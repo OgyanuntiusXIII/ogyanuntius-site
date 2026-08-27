@@ -11,9 +11,18 @@ interface Props {
   cover?: boolean;
   /** About ページだけ true。ProfilePage / Person を出す */
   profile?: boolean;
+  /** 記事など、ページ側で組み立てた構造化データ */
+  structuredData?: Record<string, unknown>;
 }
 
-const { title, description = SITE.description, ogImage = SITE.ogImage, cover = false, profile = false } = Astro.props;
+const {
+  title,
+  description = SITE.description,
+  ogImage = SITE.ogImage,
+  cover = false,
+  profile = false,
+  structuredData: suppliedStructuredData,
+} = Astro.props;
 
 const pageTitle = cover ? SITE.title : `${title}｜${SITE.title}`;
 // build.format:'file' だと pathname が /about.html になる。
@@ -24,14 +33,14 @@ const ogUrl = new URL(ogImage, Astro.site ?? SITE.origin).href;
 
 const websiteId = new URL('/#website', SITE.origin).href;
 const personId = new URL('/about#person', SITE.origin).href;
-const structuredData = cover
+const defaultStructuredData = cover
   ? {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
       '@id': websiteId,
       url: `${SITE.origin}/`,
       name: SITE.title,
-      alternateName: SITE.titleEn,
+      alternateName: [SITE.titleEn, ...SITE.aliases],
       description: SITE.description,
       inLanguage: 'ja',
     }
@@ -48,15 +57,18 @@ const structuredData = cover
           '@type': 'Person',
           '@id': personId,
           name: SITE.title,
-          alternateName: SITE.titleEn,
+          alternateName: [SITE.titleEn, ...SITE.aliases],
           url: canonical,
           description: SITE.creatorDescription,
+          jobTitle: 'クリエイター',
           image: new URL('/images/about/icon-cory.webp', SITE.origin).href,
           sameAs: SITE.sameAs,
           knowsAbout: ['ゲーム制作', 'アプリ開発', 'TRPGシナリオ制作', '動画制作'],
         },
       }
     : null;
+
+const structuredData = suppliedStructuredData ?? defaultStructuredData;
 
 const structuredDataJson = structuredData
   ? JSON.stringify(structuredData).replace(/</g, '\\u003c')

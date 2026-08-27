@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import { SITE } from '../../data/site';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft);
@@ -11,12 +12,41 @@ const { entry } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data.date;
 const md = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+const canonical = new URL(`/blog/${entry.id}`, SITE.origin).href;
+const articleStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  '@id': `${canonical}#article`,
+  url: canonical,
+  headline: entry.data.title,
+  description: entry.data.description,
+  datePublished: d.toISOString(),
+  dateModified: d.toISOString(),
+  image: new URL(entry.data.heroImage ?? SITE.ogImage, SITE.origin).href,
+  mainEntityOfPage: canonical,
+  isPartOf: { '@id': new URL('/#website', SITE.origin).href },
+  author: {
+    '@type': 'Person',
+    '@id': new URL('/about#person', SITE.origin).href,
+    name: SITE.title,
+    url: new URL('/about', SITE.origin).href,
+  },
+};
 ---
-<Base title={entry.data.title} description={entry.data.description} ogImage={entry.data.heroImage}>
+<Base
+  title={entry.data.title}
+  description={entry.data.description}
+  ogImage={entry.data.heroImage}
+  structuredData={articleStructuredData}
+>
   <article class="wrap measure">
     <p class="kicker">制作の裏側</p>
     <h1 class="ttl">{entry.data.title}</h1>
-    <p class="meta"><time>{md}</time>{entry.data.tags.length > 0 && <span> ／ {entry.data.tags.join(' / ')}</span>}</p>
+    <p class="meta">
+      <time>{md}</time>
+      <span> ／ <a href="/about" rel="author">{SITE.title}</a></span>
+      {entry.data.tags.length > 0 && <span> ／ {entry.data.tags.join(' / ')}</span>}
+    </p>
 
     {entry.data.heroImage && <img class="hero" src={entry.data.heroImage} alt="" width="1600" height="900" />}
 

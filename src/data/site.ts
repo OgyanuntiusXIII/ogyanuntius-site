@@ -5,10 +5,12 @@
 export const SITE = {
   title: 'オギャヌンティウス十三世',
   titleEn: 'OGYANUNTIUS XIII',
+  /** 本人が使う短い呼び名。検索・構造化データ・Aboutで同じ語を使う */
+  aliases: ['オギャヌンティウス', 'オギャヌン'],
   /** SNSのカードと検索結果に出る一文。表紙(トップ)で使われる */
   description: 'ゲーム・アプリ・TRPGシナリオ・動画などを制作する、オギャヌンティウス十三世の公式サイト。作品、制作記録、最新情報を掲載しています。',
   /** About と構造化データで使う、公開範囲の作者説明 */
-  creatorDescription: '大阪でゲーム、アプリ、TRPGシナリオ、動画、そのほか名前のついていないものを作っているクリエイター。',
+  creatorDescription: 'オギャヌン／オギャヌンティウスとも呼ばれる、大阪でゲーム、アプリ、TRPGシナリオ、動画、そのほか名前のついていないものを作っているクリエイター。',
   /** 本番URL。Cloudflare Pages の custom domain（2026-08-27 有効化） */
   origin: 'https://ogyanuntiusxiii.com',
   /** SNS共通のOGP。**SVGは X も Facebook も描画しない**ので JPEG にする */
