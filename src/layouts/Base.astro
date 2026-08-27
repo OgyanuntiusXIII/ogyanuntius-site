@@ -14,7 +14,10 @@ interface Props {
 const { title, description = SITE.description, ogImage = SITE.ogImage, cover = false } = Astro.props;
 
 const pageTitle = cover ? SITE.title : `${title}｜${SITE.title}`;
-const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE.origin).href;
+// build.format:'file' だと pathname が /about.html になる。
+// 公開URLは /about なので、canonical と og:url からは .html を落とす
+const cleanPath = Astro.url.pathname.replace(/index\.html$/, '').replace(/\.html$/, '') || '/';
+const canonical = new URL(cleanPath, Astro.site ?? SITE.origin).href;
 const ogUrl = new URL(ogImage, Astro.site ?? SITE.origin).href;
 ---
 <!doctype html>
