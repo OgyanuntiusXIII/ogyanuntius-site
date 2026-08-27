@@ -185,8 +185,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           <img
             src="/images/about/tako.webp"
             alt=""
-            width="372"
-            height="198"
+            width="348"
+            height="193"
             loading="eager"
             aria-hidden="true"
           />
@@ -227,7 +227,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     display: grid;
     grid-template-rows: auto auto 1fr auto;
     padding: 0 var(--gut) calc(var(--gut) * 0.6);
-    gap: clamp(10px, 1.6vw, 22px);
+    --cover-gap: clamp(10px, 1.6vw, 22px);
+    gap: var(--cover-gap);
   }
 
   .cover__rail {
@@ -650,6 +651,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     display: block;
     width: clamp(96px, 9.5vw, 148px);   /* 3xで書き出してあるので実表示はこの1/3相当 */
     padding-top: .8rem;
+    /* 行間のぶん下へ出して、下の罫に足を着ける */
+    margin-bottom: calc(var(--cover-gap) * -1);
     transition: transform 160ms ease;
   }
   .cover__tako img { width: 100%; height: auto; display: block; }
@@ -694,12 +697,14 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   /* 背の低いノートPC（720p等）では情報量を少し落として一画面に収める。
      密度は上げたいが、表紙が溢れるほうが損（仕様書7章 一画面で完結）。 */
   @media (min-width: 900px) and (max-height: 850px) {
+    .cover { padding-bottom: calc(var(--gut) * 0.35); }
     .block { margin-top: 10px; }
     .block__ttl { margin-bottom: .35em; padding-bottom: .25em; }
     .block__row { padding: .28em 0; }
     .cover__right .block__list li:nth-child(n + 3) { display: none; }
     .cover__theme { font-size: clamp(1.8rem, 5.4vw, 3.6rem); }
     .cover__strips { display: none; }
+    .cover__tako { padding-top: .2rem; width: clamp(84px, 8.4vw, 124px); }
   }
 
   /* 見開きを感じさせるのはPCだけ（仕様書19章） */
