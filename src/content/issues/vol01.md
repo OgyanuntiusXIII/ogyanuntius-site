@@ -43,7 +43,6 @@ headlines:
     catch: 制作の裏側
     slot: strip
 strips:
-  - NOW MAKING / タッコが魔改造されるかも？
   - 定価 ¥0（なんでも見ていってください）
 colophon:
   - オギャヌンティウス十三世

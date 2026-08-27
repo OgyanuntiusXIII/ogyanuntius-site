@@ -9,7 +9,7 @@ if (!issue) throw new Error('src/content/issues/ に号が1つも無い');
 const works = await getCollection('works');
 const scenarios = await getCollection('scenarios');
 /* コロコロ側の情報量はここから来る。装飾ではなく実データを載せる（仕様書4章・8章） */
-const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order).slice(0, 2);
+const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order).slice(0, 3);
 const news = (await getCollection('news')).sort((a, b) => +b.data.date - +a.data.date).slice(0, 3);
 
 type Resolved = { catch: string; href: string; badge?: string; no?: number };
@@ -89,7 +89,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           <ul class="block__list">
             {nowmaking.map((n, i) => (
               <li>
-                <a class="block__row" href="/contents">
+                <a class="block__row" href={n.data.ref ? `/works/${n.data.ref}` : '/contents'}>
                   <span class="block__tag">制作中</span>
                   <i class="no">{String(i + 1).padStart(2, '0')}</i>
                   <span class="block__body">
@@ -682,6 +682,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     .block__ttl { margin-bottom: .35em; padding-bottom: .25em; }
     .block__row { padding: .28em 0; }
     .cover__right .block__list li:nth-child(n + 3) { display: none; }
+    /* 背の低い画面では NOW MAKING も2件までにする（3件だと21px溢れた） */
+    .cover__left .block__list li:nth-child(n + 3) { display: none; }
     .cover__theme { font-size: clamp(1.8rem, 5.4vw, 3.6rem); }
     .cover__strips { display: none; }
     .cover__tako { padding-top: .2rem; }

@@ -42,7 +42,9 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
     <ul class="plain">
       {nowmaking.map((n) => (
         <li>
-          <strong>{n.data.title}</strong> — {n.data.catch}
+          {n.data.ref
+            ? <a class="link" href={`/works/${n.data.ref}`}><strong>{n.data.title}</strong></a>
+            : <strong>{n.data.title}</strong>} — {n.data.catch}
           {n.data.progress && <span class="dim">（{n.data.progress}・{md(n.data.updated)}）</span>}
         </li>
       ))}

@@ -148,6 +148,8 @@ const nowmaking = defineCollection({
     catch: z.string().max(40),
     updated: z.coerce.date(),
     progress: z.string().optional(),
+    /** どの作品の話か。works / scenarios の slug。あればその作品ページへリンクする */
+    ref: z.string().optional(),
     order: z.number().int().default(50),
   }),
 });
