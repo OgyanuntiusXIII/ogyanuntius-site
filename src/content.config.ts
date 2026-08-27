@@ -107,6 +107,23 @@ const issues = defineCollection({
   }),
 });
 
+/** 制作の裏側。開発メモ・制作記事（仕様書13章） */
+const blog = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
+  schema: z.object({
+    title: z.string(),
+    date: z.coerce.date(),
+    /** 一覧と meta description に出る。10〜160字 */
+    description: z.string().min(10).max(160),
+    /** どの作品の裏側か。works / scenarios の slug */
+    relatedTo: z.string().optional(),
+    tags: z.array(z.string()).default([]),
+    /** true の間は一覧にもURLにも出ない */
+    draft: z.boolean().default(false),
+    heroImage: publicPath.optional(),
+  }),
+});
+
 const news = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/news' }),
   schema: z.object({
@@ -130,4 +147,4 @@ const nowmaking = defineCollection({
   }),
 });
 
-export const collections = { works, scenarios, issues, news, nowmaking };
+export const collections = { works, scenarios, issues, news, nowmaking, blog };

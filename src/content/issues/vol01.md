@@ -38,9 +38,12 @@ headlines:
     collection: page
     catch: 今月の制作物
     slot: strip
+  - ref: /blog
+    collection: page
+    catch: 制作の裏側
+    slot: strip
 strips:
   - NOW MAKING ／ この人、また何か作っている
-  - 制作の裏側、全部見せます
   - 定価 ¥0（気が向いたら支援版）
 colophon:
   - オギャヌンティウス十三世

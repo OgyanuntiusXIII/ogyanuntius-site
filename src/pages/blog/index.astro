@@ -1,0 +1,50 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => +b.data.date - +a.data.date);
+
+const md = (d: Date) =>
+  `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+---
+<Base title="制作の裏側" description="開発メモ・制作記事。作っている途中の話。">
+  <div class="wrap measure">
+    <p class="kicker">BEHIND</p>
+    <h1 class="h1">制作の裏側</h1>
+
+    {posts.length === 0 ? (
+      <p>まだ記事がありません。</p>
+    ) : (
+      <ul class="list">
+        {posts.map((p) => (
+          <li>
+            <a class="row" href={`/blog/${p.id}`}>
+              <time class="date">{md(p.data.date)}</time>
+              <span class="body">
+                <span class="ttl">{p.data.title}</span>
+                <span class="desc">{p.data.description}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+
+    <p class="back"><a class="link" href="/contents">← 目次へ戻る</a></p>
+  </div>
+</Base>
+
+<style>
+  .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
+  .h1 { font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: -.02em; margin: 0 0 2rem; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { border-top: 1px solid var(--rule); }
+  .list li:last-child { border-bottom: 1px solid var(--rule); }
+  .row { display: flex; gap: clamp(12px, 3vw, 28px); padding: 1.1rem 0; text-decoration: none; align-items: baseline; }
+  .row:hover .ttl { text-decoration: underline; }
+  .date { flex: none; font-family: var(--font-en); font-size: .84rem; color: var(--ink-mid); }
+  .ttl { display: block; font-size: clamp(1rem, 2vw, 1.25rem); font-weight: 700; line-height: 1.4; }
+  .desc { display: block; color: var(--ink-mid); font-size: .9rem; }
+  .back { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
+</style>
