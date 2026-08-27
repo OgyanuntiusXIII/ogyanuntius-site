@@ -2,7 +2,7 @@
 vol: VOL.01
 label: 創刊号
 theme: やりたいこと、全部やる
-published: 2026-08-27
+published: 2026-09-01
 current: true
 mainVisual: /images/cover/2026-09-main.webp
 mainVisualAlt: 白衣の男性とサメのぬいぐるみを囲む4人の少女たちの集合写真
@@ -36,9 +36,9 @@ strips:
   - 定価 ¥0（気が向いたら支援版）
 colophon:
   - オギャヌンティウス十三世
-  - VOL.01 / 創刊号
+  - VOL.01 / 創刊号 / 2026年9月号
   - 発行：オギャヌンティウス十三世
   - Web：ogyanuntiusxiii.com
 ---
 
-創刊号。作品は3つしかない。だから3つとも特集にした。
+創刊号。2026年9月号。作品は3つしかない。だから3つとも特集にした。
