@@ -43,8 +43,8 @@ Cloudflare Pages
 > 開発記録には失敗・愚痴・プロンプト全文が入っている。**公開文とは粒度が別物。**
 > 必ず読み直して、公開用に書き直すこと。
 
-Vault の絶対パス：`C:\Users\owner\Documents\Obsidian\MyBrain`
-`mybrain` MCP（`search_notes` / `read_note`）がこのリポジトリからも使える。
+Vault へは **`mybrain` MCP**（`search_notes` / `read_note` / `get_bearings`）で読む。
+**絶対パスはこのファイルに書かない**（public なので誰でも読める）。
 
 ---
 
