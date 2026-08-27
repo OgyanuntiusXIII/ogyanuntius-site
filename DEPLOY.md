@@ -1,5 +1,16 @@
 # 公開手順
 
+> [!NOTE] **2026-08-27、公開済み**
+> | | |
+> |---|---|
+> | 本番 | https://ogyanuntiusxiii.com |
+> | Pages | https://ogyanuntius-site.pages.dev |
+> | リポジトリ | https://github.com/OgyanuntiusXIII/ogyanuntius-site |
+> | プロジェクト | Cloudflare Pages `ogyanuntius-site`（自動デプロイ有効） |
+>
+> **`main` に push すれば自動で反映される。** 以下は再構築するときの記録。
+
+
 構成：**GitHub（public） → Cloudflare Pages → ogyanuntiusxiii.com**
 
 `main` に push すると Cloudflare Pages が自動でビルドして公開する。

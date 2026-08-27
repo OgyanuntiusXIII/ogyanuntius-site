@@ -2,7 +2,8 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  // ドメインは未購入。無料サブドメインで公開してから差し替える（⑦ #118 / 決定パターン3）
+  // 本番URL。Cloudflare Pages の custom domain（2026-08-27 有効化）。
+  // ここがズレると canonical と OGP が間違ったURLで配信される
   site: 'https://ogyanuntiusxiii.com',
   trailingSlash: 'never',
   // 既定の directory 形式。/works/desk-takko で引ける（仕様書11章）

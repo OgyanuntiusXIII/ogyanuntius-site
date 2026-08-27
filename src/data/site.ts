@@ -9,7 +9,7 @@ export const SITE = {
   titleEn: 'OGYANUNTIUS XIII',
   description:
     'オギャヌンティウス十三世が発行する一冊の雑誌。ゲーム、アプリ、TRPGシナリオ、動画、そのほか。',
-  /** 未購入。無料サブドメインで公開してから差し替える */
+  /** 本番URL。Cloudflare Pages の custom domain（2026-08-27 有効化） */
   origin: 'https://ogyanuntiusxiii.com',
   ogImage: '/images/ogp/default.svg',
 } as const;
