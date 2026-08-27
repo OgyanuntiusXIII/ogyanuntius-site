@@ -640,10 +640,10 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     align-self: flex-end;
     display: block;
     /* **ドット絵なので幅は 48px の整数倍だけ。** 半端な幅にするとドットが潰れる */
-    width: 144px;                        /* 48 × 3 */
+    width: 96px;                         /* 48 × 2 */
     padding-top: .8rem;
-    /* 行間のぶん下へ出して、下の罫に足を着ける */
-    margin-bottom: calc(var(--cover-gap) * -1);
+    /* 行間の半分だけ下へ出す → 罫から少し浮いて見える */
+    margin-bottom: calc(var(--cover-gap) * -0.5);
     transition: transform 160ms ease;
   }
   .cover__tako img {
@@ -657,34 +657,21 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   .cover__foot {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: baseline;
     gap: 0 1.2em;
     border-top: 2px solid var(--rule);
     padding-top: 10px;
   }
-  /* 目次への入口。白地の誌面で一番目立たせたいので、ここだけ黒ベタ＋白抜きにする */
   .cover__contents {
     font-family: var(--font-en);
-    font-size: clamp(0.82rem, 1.1vw, 1rem);
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
     font-weight: 700;
     letter-spacing: 0.2em;
     text-decoration: none;
     margin-right: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: .7em;
-    background: var(--ink);
-    color: var(--paper);
-    padding: .6em 1.1em .6em 1.2em;
-    transition: background 140ms ease, transform 140ms ease;
   }
   .cover__contents span { transition: transform 140ms ease; }
-  .cover__contents:hover,
-  .cover__contents:focus-visible {
-    background: var(--accent);
-    color: var(--paper);
-    transform: translateY(-2px);
-  }
+  .cover__contents:hover { color: var(--accent); }
   .cover__contents:hover span { transform: translateX(4px); }
 
   /* 背の低いノートPC（720p等）では情報量を少し落として一画面に収める。
@@ -697,7 +684,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     .cover__right .block__list li:nth-child(n + 3) { display: none; }
     .cover__theme { font-size: clamp(1.8rem, 5.4vw, 3.6rem); }
     .cover__strips { display: none; }
-    .cover__tako { padding-top: .2rem; width: 96px; }   /* 48 × 2 */
+    .cover__tako { padding-top: .2rem; }
   }
 
   /* 見開きを感じさせるのはPCだけ（仕様書19章） */
