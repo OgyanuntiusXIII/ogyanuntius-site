@@ -44,6 +44,11 @@ const workSchema = z.object({
   tags: z.array(z.string()).default([]),
   /** OGP画像を個別に持つなら。無ければサイト共通OGPが使われる */
   ogImage: publicPath.optional(),
+  /**
+   * 紹介ムービーのYouTube ID（`watch?v=` のあとの部分だけ）。
+   * **押されるまでYouTubeを読み込まない**作りなので、置いてもページは重くならない。
+   */
+  youtubeId: z.string().regex(/^[A-Za-z0-9_-]{11}$/, 'YouTubeのID（11文字）だけを書く').optional(),
 });
 
 const works = defineCollection({

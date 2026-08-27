@@ -158,6 +158,21 @@ ogImage:      # 任意。無ければ thumbnail が使われる
 
 ファイル名がそのまま URL の slug になる（`desk-takko.md` → `/works/desk-takko`）。
 
+### 紹介ムービー（`youtubeId`）
+
+works / scenarios の frontmatter に `youtubeId`（`watch?v=` のあとの11文字）を書くと、
+作品ページのメインビジュアルが**再生ボタン付きになる**。
+
+> [!IMPORTANT] 押されるまでYouTubeを読み込まない
+> ページを開いた時点では**手元の画像だけ**。`<iframe>` は存在しない（実測: 0個）。
+> 押して初めて `youtube-nocookie.com` の iframe を作る。
+> **重さは 546 バイトのインラインスクリプトだけ。**
+> 普通に `<iframe>` を貼ると、再生しなくても1MB前後を読み込むことになる。
+> 決定パターン4（軽さ＝継続可能性）に反するので、**普通の埋め込みに戻さない。**
+
+X（Twitter）の埋め込みは**入れない**（2026-08-28 判断）。スクリプトが重く、
+ポストを消すとページが壊れ、NEWS が既に同じ役割を果たしているため。
+
 ### `src/content/blog/*.md`
 
 ```yaml

@@ -8,6 +8,7 @@ priceType: free
 thumbnail: /images/works/shinari-make.webp
 heroImage: /images/works/shinari-make.webp
 description: TRPGシナリオを書いて、そのまま一冊の本に組み上げるための制作ツール。書く工程と組版の工程を分けずに済ませる。
+youtubeId: J9iZQPdONhQ
 links:
   - label: BOOTH
     url: https://tiiinnstudio.booth.pm/

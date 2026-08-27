@@ -11,6 +11,7 @@ interface Props {
     description: string;
     links: { label: string; url: string }[];
     tags: string[];
+    youtubeId?: string;
   };
   feature?: string;
 }
@@ -26,7 +27,18 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
   <h1 class="ttl">{data.title}</h1>
   <p class="catch">{data.catch}</p>
 
-  <img class="hero" src={data.heroImage} alt={`${data.title} のメインビジュアル`} width="1600" height="900" loading="eager" />
+  {data.youtubeId ? (
+    /* 押されるまでYouTubeを読み込まない。ポスターは手元の画像なので外部通信ゼロ */
+    <div class="hero hero--video" data-yt={data.youtubeId}>
+      <img src={data.heroImage} alt={`${data.title} のメインビジュアル`} width="1600" height="900" loading="eager" />
+      <button type="button" class="hero__play">
+        <span class="hero__triangle" aria-hidden="true"></span>
+        <span class="hero__label">紹介ムービーを再生</span>
+      </button>
+    </div>
+  ) : (
+    <img class="hero" src={data.heroImage} alt={`${data.title} のメインビジュアル`} width="1600" height="900" loading="eager" />
+  )}
 
   <dl class="meta">
     <div><dt>公開</dt><dd>{ymd}</dd></div>
@@ -47,6 +59,32 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
 
   <p class="back"><a class="link" href="/contents">← 目次へ戻る</a></p>
 </article>
+
+<script>
+  // 押されて初めて YouTube を読み込む。それまで外部通信は一切ない。
+  // astro:page-load は View Transitions のあとにも走る
+  const wire = () => {
+    document.querySelectorAll<HTMLElement>('.hero--video').forEach((box) => {
+      const btn = box.querySelector<HTMLButtonElement>('.hero__play');
+      if (!btn || btn.dataset.wired) return;
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', () => {
+        const id = box.dataset.yt;
+        if (!id) return;
+        const f = document.createElement('iframe');
+        // nocookie 版。再生するまでCookieを置かない
+        f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+        f.title = '紹介ムービー';
+        f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        f.allowFullscreen = true;
+        box.appendChild(f);
+        btn.remove();
+      });
+    });
+  };
+  wire();
+  document.addEventListener('astro:page-load', wire);
+</script>
 
 <style>
   .feature {
@@ -69,6 +107,55 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
     object-fit: cover;
     border: 1px solid var(--rule);
     background: var(--paper-2);
+  }
+
+  /* --- 紹介ムービー -------------------------------------------
+     クリックされるまで iframe を作らない。それまでは手元の画像だけ。 */
+  .hero--video { position: relative; overflow: hidden; padding: 0; }
+  .hero--video > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hero--video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+  .hero__play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .9em;
+    width: 100%;
+    background: rgba(16, 16, 16, .34);
+    border: 0;
+    cursor: pointer;
+    color: #fff;
+    font: inherit;
+    transition: background 160ms ease;
+  }
+  .hero__play:hover { background: rgba(16, 16, 16, .5); }
+  .hero__triangle {
+    width: clamp(46px, 7vw, 72px);
+    height: clamp(46px, 7vw, 72px);
+    border-radius: 50%;
+    background: var(--accent);
+    position: relative;
+    transition: transform 160ms ease;
+  }
+  .hero__triangle::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 54%;
+    transform: translate(-50%, -50%);
+    border-style: solid;
+    border-width: .55em 0 .55em .95em;
+    border-color: transparent transparent transparent #fff;
+    font-size: clamp(16px, 2.4vw, 24px);
+  }
+  .hero__play:hover .hero__triangle { transform: scale(1.08); }
+  .hero__label {
+    font-size: clamp(.78rem, 1.2vw, .92rem);
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
   }
   .meta {
     display: flex; flex-wrap: wrap; gap: 0 2.4rem;

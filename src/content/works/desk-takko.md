@@ -8,6 +8,7 @@ priceType: free
 thumbnail: /images/works/desk-takko.webp
 heroImage: /images/works/desk-takko.webp
 description: デスクトップの上に住みつくタコのデスクトップマスコット。窓の縁に張り付き、勝手に喋り、たまに墨を吐く。放っておくと何かしている。
+youtubeId: tM9CEegsBWk
 links:
   - label: BOOTH
     url: https://tiiinnstudio.booth.pm/
