@@ -4,9 +4,9 @@ label: 創刊号
 theme: やりたいこと、全部やる
 published: 2026-08-27
 current: true
-mainVisual: /images/cover/vol01-main.svg
-mainVisualAlt: これまで制作したキャラクターたちの集合写真（仮画像）
-mainVisualFocus: 50% 40%
+mainVisual: /images/cover/2026-09-main.webp
+mainVisualAlt: 白衣の男性とサメのぬいぐるみを囲む4人の少女たちの集合写真
+mainVisualFocus: 50% 50%
 coverInk: dark
 headlines:
   - ref: desk-takko

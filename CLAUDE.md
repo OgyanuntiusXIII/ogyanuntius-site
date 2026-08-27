@@ -70,13 +70,24 @@ Vault の絶対パス：`C:\Users\owner\Documents\Obsidian\MyBrain`
 
 **縦横比は気にしなくていい。** 誌面の枠が縦長で、`object-fit: cover` が合わせる。
 
-1. 画像を `public/images/cover/<vol>-main.<拡張子>` へ置く
+1. **画像を webp へ変換して** `public/images/cover/<YYYY-MM>-main.webp` へ置く
+   ```bash
+   node -e "require('sharp')('元画像.png').resize({width:1200,withoutEnlargement:true}).webp({quality:86}).toFile('public/images/cover/2026-09-main.webp')"
+   ```
+   → 実測で **2.0MB の PNG が 151KB になった（92%減）**。仕様書21章「表紙のために
+   サイト全体を重くしない」。`sharp` は Astro が持っているので追加インストールは要らない
 2. `src/content/issues/<vol>.md` の `mainVisual` をそのパスに書き換える
 3. `mainVisualAlt` を書き直す（**altは必須**。無いとビルドが落ちる）
 4. `mainVisualFocus` で「どこを見せるか」を決める（例 `50% 30%` で上寄り）
    → 人物の顔が切れるのを防ぐ。**渡された画像の構図を見てから決める**
 5. `coverInk` を決める — 明るい画像なら `dark`、暗い画像なら `light`
-   → 一冊の上に重なる題字・VOL表記・バーコードの色。**画像の明るさを見てから決める**
+   → 一冊の上に重なる題字・VOL表記・バーコードの色。**推測せず、実際に測る**：
+   ```bash
+   node -e "const s=require('sharp');const f='public/images/cover/2026-09-main.webp';(async()=>{const m=await s(f).metadata();const w=Math.round(m.height/1.32),l=Math.round((m.width-w)/2);for(const[n,a,b]of[['上',.045,.095],['題字',.10,.225],['下',.87,.96]]){const t=Math.round(m.height*a),h=Math.round(m.height*(b-a));const buf=await s(f).extract({left:l,top:t,width:w,height:h}).greyscale().toBuffer();console.log(n,(await s(buf).stats()).channels[0].mean.toFixed(0))}})()"
+   ```
+   → 各帯の平均輝度が出る。**目安：170超なら `dark`、110未満なら `light`**
+   ⚠️ `extract().stats()` と繋ぐと **stats は入力画像全体を見てしまう**。
+   必ず `toBuffer()` を挟むこと（一度これで誤った測定を報告した）
 6. `npm run build`
 
 損しにくいのは**縦長〜正方形**の画像。極端な横長は左右が大きく切られる。
