@@ -65,6 +65,7 @@ const issues = defineCollection({
   schema: z.object({
     vol: z.string(),
     label: z.string(),
+    /** 号のテーマ。**改行を入れるとその位置で折れる**（YAMLの |- で書く） */
     theme: z.string(),
     published: z.coerce.date(),
     mainVisual: publicPath,

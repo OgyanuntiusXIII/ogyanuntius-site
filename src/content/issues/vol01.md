@@ -1,12 +1,14 @@
 ---
 vol: VOL.01
 label: 創刊号
-theme: やりたいこと、全部やる
+theme: |-
+  やりたいこと、
+  全部やる
 published: 2026-09-01
 current: true
 mainVisual: /images/cover/2026-09-main.webp
 mainVisualAlt: 白衣の男性とサメのぬいぐるみを囲む4人の少女たちの集合写真
-mainVisualFocus: 50% 50%
+mainVisualFocus: 50% 0%
 coverInk: dark
 magTitleJp: 月刊
 magTitleEn: OGYANUN

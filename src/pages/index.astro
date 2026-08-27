@@ -8,6 +8,9 @@ if (!issue) throw new Error('src/content/issues/ に号が1つも無い');
 
 const works = await getCollection('works');
 const scenarios = await getCollection('scenarios');
+/* コロコロ側の情報量はここから来る。装飾ではなく実データを載せる（仕様書4章・8章） */
+const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order).slice(0, 2);
+const news = (await getCollection('news')).sort((a, b) => +b.data.date - +a.data.date).slice(0, 3);
 
 type Resolved = { catch: string; href: string; badge?: string; no?: number };
 
@@ -40,6 +43,9 @@ const lower = slot('lower');
 const strip = slot('strip');
 
 const issued = issue.data.published;
+const md = (d: Date) =>
+  `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+const featureCount = works.length + scenarios.length;
 const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, '0')}`;
 /** 一冊の上に刷る号表記。ゼロ埋めしない（「2026年09月号」にしない） */
 const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
@@ -59,7 +65,10 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
 
     <div class="cover__body">
       <div class="cover__left">
-        <p class="cover__theme">{issue.data.theme}</p>
+        <p class="cover__theme">
+          {/* 改行位置は vol01.md 側で決める。折り返し任せにしない */}
+          {issue.data.theme.split('\n').map((line) => <span>{line}</span>)}
+        </p>
 
         {lead.map((h) => (
           <a class="cover__lead" href={h.href}>
@@ -74,6 +83,24 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
             <span aria-hidden="true">▶</span> {h.catch}
           </a>
         ))}
+
+        <section class="block">
+          <h2 class="block__ttl">NOW MAKING<span class="block__note">この人、また何か作っている</span></h2>
+          <ul class="block__list">
+            {nowmaking.map((n, i) => (
+              <li>
+                <a class="block__row" href="/contents">
+                  <span class="block__tag">制作中</span>
+                  <i class="no">{String(i + 1).padStart(2, '0')}</i>
+                  <span class="block__body">
+                    <b>{n.data.title}</b>
+                    <span class="block__sub">{n.data.catch}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
 
       <figure class="cover__visual">
@@ -125,6 +152,21 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           </a>
         ))}
 
+        <section class="block">
+          <h2 class="block__ttl">今月の制作物<span class="block__note">NEWS</span></h2>
+          <ul class="block__list">
+            {news.map((n) => (
+              <li>
+                <a class="block__row block__row--news" href={n.data.url ?? '/contents'}>
+                  <time class="block__date">{md(n.data.date)}</time>
+                  <span class="block__body">{n.data.title}</span>
+                  <span class="block__arrow" aria-hidden="true">→</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         <ul class="cover__strips">
           {issue.data.strips.map((s) => <li>{s}</li>)}
         </ul>
@@ -140,6 +182,9 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           <span aria-hidden="true">▶</span> {h.catch}
         </a>
       ))}
+      <span class="cover__stamp">特集{featureCount}本</span>
+      <span class="cover__stamp">全部無料</span>
+      <span class="cover__stamp cover__stamp--next">次号 VOL.02 準備中</span>
     </div>
   </div>
 </Base>
@@ -198,6 +243,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     line-height: 1.02;
     letter-spacing: -0.03em;
   }
+  /* 1行＝1span。折り返し任せにせず、vol01.md の改行どおりに折る */
+  .cover__theme span { display: block; }
 
   .cover__lead {
     display: block;
@@ -300,14 +347,14 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   }
   .mag__dress > * { position: relative; }
 
-  .mag--dark { --mag-ink: #101010; --mag-rule: rgba(16,16,16,.55);
-    --mag-shadow: 0 1px 2px rgba(255,255,255,.6);
-    --mag-scrim: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.1) 30%,
-                 rgba(255,255,255,0) 46%, rgba(255,255,255,.5) 74%, rgba(255,255,255,.84)); }
-  .mag--light { --mag-ink: #ffffff; --mag-rule: rgba(255,255,255,.6);
-    --mag-shadow: 0 1px 3px rgba(0,0,0,.6);
-    --mag-scrim: linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.08) 30%,
-                 rgba(0,0,0,0) 46%, rgba(0,0,0,.35) 74%, rgba(0,0,0,.62)); }
+  /* スクリムは**最下部だけ**。ここを広げると被写体の顔にモヤがかかる。
+     見出しの可読性は全面を白ませるのではなく、見出し自身の白帯（.mag__lines li）で取る。 */
+  .mag--dark { --mag-ink: #101010; --mag-plate: rgba(255,255,255,.88);
+    --mag-shadow: none;
+    --mag-scrim: linear-gradient(180deg, rgba(255,255,255,0) 88%, rgba(255,255,255,.78) 100%); }
+  .mag--light { --mag-ink: #ffffff; --mag-plate: rgba(0,0,0,.62);
+    --mag-shadow: 0 1px 3px rgba(0,0,0,.7);
+    --mag-scrim: linear-gradient(180deg, rgba(0,0,0,0) 88%, rgba(0,0,0,.7) 100%); }
 
   .mag__issue {
     margin: 0;
@@ -356,12 +403,16 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     font-weight: 700;
     line-height: 1.3;
   }
-  .mag__lines li { position: relative; padding-left: 1.5em; }
+  .mag__lines li {
+    position: relative;
+    padding: .16em .5em .16em 1.9em;
+    background: var(--mag-plate);
+  }
   .mag__lines li::before {
     content: '';
     position: absolute;
-    left: 0;
-    top: .52em;
+    left: .5em;
+    top: .68em;
     width: 1em;
     height: .22em;
     background: var(--accent);
@@ -369,6 +420,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
 
   .mag__bottom {
     margin-top: 1.1em;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, .55);
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: end;
@@ -399,6 +451,82 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     opacity: .88;
   }
 
+  /* --- コロコロ側の情報量 --------------------------------
+     余白を詰めるのではなく、空いた場所に**実データ**を流す。
+     装飾ではなく、すべてリンクとして機能させる（仕様書8章）。 */
+  .block { margin-top: clamp(14px, 1.8vw, 26px); }
+
+  .block__ttl {
+    display: flex;
+    align-items: baseline;
+    gap: .8em;
+    margin: 0 0 .5em;
+    font-family: var(--font-en);
+    font-size: clamp(.62rem, .78vw, .72rem);
+    font-weight: 700;
+    letter-spacing: .2em;
+    padding-bottom: .35em;
+    border-bottom: 2px solid var(--rule);
+  }
+  .block__note {
+    font-family: var(--font-jp);
+    font-size: .92em;
+    font-weight: 400;
+    letter-spacing: .02em;
+    color: var(--ink-mid);
+  }
+
+  .block__list { list-style: none; margin: 0; padding: 0; }
+  .block__list li + li { border-top: 1px solid #e2e2e2; }
+
+  .block__row {
+    display: flex;
+    align-items: baseline;
+    gap: .55em;
+    padding: .42em 0;
+    text-decoration: none;
+    font-size: clamp(.72rem, .88vw, .82rem);
+    line-height: 1.4;
+  }
+  .block__row:hover b,
+  .block__row--news:hover .block__body { text-decoration: underline; }
+  .block__row:hover .block__arrow { color: var(--accent); }
+
+  .block__tag {
+    flex: none;
+    font-size: .74em;
+    font-weight: 700;
+    letter-spacing: .08em;
+    border: 1px solid var(--rule);
+    padding: .1em .45em;
+  }
+  .block__body { min-width: 0; }
+  .block__body b { font-weight: 700; }
+  .block__sub {
+    display: block;
+    color: var(--ink-mid);
+    font-size: .92em;
+    font-weight: 400;
+  }
+  .block__date {
+    flex: none;
+    font-family: var(--font-en);
+    font-size: .86em;
+    color: var(--ink-mid);
+    letter-spacing: .04em;
+  }
+  .block__arrow { margin-left: auto; flex: none; }
+
+  .cover__stamp {
+    font-family: var(--font-en);
+    font-size: clamp(.6rem, .74vw, .68rem);
+    font-weight: 700;
+    letter-spacing: .12em;
+    border: 1px solid var(--rule);
+    padding: .16em .5em;
+  }
+  .cover__stamp--next { border-color: var(--accent); color: var(--accent); }
+
   .cover__strips {
     list-style: none;
     margin: 0.6em 0 0;
@@ -426,6 +554,17 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     margin-right: auto;
   }
   .cover__contents:hover { color: var(--accent); }
+
+  /* 背の低いノートPC（720p等）では情報量を少し落として一画面に収める。
+     密度は上げたいが、表紙が溢れるほうが損（仕様書7章 一画面で完結）。 */
+  @media (min-width: 900px) and (max-height: 850px) {
+    .block { margin-top: 10px; }
+    .block__ttl { margin-bottom: .35em; padding-bottom: .25em; }
+    .block__row { padding: .28em 0; }
+    .cover__right .block__list li:nth-child(n + 3) { display: none; }
+    .cover__theme { font-size: clamp(1.8rem, 5.4vw, 3.6rem); }
+    .cover__strips { display: none; }
+  }
 
   /* 見開きを感じさせるのはPCだけ（仕様書19章） */
   @media (min-width: 900px) {
