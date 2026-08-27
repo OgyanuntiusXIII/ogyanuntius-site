@@ -43,8 +43,8 @@ headlines:
     catch: 制作の裏側
     slot: strip
 strips:
-  - NOW MAKING ／ この人、また何か作っている
-  - 定価 ¥0（気が向いたら支援版）
+  - NOW MAKING / タッコが魔改造されるかも？
+  - 定価 ¥0（なんでも見ていってください）
 colophon:
   - オギャヌンティウス十三世
   - VOL.01 / 創刊号 / 2026年9月号
