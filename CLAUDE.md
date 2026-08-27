@@ -288,7 +288,8 @@ npm run preview  # ビルド結果の確認
   デスクタッコとしなりメイクはショップURLを暫定で入れてある）
 
 確定済み（2026-08-27 本人）：
-- メール `（連絡はXのみ）` ／ X `https://x.com/ogyanuntiusxiii`
-  → `src/data/site.ts` の `CONTACT` が正本。About・目次・奥付はここを参照している
+- 連絡は **X のみ**（`https://x.com/ogyanuntiusxiii`）。
+  → `src/data/site.ts` の `CONTACT` が正本。About・目次・奥付はここを参照している。
+  **メールアドレスはこのリポジトリに書かない**（public なので履歴からも読める）
 - **メインビジュアル**（キャラクター集合写真）→ `public/images/cover/vol01-main.svg` を差し替え
 - **ドメイン `ogyanuntiusxiii.com`** → **今は買わない。** 無料サブドメインで公開してから判断
