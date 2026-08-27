@@ -5,7 +5,22 @@ import { SITE, CONTACT } from '../data/site';
 <Base title="WHO IS OGYANUNTIUS XIII?" description="オギャヌンティウス十三世が何をしている人なのか。">
   <div class="wrap measure">
     <p class="kicker">ABOUT</p>
-    <h1 class="h1">WHO IS<br />OGYANUNTIUS XIII?</h1>
+
+    <div class="lead">
+      <div class="lead__text">
+        <h1 class="h1">WHO IS<br />OGYANUNTIUS XIII?</h1>
+      </div>
+      <figure class="icon">
+        <img
+          src="/images/about/icon-cory.webp"
+          alt="オギャヌンティウス十三世のアイコンに使っているコリドラス・ステルバイの写真"
+          width="900"
+          height="1004"
+          loading="eager"
+        />
+        <figcaption>いつものアイコン。<br />コリドラス・ステルバイ。</figcaption>
+      </figure>
+    </div>
 
     <div class="prose">
       <p>
@@ -24,6 +39,16 @@ import { SITE, CONTACT } from '../data/site';
         <li><a href="/scenario/amefuru-saigo-no-jikan-ni">雨降る最後の時間に</a> — CoCシナリオ</li>
       </ul>
 
+      <h2>この魚について</h2>
+      <p>
+        アイコンに使っているのはコリドラス・ステルバイという魚です。
+        水槽の底のほうにいて、砂に口を突っ込んで、ずっと何かを探しています。
+        見つけたいものが特にあるわけでもなさそうなのに、ずっと探している。
+      </p>
+      <p>
+        だいたい、そういう気持ちで作っています。
+      </p>
+
       <h2>連絡</h2>
       <p>
         <a class="link" href={CONTACT.x} rel="noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a>
@@ -38,7 +63,25 @@ import { SITE, CONTACT } from '../data/site';
 
 <style>
   .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
-  .h1 { font-family: var(--font-en); font-size: clamp(1.9rem, 6vw, 3.6rem); line-height: 1.05; letter-spacing: -.02em; margin: 0 0 2rem; }
+
+  /* 象徴を先に見せる。文章より前に、この魚が誰なのかを伝える */
+  .lead { display: grid; gap: 1.4rem; align-items: center; margin-bottom: 2.4rem; }
+  .lead__text { min-width: 0; }
+  .icon { margin: 0; }
+  .icon img { width: 100%; max-width: 340px; height: auto; }
+  .icon figcaption {
+    margin-top: .6em;
+    font-size: .82rem;
+    line-height: 1.6;
+    color: var(--ink-mid);
+    border-left: 3px solid var(--accent);
+    padding-left: .7em;
+  }
+  @media (min-width: 720px) {
+    .lead { grid-template-columns: 1fr auto; gap: 2.4rem; }
+    .icon img { max-width: 300px; }
+  }
+  .h1 { font-family: var(--font-en); font-size: clamp(1.9rem, 6vw, 3.6rem); line-height: 1.05; letter-spacing: -.02em; margin: 0; }
   .back { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
   .sr { position: absolute; left: -9999px; }
 </style>
