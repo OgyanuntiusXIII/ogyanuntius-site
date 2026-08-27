@@ -185,8 +185,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           class="cover__tako"
           src="/images/about/tako.webp"
           alt=""
-          width="232"
-          height="302"
+          width="345"
+          height="192"
           loading="eager"
           aria-hidden="true"
         />
@@ -645,7 +645,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   .cover__tako {
     margin-top: auto;
     align-self: flex-end;
-    width: clamp(74px, 8vw, 116px);
+    width: clamp(96px, 9.5vw, 148px);   /* 3xで書き出してあるので実表示はこの1/3相当 */
     height: auto;
     padding-top: .8rem;
   }
