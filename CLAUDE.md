@@ -290,12 +290,14 @@ npm run preview  # ビルド結果の確認
 
 ## 7. 未確定（本人に聞かないと埋められない）
 
-- **YouTube の URL** → `src/data/site.ts` の `LINKS`
-  （空文字のままなら表示されない。**推測で埋めない**）
 - **BOOTH の各商品URL**（分かっているのは『雨降る最後の時間に』のみ。
   デスクタッコとしなりメイクはショップURLを暫定で入れてある）
 
-確定済み（2026-08-27 本人）：
+確定済み（2026-08-27〜28 本人）：
+- YouTube `https://www.youtube.com/@ogyanuntiusxiii`
+  → 各作品の紹介ムービーは `content` 側の `links` に個別に入れてある。
+  **URLはチャンネルを実際に開いて確認した。推測で埋めない**
+- Twitch `https://www.twitch.tv/ogyanuntiusxiii` は**まだ載せていない**（本人未指示）
 - 連絡は **X のみ**（`https://x.com/ogyanuntiusxiii`）。
   → `src/data/site.ts` の `CONTACT` が正本。About・目次・奥付はここを参照している。
   **メールアドレスはこのリポジトリに書かない**（public なので履歴からも読める）
