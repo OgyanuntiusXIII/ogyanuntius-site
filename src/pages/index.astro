@@ -105,6 +105,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
 
       <figure class="cover__visual">
         {/* 中央に置く一冊。雑誌らしさはここで作る。周りの誌面レイアウトは触らない */}
+        <a class="mag-link" href="/about" aria-label="オギャヌンティウス十三世とは？">
         <div class={`mag mag--${issue.data.coverInk}`}>
           <img
             src={issue.data.mainVisual}
@@ -140,7 +141,15 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
             </div>
           </div>
           <span class="mag__spine" aria-hidden="true"></span>
+
+          {issue.data.coverNote && (
+            <div class="mag__obi">
+              <p class="mag__obi-text"><b>表紙</b>{issue.data.coverNote}</p>
+              <p class="mag__obi-cta">オギャヌンティウス十三世とは？<span aria-hidden="true"> →</span></p>
+            </div>
+          )}
         </div>
+        </a>
       </figure>
 
       <div class="cover__right">
@@ -292,8 +301,19 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     justify-content: center;
   }
 
+  /* 一冊まるごとがリンク。押すと「オギャヌンティウス十三世とは？」へ */
+  .mag-link {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+  .mag-link:focus-visible { outline-offset: 6px; }
+
   .mag {
     container-type: inline-size;
+    transition: transform 160ms ease, box-shadow 160ms ease;
     position: relative;
     width: 100%;
     aspect-ratio: var(--mag-ratio);
@@ -334,7 +354,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     inset: 0;
     display: flex;
     flex-direction: column;
-    padding: 5cqw 5cqw 4.5cqw 8cqw;   /* 左は背表紙ぶん広げる */
+    padding: 5cqw 5cqw 2.6cqw 8cqw;   /* 左は背表紙ぶん広げる */
     color: var(--mag-ink);
     text-shadow: var(--mag-shadow);
   }
@@ -398,11 +418,15 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: .45em;
+    gap: .38em;
     font-size: 3.1cqw;
     font-weight: 700;
     line-height: 1.3;
   }
+  .mag__lines { transition: opacity 150ms ease; }
+  .mag-link:hover .mag__lines,
+  .mag-link:focus-visible .mag__lines { opacity: 0; }
+
   .mag__lines li {
     position: relative;
     padding: .16em .5em .16em 1.9em;
@@ -419,7 +443,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   }
 
   .mag__bottom {
-    margin-top: 1.1em;
+    margin-top: .3em;
     text-shadow: 0 1px 2px rgba(255, 255, 255, .55);
     display: grid;
     grid-template-columns: 1fr auto;
@@ -439,6 +463,59 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     opacity: .7;
   }
   .mag__price { font-size: 3.4cqw; }
+
+  /* 本の帯。カーソルを置くと下から上がってくる（仕様書10章 演出は短く） */
+  .mag__obi {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 4cqw 5cqw 4cqw 8cqw;
+    background: rgba(16, 16, 16, .92);
+    color: #fff;
+    transform: translateY(101%);
+    transition: transform 190ms cubic-bezier(.4, 0, .2, 1);
+  }
+  .mag__obi p { margin: 0; }
+  .mag__obi-text {
+    font-size: 3cqw;
+    line-height: 1.5;
+  }
+  .mag__obi-text b {
+    display: inline-block;
+    margin-right: .7em;
+    padding: 0 .45em;
+    background: var(--accent);
+    font-size: .86em;
+    letter-spacing: .1em;
+  }
+  .mag__obi-cta {
+    margin-top: .7em;
+    font-size: 2.7cqw;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: .3em;
+  }
+
+  .mag-link:hover .mag,
+  .mag-link:focus-visible .mag {
+    transform: translateY(-5px);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, .5),
+      2px 3px 0 rgba(0, 0, 0, .06),
+      18px 28px 50px -14px rgba(0, 0, 0, .55);
+  }
+  .mag-link:hover .mag__obi,
+  .mag-link:focus-visible .mag__obi { transform: translateY(0); }
+
+  /* 触れない端末には最初から出しておく（ホバーが無いと存在に気付けない）。
+     position は absolute のまま。static にすると帯が本の上端へ飛ぶ */
+  @media (hover: none) {
+    .mag__obi { transform: translateY(0); }
+    .mag-link:hover .mag { transform: none; box-shadow: inherit; }
+  }
 
   /* バーコード。背景の縞で描くので画像は増えない */
   .mag__barcode {
@@ -576,6 +653,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     }
     .cover__left { display: flex; flex-direction: column; justify-content: flex-start; }
     .cover__visual { height: 100%; align-items: center; }
+    .mag-link { height: 100%; align-items: center; }
     .mag { width: auto; height: 100%; max-width: 100%; }
   }
 </style>

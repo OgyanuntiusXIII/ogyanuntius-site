@@ -181,7 +181,14 @@ ogImage:      # 任意。無ければ thumbnail が使われる
 4. **影を右下だけに落とす** — 左は綴じられているので影を出さない
 
 - 判型は `--mag-ratio`（既定 `1 / 1.32`）。`src/styles/global.css`
-- `coverLines` は**最大4本・1本24字まで**（超えるとビルドが落ちる）
+- `coverLines` は**最大4本・1本24字まで**（超えるとビルドが落ちる）。
+  **本数は画像しだい。** 白帯が顔に乗る（2026-08-27 に3本で乗った）。画像を替えたら測る：
+  ```bash
+  node -e "const s=require('sharp');const f='public/images/cover/2026-09-main.webp';(async()=>{const m=await s(f).metadata();const V=Math.round(m.width*1.32),x=Math.round(m.width*.08);for(let p=.6;p<.95;p+=.03){const t=Math.round(V*p),h=Math.round(V*.03);const b=await s(f).extract({left:x,top:t,width:Math.round(m.width*.5)-x,height:h}).greyscale().toBuffer();const c=(await s(b).stats()).channels[0];console.log((p*100).toFixed(0)+'% mean='+c.mean.toFixed(0)+' sd='+c.stdev.toFixed(0)+(c.mean>190&&c.stdev<52?' ✓置ける':''))}})()"
+  ```
+  **sd が高い帯＝顔や模様。そこに白帯を置かない。** この画像では顔66-75% / 置ける78-90%
+- 一冊の上と誌面で**同じ文言を出さない**。`theme` は誌面に巨大に出ているので
+  `coverLines` へ重ねて入れない（2026-08-27 に重複していた）
 - `magTitleEn` を長くすると誌名が枠を超えて**黙って切れる**。
   変えたら `.mag__masthead-en` の `font-size`（既定 `13cqw`）で詰めること
 - バーコードは背景の縞（`repeating-linear-gradient`）。**画像ファイルではない**

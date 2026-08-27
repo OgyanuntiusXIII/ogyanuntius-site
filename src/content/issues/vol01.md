@@ -10,10 +10,10 @@ mainVisual: /images/cover/2026-09-main.webp
 mainVisualAlt: 白衣の男性とサメのぬいぐるみを囲む4人の少女たちの集合写真
 mainVisualFocus: 50% 0%
 coverInk: dark
+coverNote: 今月プレイしたCoCのキャラ達。全員生きているが、年代が違う人間もいる。
 magTitleJp: 月刊
 magTitleEn: OGYANUN
 coverLines:
-  - やりたいこと、全部やる
   - デスクトップに、タコがいる。
   - シナリオ制作、もっとラクしていい。
 headlines:
