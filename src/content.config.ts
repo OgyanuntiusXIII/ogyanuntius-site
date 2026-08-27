@@ -73,6 +73,11 @@ const issues = defineCollection({
     mainVisualFocus: z.string().default('50% 50%'),
     /** 中央の一冊に重ねる文字の色。明るい画像なら dark、暗い画像なら light */
     coverInk: z.enum(['dark', 'light']).default('dark'),
+    /** 誌名。**サイト名（オギャヌンティウス十三世）とは別物。** 一冊の題字になる */
+    magTitleJp: z.string().default('月刊'),
+    magTitleEn: z.string().default('OGYANUN'),
+    /** 表紙に刷る見出し。誌面側の headlines とは別に、一冊の上に印刷される文言 */
+    coverLines: z.array(z.string().max(24, '表紙に刷る。24字を超えると読めない')).max(4).default([]),
     current: z.boolean().default(false),
     /** 表紙に載せる見出し。ここへ足すと表紙に出る */
     headlines: z
