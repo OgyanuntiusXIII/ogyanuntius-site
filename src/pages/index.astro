@@ -70,17 +70,17 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           {issue.data.theme.split('\n').map((line) => <span>{line}</span>)}
         </p>
 
+        {lower.map((h) => (
+          <a class="cover__small" href={h.href}>
+            <span aria-hidden="true">▶</span> {h.catch}
+          </a>
+        ))}
+
         {lead.map((h) => (
           <a class="cover__lead" href={h.href}>
             {h.no && <i class="no">{String(h.no).padStart(2, '0')}</i>}
             {h.badge && <span class="label">{h.badge}</span>}
             <span class="cover__lead-text">{h.catch}</span>
-          </a>
-        ))}
-
-        {lower.map((h) => (
-          <a class="cover__small" href={h.href}>
-            <span aria-hidden="true">▶</span> {h.catch}
           </a>
         ))}
 
@@ -278,6 +278,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     border-top: 1px solid var(--rule);
     padding: 0.5em 0 0.9em;
   }
+
+  .cover__left .cover__small { margin-bottom: 1.1em; }
 
   .cover__small {
     display: inline-block;
