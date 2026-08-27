@@ -11,6 +11,8 @@ description: クトゥルフ神話TRPG（新クトゥルフ神話TRPG）シナ�
 links:
   - label: BOOTH
     url: https://tiiinnstudio.booth.pm/items/8616258
+  - label: 紹介ムービー
+    url: https://www.youtube.com/watch?v=6aAX2ugxQPA
 tags: [CoC, クトゥルフ神話TRPG, タイマン]
 ---
 

@@ -11,6 +11,8 @@ description: デスクトップの上に住みつくタコのデスクトップ�
 links:
   - label: BOOTH
     url: https://tiiinnstudio.booth.pm/
+  - label: 紹介ムービー
+    url: https://www.youtube.com/watch?v=tM9CEegsBWk
 tags: [デスクトップマスコット, Windows, ARG]
 ---
 

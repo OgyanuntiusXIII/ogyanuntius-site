@@ -1,8 +1,6 @@
 /**
  * サイト全体の定数。
- * TODO(本人確認): YouTube の実URLを入れる。
- *   推測で埋めると「動いてないものの計上」になるので、空のまま置いてある。
- *   空の項目は表示されないので、埋まるまでは出ない。
+ * url が空の項目は表示されない。**推測で埋めない**（「動いてないものの計上」になる）。
  */
 export const SITE = {
   title: 'オギャヌンティウス十三世',
@@ -22,7 +20,7 @@ export const LINKS: SiteLink[] = [
   { label: 'X', url: 'https://x.com/ogyanuntiusxiii' },
   { label: 'BOOTH', url: 'https://tiiinnstudio.booth.pm/' },
   { label: 'GitHub', url: 'https://github.com/OgyanuntiusXIII/ogyanuntius-site' },
-  { label: 'YouTube', url: '' },  // TODO(本人確認)
+  { label: 'YouTube', url: 'https://www.youtube.com/@ogyanuntiusxiii' },
 ];
 
 /**

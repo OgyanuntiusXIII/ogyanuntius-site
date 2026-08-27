@@ -11,6 +11,8 @@ description: TRPGシナリオを書いて、そのまま一冊の本に組み上
 links:
   - label: BOOTH
     url: https://tiiinnstudio.booth.pm/
+  - label: 紹介ムービー
+    url: https://www.youtube.com/watch?v=J9iZQPdONhQ
 tags: [TRPG, シナリオ制作, 組版]
 ---
 
