@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { SITE } from '../data/site';
+import { SITE, CONTACT } from '../data/site';
 ---
 <Base title="WHO IS OGYANUNTIUS XIII?" description="オギャヌンティウス十三世が何をしている人なのか。">
   <div class="wrap measure">
@@ -25,10 +25,10 @@ import { SITE } from '../data/site';
       </ul>
 
       <h2>連絡</h2>
-      <p>
-        <!-- TODO(本人確認): 連絡先を決める。当面はXのDMなど既存の手段で足りる（仕様書13章 CONTACT） -->
-        連絡先は準備中です。
-      </p>
+      <ul>
+        <li>メール：<a class="link" href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a></li>
+        <li>X：<a class="link" href={CONTACT.x} rel="noopener">@ogyanuntiusxiii <span aria-hidden="true">↗</span></a></li>
+      </ul>
     </div>
 
     <p class="back"><a class="link" href="/">← 表紙へ戻る</a></p>

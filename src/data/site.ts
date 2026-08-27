@@ -1,7 +1,8 @@
 /**
- * サイト全体の定数。**URLはまだ埋まっていない。**
- * TODO(本人確認): X / GitHub / YouTube の実URLを入れる。
+ * サイト全体の定数。
+ * TODO(本人確認): GitHub / YouTube の実URLを入れる。
  *   推測で埋めると「動いてないものの計上」になるので、空のまま置いてある。
+ *   空の項目は表示されないので、埋まるまでは出ない。
  */
 export const SITE = {
   title: 'オギャヌンティウス十三世',
@@ -17,8 +18,14 @@ export type SiteLink = { label: string; url: string; note?: string };
 
 /** LINKS 欄。url が空の項目は表示されない */
 export const LINKS: SiteLink[] = [
-  { label: 'X', url: '' },        // TODO(本人確認)
+  { label: 'X', url: 'https://x.com/ogyanuntiusxiii' },
+  { label: 'BOOTH', url: 'https://tiiinnstudio.booth.pm/' },
   { label: 'GitHub', url: '' },   // TODO(本人確認)
   { label: 'YouTube', url: '' },  // TODO(本人確認)
-  { label: 'BOOTH', url: 'https://tiiinnstudio.booth.pm/' },
 ];
+
+/** 連絡先 */
+export const CONTACT = {
+  email: '（連絡はXのみ）',
+  x: 'https://x.com/ogyanuntiusxiii',
+} as const;

@@ -229,8 +229,13 @@ npm run preview  # ビルド結果の確認
 
 ## 7. 未確定（本人に聞かないと埋められない）
 
-- **X / GitHub / YouTube の URL** → `src/data/site.ts` の `LINKS`
-- **BOOTH の各商品URL**（分かっているのは『雨降る最後の時間に』のみ）
-- **CONTACT の手段** → `src/pages/about.astro`
+- **GitHub / YouTube の URL** → `src/data/site.ts` の `LINKS`
+  （空文字のままなら表示されない。**推測で埋めない**）
+- **BOOTH の各商品URL**（分かっているのは『雨降る最後の時間に』のみ。
+  デスクタッコとしなりメイクはショップURLを暫定で入れてある）
+
+確定済み（2026-08-27 本人）：
+- メール `（連絡はXのみ）` ／ X `https://x.com/ogyanuntiusxiii`
+  → `src/data/site.ts` の `CONTACT` が正本。About・目次・奥付はここを参照している
 - **メインビジュアル**（キャラクター集合写真）→ `public/images/cover/vol01-main.svg` を差し替え
 - **ドメイン `ogyanuntiusxiii.com`** → **今は買わない。** 無料サブドメインで公開してから判断

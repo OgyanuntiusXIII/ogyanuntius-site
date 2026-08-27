@@ -47,6 +47,8 @@ colophon:
   - VOL.01 / 創刊号 / 2026年9月号
   - 発行：オギャヌンティウス十三世
   - Web：ogyanuntiusxiii.com
+  - X：@ogyanuntiusxiii
+  - Mail：（連絡はXのみ）
 ---
 
 創刊号。2026年9月号。作品は3つしかない。だから3つとも特集にした。
