@@ -2,7 +2,11 @@
 import Base from '../layouts/Base.astro';
 import { SITE, CONTACT, CREDITS } from '../data/site';
 ---
-<Base title="WHO IS OGYANUNTIUS XIII?" description="オギャヌンティウス十三世が何をしている人なのか。">
+<Base
+  title="オギャヌンティウス十三世とは"
+  description={SITE.creatorDescription}
+  profile
+>
   <div class="wrap measure">
     <p class="kicker">ABOUT</p>
 
@@ -24,8 +28,9 @@ import { SITE, CONTACT, CREDITS } from '../data/site';
 
     <div class="prose">
       <p>
-        オギャヌンティウス十三世。大阪。ゲーム、アプリ、TRPGシナリオ、動画、
-        そのほか名前のついていないものを作っています。
+        オギャヌンティウス十三世（OGYANUNTIUS XIII、Xでは {CONTACT.xHandle}）。
+        大阪でゲーム、アプリ、TRPGシナリオ、動画、
+        そのほか名前のついていないものを作っています。ここは本人の公式サイトです。
       </p>
       <p>
         ジャンルは決めていません。作りたくなったものを作って、出しています。
@@ -51,7 +56,7 @@ import { SITE, CONTACT, CREDITS } from '../data/site';
 
       <h2>連絡</h2>
       <p>
-        <a class="link" href={CONTACT.x} rel="noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a>
+        <a class="link" href={CONTACT.x} rel="me noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a>
         でお願いします。
       </p>
     </div>

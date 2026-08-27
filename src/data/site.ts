@@ -6,11 +6,20 @@ export const SITE = {
   title: 'オギャヌンティウス十三世',
   titleEn: 'OGYANUNTIUS XIII',
   /** SNSのカードと検索結果に出る一文。表紙(トップ)で使われる */
-  description: 'オギャヌンティウス十三世の公式サイト',
+  description: 'ゲーム・アプリ・TRPGシナリオ・動画などを制作する、オギャヌンティウス十三世の公式サイト。作品、制作記録、最新情報を掲載しています。',
+  /** About と構造化データで使う、公開範囲の作者説明 */
+  creatorDescription: '大阪でゲーム、アプリ、TRPGシナリオ、動画、そのほか名前のついていないものを作っているクリエイター。',
   /** 本番URL。Cloudflare Pages の custom domain（2026-08-27 有効化） */
   origin: 'https://ogyanuntiusxiii.com',
   /** SNS共通のOGP。**SVGは X も Facebook も描画しない**ので JPEG にする */
   ogImage: '/images/ogp/default.jpg',
+  /** Person 構造化データで「同じ作者」として結ぶ公式アカウント */
+  sameAs: [
+    'https://x.com/ogyanuntiusxiii',
+    'https://www.youtube.com/@ogyanuntiusxiii',
+    'https://github.com/OgyanuntiusXIII',
+    'https://tiiinnstudio.booth.pm/',
+  ],
 } as const;
 
 export type SiteLink = { label: string; url: string; note?: string };

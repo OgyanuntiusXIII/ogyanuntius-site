@@ -1,0 +1,27 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base
+  title="ページが見つかりません"
+  description="指定されたページは見つかりませんでした。"
+>
+  <div class="wrap measure error-page">
+    <p class="code">404</p>
+    <h1>ページが見つかりません</h1>
+    <p>移動したか、URLが違っているようです。</p>
+    <p><a class="link" href="/">← 表紙へ戻る</a></p>
+  </div>
+</Base>
+
+<style>
+  .error-page { padding-top: clamp(4rem, 12vw, 9rem); min-height: 70vh; }
+  .code {
+    margin: 0;
+    color: var(--accent);
+    font-family: var(--font-en);
+    font-size: clamp(3rem, 12vw, 8rem);
+    font-weight: 700;
+    line-height: 1;
+  }
+  h1 { margin: .5rem 0 1rem; font-size: clamp(1.5rem, 4vw, 2.4rem); }
+</style>

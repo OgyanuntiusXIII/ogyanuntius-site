@@ -66,7 +66,7 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
     {shownLinks.length > 0 ? (
       <ul class="plain">
         {shownLinks.map((l) => (
-          <li><a class="link" href={l.url} rel="noopener">{l.label} <span aria-hidden="true">↗</span></a></li>
+          <li><a class="link" href={l.url} rel="me noopener">{l.label} <span aria-hidden="true">↗</span></a></li>
         ))}
       </ul>
     ) : (
@@ -80,7 +80,7 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
 
     <h2 class="h2">CONTACT</h2>
     <ul class="plain">
-      <li><a class="link" href={CONTACT.x} rel="noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a></li>
+      <li><a class="link" href={CONTACT.x} rel="me noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a></li>
     </ul>
 
     <h2 class="h2">奥付</h2>

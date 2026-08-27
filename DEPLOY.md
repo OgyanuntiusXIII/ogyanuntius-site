@@ -59,4 +59,8 @@
 - [ ] 一冊にカーソルを置くと帯が出て、クリックで `/about` に飛ぶか
 - [ ] 作品ページ3つ・`/blog`・`/contents` が開くか
 - [ ] OGP：`https://cards-dev.twitter.com/validator` などでXの見え方を確認
-- [ ] `robots.txt` と `sitemap` は未設定（必要になったら足す）
+- [x] `robots.txt` と `sitemap.xml` を設定（2026-08-28）
+- [ ] Google Search Console でドメイン所有権を確認し、`sitemap.xml` を送信する
+- [ ] Bing Webmaster Tools でサイトを登録し、`sitemap.xml` を送信する
+- [ ] Cloudflare Bulk Redirects で `www.ogyanuntiusxiii.com/*` を非wwwへ301リダイレクトする
+- [ ] Cloudflare Bulk Redirects で `ogyanuntius-site.pages.dev/*` も独自ドメインへ301リダイレクトする

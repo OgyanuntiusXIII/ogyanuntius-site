@@ -9,9 +9,11 @@ interface Props {
   ogImage?: string;
   /** 表紙だけ true。ヘッダーとフッターを出さない */
   cover?: boolean;
+  /** About ページだけ true。ProfilePage / Person を出す */
+  profile?: boolean;
 }
 
-const { title, description = SITE.description, ogImage = SITE.ogImage, cover = false } = Astro.props;
+const { title, description = SITE.description, ogImage = SITE.ogImage, cover = false, profile = false } = Astro.props;
 
 const pageTitle = cover ? SITE.title : `${title}｜${SITE.title}`;
 // build.format:'file' だと pathname が /about.html になる。
@@ -19,6 +21,46 @@ const pageTitle = cover ? SITE.title : `${title}｜${SITE.title}`;
 const cleanPath = Astro.url.pathname.replace(/index\.html$/, '').replace(/\.html$/, '') || '/';
 const canonical = new URL(cleanPath, Astro.site ?? SITE.origin).href;
 const ogUrl = new URL(ogImage, Astro.site ?? SITE.origin).href;
+
+const websiteId = new URL('/#website', SITE.origin).href;
+const personId = new URL('/about#person', SITE.origin).href;
+const structuredData = cover
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      '@id': websiteId,
+      url: `${SITE.origin}/`,
+      name: SITE.title,
+      alternateName: SITE.titleEn,
+      description: SITE.description,
+      inLanguage: 'ja',
+    }
+  : profile
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'ProfilePage',
+        '@id': `${canonical}#profile`,
+        url: canonical,
+        name: `オギャヌンティウス十三世とは`,
+        isPartOf: { '@id': websiteId },
+        inLanguage: 'ja',
+        mainEntity: {
+          '@type': 'Person',
+          '@id': personId,
+          name: SITE.title,
+          alternateName: SITE.titleEn,
+          url: canonical,
+          description: SITE.creatorDescription,
+          image: new URL('/images/about/icon-cory.webp', SITE.origin).href,
+          sameAs: SITE.sameAs,
+          knowsAbout: ['ゲーム制作', 'アプリ開発', 'TRPGシナリオ制作', '動画制作'],
+        },
+      }
+    : null;
+
+const structuredDataJson = structuredData
+  ? JSON.stringify(structuredData).replace(/</g, '\\u003c')
+  : null;
 ---
 <!doctype html>
 <html lang="ja">
@@ -45,7 +87,10 @@ const ogUrl = new URL(ogImage, Astro.site ?? SITE.origin).href;
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogUrl} />
     <meta property="og:site_name" content={SITE.title} />
+    <meta property="og:locale" content="ja_JP" />
     <meta name="twitter:card" content="summary_large_image" />
+
+    {structuredDataJson && <script is:inline type="application/ld+json" set:html={structuredDataJson} />}
 
     <ClientRouter />
   </head>
