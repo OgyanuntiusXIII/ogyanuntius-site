@@ -6,6 +6,9 @@ export default defineConfig({
   // ここがズレると canonical と OGP が間違ったURLで配信される
   site: 'https://ogyanuntiusxiii.com',
   trailingSlash: 'never',
-  // 既定の directory 形式。/works/desk-takko で引ける（仕様書11章）
+  // /about/index.html だと Cloudflare Pages が /about -> /about/ へ308を返し、
+  // trailingSlash:'never' で出している canonical と食い違う（2026-08-27 実測）。
+  // file 形式なら /about.html が生成され、Pages はそれを /about で直接返す。
+  build: { format: 'file' },
   image: { responsiveStyles: true },
 });
