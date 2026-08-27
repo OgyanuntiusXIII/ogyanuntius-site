@@ -282,7 +282,7 @@ npm run preview  # ビルド結果の確認
 
 ## 7. 未確定（本人に聞かないと埋められない）
 
-- **GitHub / YouTube の URL** → `src/data/site.ts` の `LINKS`
+- **YouTube の URL** → `src/data/site.ts` の `LINKS`
   （空文字のままなら表示されない。**推測で埋めない**）
 - **BOOTH の各商品URL**（分かっているのは『雨降る最後の時間に』のみ。
   デスクタッコとしなりメイクはショップURLを暫定で入れてある）
