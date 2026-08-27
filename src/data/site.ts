@@ -7,8 +7,8 @@
 export const SITE = {
   title: 'オギャヌンティウス十三世',
   titleEn: 'OGYANUNTIUS XIII',
-  description:
-    'オギャヌンティウス十三世が発行する一冊の雑誌。ゲーム、アプリ、TRPGシナリオ、動画、そのほか。',
+  /** SNSのカードと検索結果に出る一文。表紙(トップ)で使われる */
+  description: 'オギャヌンティウス十三世の公式サイト',
   /** 本番URL。Cloudflare Pages の custom domain（2026-08-27 有効化） */
   origin: 'https://ogyanuntiusxiii.com',
   /** SNS共通のOGP。**SVGは X も Facebook も描画しない**ので JPEG にする */
