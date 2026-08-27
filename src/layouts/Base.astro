@@ -1,0 +1,65 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import { SITE } from '../data/site';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  /** 表紙だけ true。ヘッダーとフッターを出さない */
+  cover?: boolean;
+}
+
+const { title, description = SITE.description, ogImage = SITE.ogImage, cover = false } = Astro.props;
+
+const pageTitle = cover ? SITE.title : `${title}｜${SITE.title}`;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE.origin).href;
+const ogUrl = new URL(ogImage, Astro.site ?? SITE.origin).href;
+---
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <meta property="og:type" content={cover ? 'website' : 'article'} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogUrl} />
+    <meta property="og:site_name" content={SITE.title} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <ClientRouter />
+  </head>
+  <body>
+    <a class="skip" href="#main">本文へスキップ</a>
+
+    {!cover && (
+      <header class="rail">
+        <a href="/" style="text-decoration:none">{SITE.titleEn}</a>
+        <nav aria-label="誌面">
+          <a href="/contents" class="link">CONTENTS</a>
+          <span aria-hidden="true"> / </span>
+          <a href="/about" class="link">ABOUT</a>
+        </nav>
+      </header>
+    )}
+
+    <main id="main">
+      <slot />
+    </main>
+
+    {!cover && (
+      <footer class="rail" style="border-bottom:none;border-top:1px solid var(--rule)">
+        <span>{SITE.title} — VOL.01</span>
+        <a href="/" class="link">表紙へ戻る</a>
+      </footer>
+    )}
+  </body>
+</html>

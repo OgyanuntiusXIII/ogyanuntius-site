@@ -1,0 +1,254 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+const issues = await getCollection('issues');
+const issue = issues.find((i) => i.data.current) ?? issues[0];
+if (!issue) throw new Error('src/content/issues/ に号が1つも無い');
+
+const works = await getCollection('works');
+const scenarios = await getCollection('scenarios');
+
+type Resolved = { catch: string; href: string; badge?: string; no?: number };
+
+const index = new Map<string, { catch: string; href: string }>();
+for (const w of works) index.set(w.id, { catch: w.data.catch, href: `/works/${w.id}` });
+for (const s of scenarios) index.set(s.id, { catch: s.data.catch, href: `/scenario/${s.id}` });
+
+/** ref を解決する。見つからなければビルドを落とす（壊れたまま本番へ出さない） */
+function resolve(h: (typeof issue.data.headlines)[number]): Resolved {
+  if (h.collection === 'page') {
+    return { catch: h.catch ?? h.ref, href: h.ref, badge: h.badge, no: h.no };
+  }
+  const found = index.get(h.ref);
+  if (!found) {
+    throw new Error(
+      `vol01.md の headlines に未知の ref: "${h.ref}"。` +
+        `src/content/${h.collection}/${h.ref}.md が要る`
+    );
+  }
+  return { catch: h.catch ?? found.catch, href: found.href, badge: h.badge, no: h.no };
+}
+
+const slot = (name: string) =>
+  issue.data.headlines.filter((h) => h.slot === name).map(resolve);
+
+const lead = slot('lead');
+const upper = slot('upper');
+const side = slot('side');
+const lower = slot('lower');
+const strip = slot('strip');
+
+const issued = issue.data.published;
+const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, '0')}`;
+---
+
+<Base title="表紙" cover>
+  <div class="cover">
+    <div class="cover__rail">
+      <span>{issue.data.vol}　{issue.data.label}　{ym}</span>
+      <span class="cover__price">定価 ¥0</span>
+    </div>
+
+    <h1 class="cover__title">
+      <span class="cover__title-jp">オギャヌンティウス十三世</span>
+      <span class="cover__title-en">OGYANUNTIUS XIII</span>
+    </h1>
+
+    <div class="cover__body">
+      <div class="cover__left">
+        <p class="cover__theme">{issue.data.theme}</p>
+
+        {lead.map((h) => (
+          <a class="cover__lead" href={h.href}>
+            {h.no && <i class="no">{String(h.no).padStart(2, '0')}</i>}
+            {h.badge && <span class="label">{h.badge}</span>}
+            <span class="cover__lead-text">{h.catch}</span>
+          </a>
+        ))}
+
+        {lower.map((h) => (
+          <a class="cover__small" href={h.href}>
+            <span aria-hidden="true">▶</span> {h.catch}
+          </a>
+        ))}
+      </div>
+
+      <figure class="cover__visual">
+        <img
+          src={issue.data.mainVisual}
+          alt={issue.data.mainVisualAlt}
+          width="1200"
+          height="1500"
+          fetchpriority="high"
+        />
+      </figure>
+
+      <div class="cover__right">
+        {[...upper, ...side].map((h) => (
+          <a class="cover__mid" href={h.href}>
+            {h.no && <i class="no">{String(h.no).padStart(2, '0')}</i>}
+            {h.badge && <span class="label">{h.badge}</span>}
+            <span>{h.catch}</span>
+          </a>
+        ))}
+
+        <ul class="cover__strips">
+          {issue.data.strips.map((s) => <li>{s}</li>)}
+        </ul>
+      </div>
+    </div>
+
+    <div class="cover__foot">
+      <a href="/contents" class="cover__contents">
+        CONTENTS <span aria-hidden="true">→</span>
+      </a>
+      {strip.map((h) => (
+        <a class="cover__small" href={h.href}>
+          <span aria-hidden="true">▶</span> {h.catch}
+        </a>
+      ))}
+    </div>
+  </div>
+</Base>
+
+<style>
+  /* 表紙だけはインパクト最優先（仕様書5章）。ここ以外へこの書き方を持ち出さない。 */
+  .cover {
+    min-height: 100svh;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    padding: 0 var(--gut) calc(var(--gut) * 0.6);
+    gap: clamp(10px, 1.6vw, 22px);
+  }
+
+  .cover__rail {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--font-en);
+    font-size: clamp(10px, 1.1vw, 12px);
+    letter-spacing: 0.2em;
+    padding: 12px 0 8px;
+    border-bottom: 2px solid var(--rule);
+  }
+  .cover__price { color: var(--accent); font-weight: 700; }
+
+  .cover__title { margin: 0; }
+  .cover__title-jp {
+    display: block;
+    font-size: clamp(1.9rem, 7.8vw, 7.2rem);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.98;
+  }
+  .cover__title-en {
+    display: block;
+    font-family: var(--font-en);
+    font-size: clamp(9px, 1.25vw, 15px);
+    font-weight: 400;
+    letter-spacing: 0.52em;
+    padding-top: 0.5em;
+  }
+
+  .cover__body {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(16px, 2.4vw, 34px);
+    align-items: start;
+  }
+
+  .cover__theme {
+    margin: 0 0 0.5em;
+    font-size: clamp(2rem, 6.4vw, 4.6rem);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+  }
+
+  .cover__lead {
+    display: block;
+    text-decoration: none;
+    font-size: clamp(1.05rem, 2.1vw, 1.7rem);
+    font-weight: 700;
+    line-height: 1.35;
+    border-top: 1px solid var(--rule);
+    padding-top: 0.5em;
+    margin-bottom: 0.9em;
+  }
+  .cover__lead-text { display: inline; }
+  .cover__lead:hover .cover__lead-text,
+  .cover__mid:hover span:last-child { text-decoration: underline; }
+
+  .cover__mid {
+    display: block;
+    text-decoration: none;
+    font-size: clamp(0.95rem, 1.35vw, 1.15rem);
+    font-weight: 700;
+    line-height: 1.45;
+    border-top: 1px solid var(--rule);
+    padding: 0.5em 0 0.9em;
+  }
+
+  .cover__small {
+    display: inline-block;
+    text-decoration: none;
+    font-size: clamp(0.8rem, 1vw, 0.9rem);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-right: 1.4em;
+  }
+  .cover__small:hover { color: var(--accent); }
+
+  .cover__visual { margin: 0; }
+  .cover__visual img {
+    width: 100%;
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+  }
+
+  .cover__strips {
+    list-style: none;
+    margin: 0.6em 0 0;
+    padding: 0;
+    font-size: clamp(0.72rem, 0.92vw, 0.82rem);
+    line-height: 1.7;
+    color: var(--ink-mid);
+  }
+  .cover__strips li::before { content: '▸ '; color: var(--accent); }
+
+  .cover__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 1.2em;
+    border-top: 2px solid var(--rule);
+    padding-top: 10px;
+  }
+  .cover__contents {
+    font-family: var(--font-en);
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-decoration: none;
+    margin-right: auto;
+  }
+  .cover__contents:hover { color: var(--accent); }
+
+  /* 見開きを感じさせるのはPCだけ（仕様書19章） */
+  @media (min-width: 900px) {
+    .cover { overflow: hidden; }
+    .cover__title-jp { white-space: nowrap; }
+    .cover__body {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.15fr) minmax(0, 0.8fr);
+      align-items: stretch;
+    }
+    .cover__left { display: flex; flex-direction: column; justify-content: flex-start; }
+    .cover__visual {
+      height: 100%;
+      display: flex;
+      align-items: stretch;
+    }
+    .cover__visual img { height: 100%; object-fit: cover; }
+  }
+</style>

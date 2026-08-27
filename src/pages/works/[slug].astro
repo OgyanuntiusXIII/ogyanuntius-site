@@ -1,0 +1,21 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import WorkArticle from '../../components/WorkArticle.astro';
+
+export async function getStaticPaths() {
+  const works = await getCollection('works');
+  return works.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: { entry, feature: `FEATURE ${String(i + 1).padStart(2, '0')}` },
+  }));
+}
+
+const { entry, feature } = Astro.props;
+const { Content } = await render(entry);
+---
+<Base title={entry.data.title} description={entry.data.description} ogImage={entry.data.ogImage ?? entry.data.thumbnail}>
+  <WorkArticle data={entry.data} feature={feature}>
+    <Content />
+  </WorkArticle>
+</Base>

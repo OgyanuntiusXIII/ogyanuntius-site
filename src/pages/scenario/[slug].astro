@@ -1,0 +1,21 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import WorkArticle from '../../components/WorkArticle.astro';
+
+export async function getStaticPaths() {
+  const scenarios = await getCollection('scenarios');
+  return scenarios.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+<Base title={entry.data.title} description={entry.data.description} ogImage={entry.data.ogImage ?? entry.data.thumbnail}>
+  <WorkArticle data={entry.data} feature="TRPG SCENARIO">
+    <Content />
+  </WorkArticle>
+</Base>

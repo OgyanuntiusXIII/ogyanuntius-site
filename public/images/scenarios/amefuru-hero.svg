@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="AMEFURU">
+  <rect width="1600" height="900" fill="#eceaf2"/>
+  <g fill="none" stroke="#111" stroke-width="2">
+    <rect x="8" y="8" width="1584" height="884"/>
+    <path d="M8 8 L1592 892 M1592 8 L8 892"/>
+  </g>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
+        font-family="system-ui, sans-serif" font-size="72" font-weight="700" fill="#111">AMEFURU</text>
+  <text x="50%" y="58%" text-anchor="middle" dominant-baseline="middle"
+        font-family="system-ui, sans-serif" font-size="40" fill="#111" opacity="0.6">PLACEHOLDER / 差し替え予定</text>
+</svg>

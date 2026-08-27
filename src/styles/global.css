@@ -1,0 +1,135 @@
+/* =========================================================
+   オギャヌンティウス十三世 / 誌面の基礎
+   遠目はファッション誌70% / 近づくとコロコロ30%
+   ここは「紙の規格」。個別の演出は各ページ側に書く。
+   ========================================================= */
+
+:root {
+  /* 日本語ウェブフォントは読み込まない（数MB級で、決定パターン4「軽さ＝継続可能性」に反する）。
+     題字のインパクトはサイズ差・字間・レイアウトで出す。 */
+  --font-jp: "Hiragino Kaku Gothic ProN", "Yu Gothic", "YuGothic",
+             "Noto Sans JP", system-ui, sans-serif;
+  --font-mincho: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", serif;
+  --font-en: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --ink: #101010;
+  --ink-mid: #4a4a4a;
+  --paper: #ffffff;
+  --paper-2: #f4f2ed;   /* 少しだけ紙寄りの白 */
+  --rule: #101010;
+  --accent: #e0301e;    /* コロコロ側の担当。使うのはラベル・番号・矢印だけ */
+
+  --gut: clamp(16px, 4vw, 56px);   /* 版面の外余白 */
+  --hair: 1px;
+  --turn: 260ms;                   /* ページめくりの尺。伸ばさない（仕様書10章） */
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-jp);
+  font-size: 17px;
+  line-height: 1.85;
+  font-feature-settings: "palt" 1;
+  text-underline-offset: 0.22em;
+}
+
+img, svg { max-width: 100%; height: auto; display: block; }
+
+a { color: inherit; }
+
+/* 表紙以外はリンクが分かること（仕様書20章） */
+.prose a,
+a.link { text-decoration: underline; text-decoration-thickness: 1px; }
+.prose a:hover, a.link:hover { color: var(--accent); }
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.skip {
+  position: absolute; left: -9999px;
+  background: var(--ink); color: var(--paper); padding: .6em 1em; z-index: 99;
+}
+.skip:focus { left: var(--gut); top: 8px; }
+
+/* --- 誌面の共通パーツ ------------------------------------ */
+
+.rail {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 1em;
+  font-family: var(--font-en);
+  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  padding: 10px var(--gut);
+  border-bottom: var(--hair) solid var(--rule);
+}
+
+.label {
+  display: inline-block;
+  font-family: var(--font-en);
+  font-size: 10px; font-weight: 700; letter-spacing: .16em;
+  background: var(--accent); color: #fff;
+  padding: .25em .6em; border-radius: 2px;
+  vertical-align: .18em;
+}
+
+.no {
+  font-family: var(--font-en);
+  font-weight: 700; font-style: italic;
+  color: var(--accent);
+  margin-right: .4em;
+}
+
+/* 本文（表紙以外は可読性優先） */
+.prose { max-width: 40rem; }
+.prose h2 {
+  font-size: 1.35rem; line-height: 1.5; margin: 2.6em 0 .8em;
+  padding-bottom: .3em; border-bottom: var(--hair) solid var(--rule);
+}
+.prose h3 { font-size: 1.1rem; margin: 2em 0 .6em; }
+.prose p { margin: 0 0 1.4em; }
+.prose ul, .prose ol { padding-left: 1.4em; margin: 0 0 1.4em; }
+.prose li { margin-bottom: .5em; }
+.prose table { width: 100%; border-collapse: collapse; margin: 0 0 1.6em; }
+.prose th, .prose td {
+  text-align: left; padding: .6em .8em;
+  border-bottom: var(--hair) solid #ddd;
+}
+.prose th { background: var(--paper-2); white-space: nowrap; }
+.prose blockquote {
+  margin: 0 0 1.4em; padding-left: 1em;
+  border-left: 3px solid var(--accent); color: var(--ink-mid);
+}
+
+.wrap { padding: 0 var(--gut) 6rem; }
+.measure { max-width: 62rem; margin: 0 auto; }
+
+/* --- ページめくり ----------------------------------------
+   紙を物理シミュレーションしない。横へ送るだけ（仕様書10章）。 */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: turn-out var(--turn) cubic-bezier(.4, 0, .2, 1) both;
+  }
+  ::view-transition-new(root) {
+    animation: turn-in var(--turn) cubic-bezier(.4, 0, .2, 1) both;
+  }
+}
+@keyframes turn-out {
+  to { transform: translateX(-4%); opacity: 0; }
+}
+@keyframes turn-in {
+  from { transform: translateX(6%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

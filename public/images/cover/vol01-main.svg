@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1500" width="1200" height="1500" role="img" aria-label="MAIN VISUAL">
+  <rect width="1200" height="1500" fill="#f2f0ea"/>
+  <g fill="none" stroke="#111" stroke-width="2">
+    <rect x="8" y="8" width="1184" height="1484"/>
+    <path d="M8 8 L1192 1492 M1192 8 L8 1492"/>
+  </g>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
+        font-family="system-ui, sans-serif" font-size="54" font-weight="700" fill="#111">MAIN VISUAL</text>
+  <text x="50%" y="58%" text-anchor="middle" dominant-baseline="middle"
+        font-family="system-ui, sans-serif" font-size="30" fill="#111" opacity="0.6">PLACEHOLDER / 差し替え予定</text>
+</svg>
