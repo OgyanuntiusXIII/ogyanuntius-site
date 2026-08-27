@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { SITE, CONTACT } from '../data/site';
+import { SITE, CONTACT, CREDITS } from '../data/site';
 ---
 <Base title="WHO IS OGYANUNTIUS XIII?" description="オギャヌンティウス十三世が何をしている人なのか。">
   <div class="wrap measure">
@@ -56,6 +56,8 @@ import { SITE, CONTACT } from '../data/site';
       </p>
     </div>
 
+    <p class="credits">{CREDITS.text}</p>
+
     <p class="back"><a class="link" href="/">← 表紙へ戻る</a></p>
   </div>
   <p class="sr">{SITE.titleEn}</p>
@@ -82,6 +84,7 @@ import { SITE, CONTACT } from '../data/site';
     .icon img { max-width: 300px; }
   }
   .h1 { font-family: var(--font-en); font-size: clamp(1.9rem, 6vw, 3.6rem); line-height: 1.05; letter-spacing: -.02em; margin: 0; }
-  .back { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
+  .credits { margin: 3rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--rule); font-size: .78rem; line-height: 1.7; color: var(--ink-mid); }
+  .back { margin-top: 1.2rem; }
   .sr { position: absolute; left: -9999px; }
 </style>

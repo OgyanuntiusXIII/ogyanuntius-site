@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import { LINKS, SITE, CONTACT } from '../data/site';
+import { LINKS, SITE, CONTACT, CREDITS } from '../data/site';
 
 const issues = await getCollection('issues');
 const issue = issues.find((i) => i.data.current) ?? issues[0];
@@ -83,6 +83,7 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
 
     <h2 class="h2">奥付</h2>
     <pre class="colophon">{issue?.data.colophon.join('\n')}</pre>
+    <p class="credits"><span class="credits__label">{CREDITS.label}</span>{CREDITS.text}</p>
   </div>
 </Base>
 
@@ -103,4 +104,9 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
   .plain li { padding: .5rem 0; border-bottom: 1px solid #e6e6e6; }
   .dim { color: var(--ink-mid); font-size: .88rem; }
   .colophon { font-family: var(--font-jp); background: var(--paper-2); border: 1px solid var(--rule); padding: 1.2rem; line-height: 1.9; white-space: pre-wrap; }
+  .credits { margin: .9rem 0 0; font-size: .78rem; line-height: 1.7; color: var(--ink-mid); }
+  .credits__label {
+    display: inline-block; margin-right: .7em; padding: .05em .5em;
+    border: 1px solid currentColor; font-size: .92em; letter-spacing: .08em;
+  }
 </style>
