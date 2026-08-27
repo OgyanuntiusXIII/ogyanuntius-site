@@ -10,7 +10,7 @@ mainVisual: /images/cover/2026-09-main.webp
 mainVisualAlt: 白衣の男性とサメのぬいぐるみを囲む4人の少女たちの集合写真
 mainVisualFocus: 50% 0%
 coverInk: dark
-coverNote: 今月プレイしたCoCのキャラ達。全員生きているが、年代が違う人間もいる。
+coverNote: 今月プレイしたCoCのキャラ達。全員生きているが、年代が違う人間もいる。（医者が1920s。名前はオギャーヌ・ドクターカモン）
 magTitleJp: 月刊
 magTitleEn: OGYANUN
 coverLines:
@@ -48,7 +48,6 @@ colophon:
   - 発行：オギャヌンティウス十三世
   - Web：ogyanuntiusxiii.com
   - X：@ogyanuntiusxiii
-  - Mail：（連絡はXのみ）
 ---
 
 創刊号。2026年9月号。作品は3つしかない。だから3つとも特集にした。

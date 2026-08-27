@@ -27,6 +27,15 @@ const ogUrl = new URL(ogImage, Astro.site ?? SITE.origin).href;
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
+    {/* 誌名にだけ使うディドー系。**ラテン部分集合のみで数十KB。**
+        日本語ウェブフォント（数MB級）は入れない、という判断は変えていない */}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..600&display=swap"
+    />
+
     <meta property="og:type" content={cover ? 'website' : 'article'} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />

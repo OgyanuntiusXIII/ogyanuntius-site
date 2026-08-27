@@ -135,8 +135,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
             </ul>
 
             <div class="mag__bottom">
-              <span class="mag__pub">発行 オギャヌンティウス十三世</span>
               <span class="mag__price">¥0</span>
+              <span class="mag__pub">発行 オギャヌンティウス十三世</span>
               <span class="mag__barcode"></span>
             </div>
           </div>
@@ -387,27 +387,33 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   }
   .mag__sep { opacity: .45; }
 
-  /* 誌名。サイト名ではない */
+  /* 誌名。サイト名ではない。
+     ファッション誌の組み：ディドー系セリフ・大文字・字間広め・罫は極細。
+     太いゴシック＋極太罫は新聞やコロコロの組みで、遠目の第一印象が変わる。 */
   .mag__masthead {
-    margin: .18em 0 0;
-    display: flex;
+    margin: .55em 0 0;
     white-space: nowrap;
-    align-items: baseline;
-    gap: .16em;
-    padding-bottom: .1em;
-    border-bottom: .8cqw solid var(--mag-ink);
-    line-height: .9;
+    padding-bottom: .28em;
+    border-bottom: 1px solid var(--mag-ink);
+    line-height: .88;
   }
   .mag__masthead-jp {
-    font-size: 5.6cqw;
-    font-weight: 800;
-    letter-spacing: -.02em;
+    display: block;
+    margin-bottom: .9em;
+    font-size: 2.4cqw;
+    font-weight: 400;
+    letter-spacing: .62em;
+    text-indent: .62em;   /* 字間の右余りを相殺して、左を罫と揃える */
   }
   .mag__masthead-en {
-    font-family: var(--font-en);
-    font-size: 13cqw;
-    font-weight: 800;
-    letter-spacing: -.035em;
+    display: block;
+    font-family: var(--font-display);
+    font-size: 16.2cqw;
+    font-weight: 500;
+    font-style: normal;
+    letter-spacing: .03em;
+    text-indent: .03em;
+    text-transform: uppercase;
   }
 
   /* 表紙に刷られた見出し。これが無いと雑誌に見えない */
@@ -443,19 +449,18 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   }
 
   .mag__bottom {
-    margin-top: .3em;
+    margin-top: .5em;
     text-shadow: 0 1px 2px rgba(255, 255, 255, .55);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: end;
-    gap: .3em 1em;
+    display: flex;
+    align-items: flex-end;
+    gap: .9em;
     font-family: var(--font-en);
     font-size: 2.7cqw;
     font-weight: 700;
     letter-spacing: .1em;
   }
   .mag__pub {
-    grid-column: 1 / -1;
+    margin-right: auto;
     font-family: var(--font-jp);
     font-size: 2.1cqw;
     font-weight: 400;
@@ -519,8 +524,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
 
   /* バーコード。背景の縞で描くので画像は増えない */
   .mag__barcode {
-    width: 24cqw;
-    height: 7cqw;
+    width: 22cqw;
+    height: 6cqw;
     background-image: repeating-linear-gradient(90deg,
       currentColor 0 1.5%, transparent 1.5% 3%,
       currentColor 3% 4%,   transparent 4% 6.5%,

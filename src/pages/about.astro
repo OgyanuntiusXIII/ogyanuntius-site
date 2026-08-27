@@ -25,10 +25,10 @@ import { SITE, CONTACT } from '../data/site';
       </ul>
 
       <h2>連絡</h2>
-      <ul>
-        <li>メール：<a class="link" href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a></li>
-        <li>X：<a class="link" href={CONTACT.x} rel="noopener">@ogyanuntiusxiii <span aria-hidden="true">↗</span></a></li>
-      </ul>
+      <p>
+        <a class="link" href={CONTACT.x} rel="noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a>
+        でお願いします。
+      </p>
     </div>
 
     <p class="back"><a class="link" href="/">← 表紙へ戻る</a></p>

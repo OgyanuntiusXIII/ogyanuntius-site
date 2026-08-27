@@ -5,8 +5,8 @@ category: app
 date: 2026-08-15
 status: published
 priceType: free
-thumbnail: /images/works/desk-takko-thumb.svg
-heroImage: /images/works/desk-takko-hero.svg
+thumbnail: /images/works/desk-takko.webp
+heroImage: /images/works/desk-takko.webp
 description: デスクトップの上に住みつくタコのデスクトップマスコット。窓の縁に張り付き、勝手に喋り、たまに墨を吐く。放っておくと何かしている。
 links:
   - label: BOOTH

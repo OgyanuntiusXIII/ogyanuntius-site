@@ -5,8 +5,8 @@ category: app
 date: 2026-08-18
 status: published
 priceType: free
-thumbnail: /images/works/shinari-make-thumb.svg
-heroImage: /images/works/shinari-make-hero.svg
+thumbnail: /images/works/shinari-make.webp
+heroImage: /images/works/shinari-make.webp
 description: TRPGシナリオを書いて、そのまま一冊の本に組み上げるための制作ツール。書く工程と組版の工程を分けずに済ませる。
 links:
   - label: BOOTH

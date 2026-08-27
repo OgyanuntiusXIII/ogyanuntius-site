@@ -24,8 +24,11 @@ export const LINKS: SiteLink[] = [
   { label: 'YouTube', url: '' },  // TODO(本人確認)
 ];
 
-/** 連絡先 */
+/**
+ * 連絡先。**Xのみ**（本人・2026-08-27）。
+ * メールアドレスは平文で載せるとスパムに拾われるため、載せない判断をした。
+ */
 export const CONTACT = {
-  email: '（連絡はXのみ）',
   x: 'https://x.com/ogyanuntiusxiii',
+  xHandle: '@ogyanuntiusxiii',
 } as const;

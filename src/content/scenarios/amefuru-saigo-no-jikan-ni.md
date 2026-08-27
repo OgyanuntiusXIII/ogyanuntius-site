@@ -5,8 +5,8 @@ category: scenario
 date: 2026-08-19
 status: published
 priceType: donation
-thumbnail: /images/scenarios/amefuru-thumb.svg
-heroImage: /images/scenarios/amefuru-hero.svg
+thumbnail: /images/scenarios/amefuru-thumb.webp
+heroImage: /images/scenarios/amefuru-hero.webp
 description: クトゥルフ神話TRPG（新クトゥルフ神話TRPG）シナリオ。無料DL版と支援版がある。
 links:
   - label: BOOTH

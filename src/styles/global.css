@@ -11,6 +11,8 @@
              "Noto Sans JP", system-ui, sans-serif;
   --font-mincho: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", serif;
   --font-en: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* 誌名専用。届かない環境でも Didot / Bodoni MT / Times で品は保てる */
+  --font-display: "Bodoni Moda", "Didot", "Bodoni MT", "Times New Roman", serif;
 
   --ink: #101010;
   --ink-mid: #4a4a4a;
