@@ -44,7 +44,6 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
 ---
 
 <Base title="表紙" cover>
-  <div class="stage">
   <div class="cover">
     <div class="cover__rail">
       <span>{issue.data.vol}　{issue.data.label}　{ym}</span>
@@ -115,34 +114,13 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
 </Base>
 
 <style>
-  /* 表紙だけはインパクト最優先（仕様書5章）。ここ以外へこの書き方を持ち出さない。
-
-     誌面は「ビューポート」ではなく「一枚の縦長の面」。
-     画面が横長でも誌面は縦長のまま、真ん中に一冊置いてあるように見せる。
-     中の寸法はすべて cqw（誌面の幅基準）なので、面が伸び縮みしても構図は崩れない。 */
-
-  .stage {
+  /* 表紙だけはインパクト最優先（仕様書5章）。ここ以外へこの書き方を持ち出さない。 */
+  .cover {
     min-height: 100svh;
     display: grid;
-    place-items: center;
-    padding: clamp(10px, 2.2vh, 28px) clamp(10px, 2vw, 28px);
-    background: var(--ground);
-  }
-
-  .cover {
-    container-type: inline-size;
-    position: relative;
-    width: min(100%, calc((100svh - clamp(20px, 4.4vh, 56px)) * var(--page-ratio)));
-    aspect-ratio: var(--page-ratio);
-    display: grid;
     grid-template-rows: auto auto 1fr auto;
-    gap: 1.4cqw;
-    padding: 0 3.4cqw 3cqw;
-    background: var(--paper);
-    box-shadow:
-      0 1px 0 rgba(0, 0, 0, .18),
-      0 18px 40px -14px rgba(0, 0, 0, .34);
-    overflow: hidden;
+    padding: 0 var(--gut) calc(var(--gut) * 0.6);
+    gap: clamp(10px, 1.6vw, 22px);
   }
 
   .cover__rail {
@@ -150,9 +128,9 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
     justify-content: space-between;
     align-items: baseline;
     font-family: var(--font-en);
-    font-size: 1.55cqw;
-    letter-spacing: .2em;
-    padding: 2.6cqw 0 1.1cqw;
+    font-size: clamp(10px, 1.1vw, 12px);
+    letter-spacing: 0.2em;
+    padding: 12px 0 8px;
     border-bottom: 2px solid var(--rule);
   }
   .cover__price { color: var(--accent); font-weight: 700; }
@@ -160,87 +138,82 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
   .cover__title { margin: 0; }
   .cover__title-jp {
     display: block;
-    font-size: 8.6cqw;
+    font-size: clamp(1.9rem, 7.8vw, 7.2rem);
     font-weight: 800;
-    letter-spacing: -.045em;
-    line-height: .98;
-    white-space: nowrap;
+    letter-spacing: -0.045em;
+    line-height: 0.98;
   }
   .cover__title-en {
     display: block;
     font-family: var(--font-en);
-    font-size: 1.5cqw;
+    font-size: clamp(9px, 1.25vw, 15px);
     font-weight: 400;
-    letter-spacing: .5em;
-    padding-top: .6em;
+    letter-spacing: 0.52em;
+    padding-top: 0.5em;
   }
 
   .cover__body {
     display: grid;
-    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.2fr) minmax(0, .78fr);
-    gap: 2.6cqw;
-    align-items: stretch;
-    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: clamp(16px, 2.4vw, 34px);
+    align-items: start;
   }
 
-  .cover__left { display: flex; flex-direction: column; }
-
   .cover__theme {
-    margin: 0 0 .55em;
-    font-size: 6.8cqw;
+    margin: 0 0 0.5em;
+    font-size: clamp(2rem, 6.4vw, 4.6rem);
     font-weight: 800;
     line-height: 1.02;
-    letter-spacing: -.035em;
+    letter-spacing: -0.03em;
   }
 
   .cover__lead {
     display: block;
     text-decoration: none;
-    font-size: 2.9cqw;
+    font-size: clamp(1.05rem, 2.1vw, 1.7rem);
     font-weight: 700;
-    line-height: 1.32;
+    line-height: 1.35;
     border-top: 1px solid var(--rule);
-    padding-top: .5em;
-    margin-bottom: .8em;
+    padding-top: 0.5em;
+    margin-bottom: 0.9em;
   }
+  .cover__lead-text { display: inline; }
   .cover__lead:hover .cover__lead-text,
   .cover__mid:hover span:last-child { text-decoration: underline; }
 
   .cover__mid {
     display: block;
     text-decoration: none;
-    font-size: 2.15cqw;
+    font-size: clamp(0.95rem, 1.35vw, 1.15rem);
     font-weight: 700;
-    line-height: 1.42;
+    line-height: 1.45;
     border-top: 1px solid var(--rule);
-    padding: .5em 0 .9em;
+    padding: 0.5em 0 0.9em;
   }
 
   .cover__small {
     display: inline-block;
     text-decoration: none;
-    font-size: 1.75cqw;
+    font-size: clamp(0.8rem, 1vw, 0.9rem);
     font-weight: 700;
-    margin-right: 1.6em;
+    letter-spacing: 0.02em;
+    margin-right: 1.4em;
   }
   .cover__small:hover { color: var(--accent); }
 
-  /* 面の中で画像だけが縦に伸びる。投げ込む画像の縦横比が違っても構図は変わらない */
-  .cover__visual { margin: 0; min-height: 0; }
+  .cover__visual { margin: 0; }
   .cover__visual img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
     border: 1px solid var(--rule);
     background: var(--paper-2);
   }
 
   .cover__strips {
     list-style: none;
-    margin: .6em 0 0;
+    margin: 0.6em 0 0;
     padding: 0;
-    font-size: 1.5cqw;
-    line-height: 1.65;
+    font-size: clamp(0.72rem, 0.92vw, 0.82rem);
+    line-height: 1.7;
     color: var(--ink-mid);
   }
   .cover__strips li::before { content: '▸ '; color: var(--accent); }
@@ -249,44 +222,34 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 0 1.4em;
+    gap: 0 1.2em;
     border-top: 2px solid var(--rule);
-    padding-top: 1.2cqw;
+    padding-top: 10px;
   }
   .cover__contents {
     font-family: var(--font-en);
-    font-size: 2cqw;
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
     font-weight: 700;
-    letter-spacing: .2em;
+    letter-spacing: 0.2em;
     text-decoration: none;
     margin-right: auto;
   }
   .cover__contents:hover { color: var(--accent); }
 
-  .no { font-size: .9em; }
-
-  /* スマホでは一冊を置く見せ方をやめ、縦長の誌面そのものにする（仕様書19章）。
-     コンセプトより操作性。ただし表紙のインパクトは落とさない。 */
-  @media (max-width: 700px) {
-    .stage { padding: 0; background: var(--paper); }
-    .cover {
-      width: 100%;
-      aspect-ratio: auto;
-      min-height: 100svh;
-      box-shadow: none;
-      padding: 0 var(--gut) var(--gut);
-      gap: 3cqw;
+  /* 見開きを感じさせるのはPCだけ（仕様書19章） */
+  @media (min-width: 900px) {
+    .cover { overflow: hidden; }
+    .cover__title-jp { white-space: nowrap; }
+    .cover__body {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.15fr) minmax(0, 0.8fr);
+      align-items: stretch;
     }
-    .cover__body { grid-template-columns: 1fr; gap: 4cqw; }
-    .cover__title-jp { font-size: 9cqw; }
-    .cover__title-en { font-size: 2.4cqw; letter-spacing: .4em; }
-    .cover__theme { font-size: 9.5cqw; }
-    .cover__lead { font-size: 4.6cqw; }
-    .cover__mid { font-size: 3.9cqw; }
-    .cover__small { font-size: 3.2cqw; }
-    .cover__strips { font-size: 2.9cqw; }
-    .cover__contents { font-size: 3.4cqw; }
-    .cover__rail { font-size: 2.6cqw; }
-    .cover__visual { aspect-ratio: 4 / 5; }
+    .cover__left { display: flex; flex-direction: column; justify-content: flex-start; }
+    .cover__visual {
+      height: 100%;
+      display: flex;
+      align-items: stretch;
+    }
+    .cover__visual img { height: 100%; object-fit: cover; }
   }
 </style>
