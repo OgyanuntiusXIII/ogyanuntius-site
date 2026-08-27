@@ -179,10 +179,30 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
         <ul class="cover__strips">
           {issue.data.strips.map((s) => <li>{s}</li>)}
         </ul>
+
+        {/* 右下の余白に立つタッコ。装飾なので読み上げからは外す */}
+        <img
+          class="cover__tako"
+          src="/images/about/tako.webp"
+          alt=""
+          width="232"
+          height="302"
+          loading="eager"
+          aria-hidden="true"
+        />
       </div>
     </div>
 
     <div class="cover__foot">
+      <img
+        class="cover__mark"
+        src="/images/about/tako-icon.webp"
+        alt=""
+        width="128"
+        height="91"
+        loading="eager"
+        aria-hidden="true"
+      />
       <a href="/contents" class="cover__contents">
         CONTENTS <span aria-hidden="true">→</span>
       </a>
@@ -621,6 +641,24 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   }
   .cover__strips li::before { content: '▸ '; color: var(--accent); }
 
+  /* 右カラムの余白に立つタッコ。元素材が小さいので**拡大して使わない**（等倍で置く） */
+  .cover__tako {
+    margin-top: auto;
+    align-self: flex-end;
+    width: clamp(74px, 8vw, 116px);
+    height: auto;
+    padding-top: .8rem;
+  }
+
+  /* 下の帯のアクセント。ドット絵なので補間せずカリッと出す */
+  .cover__mark {
+    width: clamp(20px, 2vw, 28px);
+    height: auto;
+    margin-right: .9em;
+    image-rendering: pixelated;
+    align-self: center;
+  }
+
   .cover__foot {
     display: flex;
     flex-wrap: wrap;
@@ -659,6 +697,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
       align-items: stretch;
     }
     .cover__left { display: flex; flex-direction: column; justify-content: flex-start; }
+    /* タッコを右カラムの一番下（罫のすぐ上）へ落とす */
+    .cover__right { display: flex; flex-direction: column; }
     .cover__visual { height: 100%; align-items: center; }
     .mag-link { height: 100%; align-items: center; }
     .mag { width: auto; height: 100%; max-width: 100%; }
