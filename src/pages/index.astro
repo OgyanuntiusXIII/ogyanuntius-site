@@ -180,13 +180,13 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           {issue.data.strips.map((s) => <li>{s}</li>)}
         </ul>
 
-        {/* 右下の余白に立つタッコ。押すとデスクタッコの紹介へ */}
+        {/* 右下の余白に座るタッコ。押すとデスクタッコの紹介へ */}
         <a class="cover__tako" href="/works/desk-takko" aria-label="デスクタッコの紹介へ">
           <img
-            src="/images/about/tako.webp"
+            src="/images/about/tako-icon.webp"
             alt=""
-            width="444"
-            height="246"
+            width="288"
+            height="204"
             loading="eager"
             aria-hidden="true"
           />
@@ -195,16 +195,6 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     </div>
 
     <div class="cover__foot">
-      <a class="cover__mark" href="/works/desk-takko" aria-label="デスクタッコの紹介へ">
-        <img
-          src="/images/about/tako-icon.webp"
-          alt=""
-          width="96"
-          height="68"
-          loading="eager"
-          aria-hidden="true"
-        />
-      </a>
       <a href="/contents" class="cover__contents">
         CONTENTS <span aria-hidden="true">→</span>
       </a>
@@ -649,50 +639,53 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     margin-top: auto;
     align-self: flex-end;
     display: block;
-    width: clamp(96px, 9.5vw, 148px);   /* 3xで書き出してあるので実表示はこの1/3相当 */
+    /* **ドット絵なので幅は 48px の整数倍だけ。** 半端な幅にするとドットが潰れる */
+    width: 144px;                        /* 48 × 3 */
     padding-top: .8rem;
     /* 行間のぶん下へ出して、下の罫に足を着ける */
     margin-bottom: calc(var(--cover-gap) * -1);
     transition: transform 160ms ease;
   }
-  .cover__tako img { width: 100%; height: auto; display: block; }
-  .cover__tako:hover { transform: translateY(-4px) rotate(-2deg); }
-
-  /* 下の帯のアクセント。**48x34 がドット絵の本来の解像度**。
-     それ未満で出すとドットが潰れるので、48px を下限にして整数倍で置く。 */
-  .cover__mark {
-    display: block;
-    flex: none;
-    width: 48px;
-    margin-right: 1em;
-    align-self: center;
-    transition: transform 160ms ease;
-  }
-  .cover__mark img {
+  .cover__tako img {
     width: 100%;
     height: auto;
     display: block;
-    image-rendering: pixelated;
+    image-rendering: pixelated;   /* 補間させない。ドットをそのまま出す */
   }
-  .cover__mark:hover { transform: translateY(-3px); }
+  .cover__tako:hover { transform: translateY(-4px) rotate(-2deg); }
 
   .cover__foot {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     gap: 0 1.2em;
     border-top: 2px solid var(--rule);
     padding-top: 10px;
   }
+  /* 目次への入口。白地の誌面で一番目立たせたいので、ここだけ黒ベタ＋白抜きにする */
   .cover__contents {
     font-family: var(--font-en);
-    font-size: clamp(0.8rem, 1.1vw, 1rem);
+    font-size: clamp(0.82rem, 1.1vw, 1rem);
     font-weight: 700;
     letter-spacing: 0.2em;
     text-decoration: none;
     margin-right: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: .7em;
+    background: var(--ink);
+    color: var(--paper);
+    padding: .6em 1.1em .6em 1.2em;
+    transition: background 140ms ease, transform 140ms ease;
   }
-  .cover__contents:hover { color: var(--accent); }
+  .cover__contents span { transition: transform 140ms ease; }
+  .cover__contents:hover,
+  .cover__contents:focus-visible {
+    background: var(--accent);
+    color: var(--paper);
+    transform: translateY(-2px);
+  }
+  .cover__contents:hover span { transform: translateX(4px); }
 
   /* 背の低いノートPC（720p等）では情報量を少し落として一画面に収める。
      密度は上げたいが、表紙が溢れるほうが損（仕様書7章 一画面で完結）。 */
@@ -704,7 +697,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     .cover__right .block__list li:nth-child(n + 3) { display: none; }
     .cover__theme { font-size: clamp(1.8rem, 5.4vw, 3.6rem); }
     .cover__strips { display: none; }
-    .cover__tako { padding-top: .2rem; width: clamp(84px, 8.4vw, 124px); }
+    .cover__tako { padding-top: .2rem; width: 96px; }   /* 48 × 2 */
   }
 
   /* 見開きを感じさせるのはPCだけ（仕様書19章） */
