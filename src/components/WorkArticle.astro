@@ -73,7 +73,8 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
         if (!id) return;
         const f = document.createElement('iframe');
         // nocookie 版。再生するまでCookieを置かない
-        f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+        // playsinline はスマホで全画面に飛ばされないため
+        f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`;
         f.title = '紹介ムービー';
         f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
         f.allowFullscreen = true;
@@ -113,7 +114,16 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
      クリックされるまで iframe を作らない。それまでは手元の画像だけ。 */
   .hero--video { position: relative; overflow: hidden; padding: 0; }
   .hero--video > img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .hero--video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  /* iframe は**JSで後から作る**ので Astro のスコープ属性が付かない。
+     :global() を付けないとこのCSSは一切当たらない（実測で304x154の素のiframeになった） */
+  .hero--video :global(iframe) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
 
   .hero__play {
     position: absolute;
