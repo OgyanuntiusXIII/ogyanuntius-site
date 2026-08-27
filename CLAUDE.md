@@ -66,6 +66,19 @@ Vault の絶対パス：`C:\Users\owner\Documents\Obsidian\MyBrain`
 3. `src/content/news/` に `kind: release` を1件足す
 4. 表紙に出すなら `issues/vol01.md` の `headlines` へ
 
+### 「表紙の画像を差し替えて」／画像を1枚渡されたとき
+
+**縦横比は気にしなくていい。** 誌面の枠が縦長で、`object-fit: cover` が合わせる。
+
+1. 画像を `public/images/cover/<vol>-main.<拡張子>` へ置く
+2. `src/content/issues/<vol>.md` の `mainVisual` をそのパスに書き換える
+3. `mainVisualAlt` を書き直す（**altは必須**。無いとビルドが落ちる）
+4. `mainVisualFocus` で「どこを見せるか」を決める（例 `50% 30%` で上寄り）
+   → 人物の顔が枠から切れるのを防ぐ。**渡された画像の構図を見てから決める**
+5. `npm run build`
+
+損しにくいのは**縦長〜正方形**の画像。極端な横長は左右が大きく切られる。
+
 ### 「VOL.02 を作って」
 
 1. `src/content/issues/vol01.md` の `current` を `false` に
@@ -127,6 +140,18 @@ ogImage:      # 任意。無ければ thumbnail が使われる
 ルールを緩めたくなったら、緩める前に理由を本人へ言うこと。
 
 ---
+
+## 4.5 表紙の調整つまみ
+
+`src/styles/global.css` の変数を触るだけで誌面の見え方が変わる。**表紙のコードは触らない。**
+
+| 変数 | 意味 |
+|---|---|
+| `--page-ratio` | 誌面の判型。既定 `1 / 1.3`（A4は `1 / 1.414`） |
+| `--ground` | 誌面が置かれている地の色 |
+
+表紙の中の寸法はすべて **`cqw`（誌面の幅基準）**。ビューポート基準ではないので、
+画面サイズが変わっても構図の比率は崩れない。`vw` を持ち込まないこと。
 
 ## 5. やらないこと
 

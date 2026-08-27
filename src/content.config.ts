@@ -69,6 +69,8 @@ const issues = defineCollection({
     published: z.coerce.date(),
     mainVisual: publicPath,
     mainVisualAlt: z.string().min(1, 'alt は必須。仕様書20章'),
+    /** 画像のどこを見せるか。縦横比が違う画像を投げても顔が切れないようにする（例 '50% 30%'） */
+    mainVisualFocus: z.string().default('50% 50%'),
     current: z.boolean().default(false),
     /** 表紙に載せる見出し。ここへ足すと表紙に出る */
     headlines: z

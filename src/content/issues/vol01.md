@@ -6,6 +6,7 @@ published: 2026-08-27
 current: true
 mainVisual: /images/cover/vol01-main.svg
 mainVisualAlt: これまで制作したキャラクターたちの集合写真（仮画像）
+mainVisualFocus: 50% 40%
 headlines:
   - ref: desk-takko
     collection: works
