@@ -22,6 +22,9 @@
   --gut: clamp(16px, 4vw, 56px);   /* 版面の外余白 */
   --hair: 1px;
   --turn: 260ms;                   /* ページめくりの尺。伸ばさない（仕様書10章） */
+
+  /* 表紙の中央に置く「一冊」の判型。A4は 1/1.414 */
+  --mag-ratio: 1 / 1.32;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

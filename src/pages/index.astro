@@ -75,14 +75,29 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
       </div>
 
       <figure class="cover__visual">
-        <img
-          src={issue.data.mainVisual}
-          alt={issue.data.mainVisualAlt}
-          width="1200"
-          height="1500"
-          fetchpriority="high"
-          style={`object-position:${issue.data.mainVisualFocus}`}
-        />
+        {/* 中央に置く一冊。雑誌らしさはここで作る。周りの誌面レイアウトは触らない */}
+        <div class={`mag mag--${issue.data.coverInk}`}>
+          <img
+            src={issue.data.mainVisual}
+            alt={issue.data.mainVisualAlt}
+            width="1200"
+            height="1500"
+            fetchpriority="high"
+            style={`object-position:${issue.data.mainVisualFocus}`}
+          />
+          {/* 誌面側に同じ情報があるので、読み上げでは飛ばす（仕様書20章） */}
+          <div class="mag__dress" aria-hidden="true">
+            <div class="mag__top">
+              <span class="mag__vol">{issue.data.vol}</span>
+              <span class="mag__label">{issue.data.label}</span>
+            </div>
+            <p class="mag__masthead">オギャヌンティウス十三世</p>
+            <div class="mag__bottom">
+              <span class="mag__price">¥0</span>
+              <span class="mag__barcode"></span>
+            </div>
+          </div>
+        </div>
       </figure>
 
       <div class="cover__right">
@@ -157,6 +172,7 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
     grid-template-columns: 1fr;
     gap: clamp(16px, 2.4vw, 34px);
     align-items: start;
+    min-height: 0;
   }
 
   .cover__theme {
@@ -201,11 +217,103 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
   }
   .cover__small:hover { color: var(--accent); }
 
-  .cover__visual { margin: 0; }
-  .cover__visual img {
+  /* --- 中央の一冊 -------------------------------------------
+     寸法は cqw（この一冊の幅基準）。誌面側の vw とは独立しているので、
+     ここを触っても表紙のレイアウトは動かない。 */
+  .cover__visual {
+    margin: 0;
+    min-height: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .mag {
+    container-type: inline-size;
+    position: relative;
     width: 100%;
-    border: 1px solid var(--rule);
+    aspect-ratio: var(--mag-ratio);
+    overflow: hidden;
     background: var(--paper-2);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, .55),
+      0 2px 0 rgba(0, 0, 0, .10),
+      0 22px 44px -16px rgba(0, 0, 0, .45);
+  }
+
+  .mag > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* 画像の明暗に関わらず文字が読めるよう、上下だけ薄く沈める */
+  .mag__dress {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 4.5cqw;
+    color: var(--mag-ink);
+    text-shadow: var(--mag-shadow);
+  }
+  .mag__dress::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--mag-scrim);
+    pointer-events: none;
+  }
+  .mag__dress > * { position: relative; }
+
+  .mag--dark { --mag-ink: #101010; --mag-shadow: 0 1px 2px rgba(255,255,255,.5);
+    --mag-scrim: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,0) 34%,
+                 rgba(255,255,255,0) 74%, rgba(255,255,255,.66)); }
+  .mag--light { --mag-ink: #ffffff; --mag-shadow: 0 1px 3px rgba(0,0,0,.55);
+    --mag-scrim: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,0) 34%,
+                 rgba(0,0,0,0) 74%, rgba(0,0,0,.45)); }
+
+  .mag__top {
+    display: flex;
+    align-items: baseline;
+    gap: .9em;
+    font-family: var(--font-en);
+    font-size: 2.9cqw;
+    font-weight: 700;
+    letter-spacing: .18em;
+  }
+  .mag__label { font-family: var(--font-jp); letter-spacing: .12em; }
+
+  .mag__masthead {
+    margin: .34em 0 0;
+    font-size: 8.8cqw;
+    font-weight: 800;
+    line-height: .96;
+    letter-spacing: -.05em;
+  }
+
+  .mag__bottom {
+    margin-top: auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1em;
+    font-family: var(--font-en);
+    font-size: 3cqw;
+    font-weight: 700;
+    letter-spacing: .1em;
+  }
+
+  /* バーコード。画像ではなく背景の縞で描く（1バイトも増やさない） */
+  .mag__barcode {
+    width: 26cqw;
+    height: 7.5cqw;
+    background-image: repeating-linear-gradient(90deg,
+      currentColor 0 1.5%, transparent 1.5% 3%,
+      currentColor 3% 4%,   transparent 4% 6.5%,
+      currentColor 6.5% 8.5%, transparent 8.5% 10%);
+    opacity: .85;
   }
 
   .cover__strips {
@@ -245,11 +353,7 @@ const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, 
       align-items: stretch;
     }
     .cover__left { display: flex; flex-direction: column; justify-content: flex-start; }
-    .cover__visual {
-      height: 100%;
-      display: flex;
-      align-items: stretch;
-    }
-    .cover__visual img { height: 100%; object-fit: cover; }
+    .cover__visual { height: 100%; align-items: center; }
+    .mag { width: auto; height: 100%; max-width: 100%; }
   }
 </style>
