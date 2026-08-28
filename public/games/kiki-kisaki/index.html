@@ -6,6 +6,15 @@
 <title>キキ？キサキ？</title>
 <meta name="description" content="出てきた生徒がキキかキサキかを打ち分けるだけのゲーム。1ミスで終了。猶予はどんどん短くなる。">
 <link rel="icon" href="/favicon.svg">
+<!-- Xやチャットにリンクを貼ったときに出る絵と文言。
+     X は webp のOGPを取りこぼすことがあるので jpg で置いている。 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="オギャヌンティウス十三世">
+<meta property="og:title" content="キキ？キサキ？">
+<meta property="og:description" content="園児服のときは「キキ」、そうでないときは「キサキ」と名乗っている謎の女。時間内にタイプしろ！">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/games/kiki-kisaki">
+<meta property="og:image" content="https://ogyanuntiusxiii.com/games/kiki-kisaki/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <style>
 /* =========================================================
    『キキ？キサキ？』
@@ -37,7 +46,9 @@ body{
 button{font:inherit;color:inherit;}
 
 #app{
-  position:fixed;inset:0;
+  /* bottom は指定しない。ソフトキーボードが出たときに JS で height を差し替えるため
+     （inset:0 のままだと height を上書きできず、札がキーボードの裏に隠れる） */
+  position:fixed;top:0;left:0;right:0;height:100%;
   /* hud / bar / stage / pad / footer の5行。伸びるのは stage だけ */
   display:grid;grid-template-rows:auto auto 1fr auto auto;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -152,20 +163,6 @@ body.pixel .chip img{image-rendering:pixelated;}
 .ph[data-k="KIKI"]{background:#ffe9c9;color:#6b3b00;}
 .ph[data-k="KISAKI"]{background:#d9e6ff;color:#123166;}
 
-/* 段階が解禁された瞬間に名前を出す。
-   これが無いと「札が突然消えた＝壊れた」に見える（実際そう報告された）。 */
-#call{
-  position:absolute;left:50%;top:6%;transform:translateX(-50%);
-  z-index:2;pointer-events:none;opacity:0;
-  width:max-content;max-width:90%;
-  background:var(--paper);border:1px solid var(--accent);
-  padding:.3em .8em;
-  font-size:clamp(11px,2.6vw,15px);letter-spacing:.18em;color:var(--accent);white-space:nowrap;
-}
-#call.on{animation:call 1200ms ease-out;}
-@keyframes call{ 0%{opacity:0;} 10%{opacity:1;} 72%{opacity:1;} 100%{opacity:0;} }
-@media (prefers-reduced-motion:reduce){ #call.on{animation:none;opacity:1;} }
-
 /* 入力表示（かなと、その下に打った文字） */
 #input{display:flex;flex-direction:column;align-items:center;gap:4px;}
 #typed{
@@ -213,10 +210,15 @@ body.pixel .chip img{image-rendering:pixelated;}
 .mini:hover{background:var(--ink);color:var(--paper);}
 
 /* --- 下段：スマホ用ボタンと注記 -------------------------- */
-#pad{display:none;gap:10px;padding:0 12px 12px;}
+/* スマホは K I S A の4キー。
+   ★2つのボタン（キキ／キサキ）にしていたら、1タップで仕分けできて簡単すぎた。
+     ここを4キーにすると、キキ＝4回・キサキ＝6回で**PCの打鍵数と一致する**。
+     物理キーがあるぶんPCが有利なのは、本人の判断でそのままにしてある。 */
+#pad{display:none;gap:8px;padding:0 10px 10px;}
 #pad button{
-  flex:1;padding:1.1em 0;border:2px solid var(--ink);background:var(--paper);
-  font-size:22px;letter-spacing:.16em;cursor:pointer;
+  flex:1;padding:.85em 0;border:2px solid var(--ink);background:var(--paper);
+  font-family:var(--font-en);font-size:24px;font-weight:700;letter-spacing:.06em;cursor:pointer;
+  touch-action:manipulation;
 }
 #pad button:active{background:var(--ink);color:var(--paper);}
 body.touch #pad.on{display:flex;}
@@ -281,8 +283,10 @@ footer a{color:inherit;}
 
   <!-- 下段 -->
   <div id="pad">
-    <button data-a="KIKI">キキ</button>
-    <button data-a="KISAKI">キサキ</button>
+    <button data-k="K" type="button">K</button>
+    <button data-k="I" type="button">I</button>
+    <button data-k="S" type="button">S</button>
+    <button data-k="A" type="button">A</button>
   </div>
   <footer>
     『ブルーアーカイブ -Blue Archive-』の非公式ファンメイド作品であり、公式とは関係ありません。<br>
@@ -330,8 +334,16 @@ const graceAt = (sec) => {
 
 const tortureAt = (sec) => D.torture.filter(t => sec >= t.at).map(t => t.kind);
 
+/* localStorage は書き換えられうるので、読んだ値は必ず数値へ丸めてから使う。
+   そのまま HTML に流し込むと、細工された値が描画に混ざる。 */
 const readBest = () => {
-  try { return JSON.parse(localStorage.getItem(BEST_KEY)) || null; } catch { return null; }
+  try {
+    const r = JSON.parse(localStorage.getItem(BEST_KEY));
+    if (!r || typeof r !== "object") return null;
+    const ms = Number(r.ms), sorted = Number(r.sorted);
+    if (!isFinite(ms) || !isFinite(sorted) || ms < 0 || sorted < 0) return null;
+    return { ms, sorted: Math.floor(sorted) };
+  } catch { return null; }
 };
 const writeBest = (rec) => {
   try { localStorage.setItem(BEST_KEY, JSON.stringify(rec)); } catch {}
@@ -354,7 +366,6 @@ const S = {
   raf: 0,
   timer: 0,
   cleared: false,
-  seen: null,        // この回でもう告知した段階
 };
 
 /* ---------- 画面 ---------- */
@@ -382,7 +393,8 @@ function startCountdown() {
   bgmPlay();                             // PLAY を押すたびに曲の頭から
   preload();                             // カウントダウンのあいだに絵を落としておく
   // 調整用の隠し入口：?t=40 で40秒地点から始める。画面には出さない
-  S.offset = Math.max(0, Number(new URLSearchParams(location.search).get("t") || 0)) * 1000;
+  const t = Number(new URLSearchParams(location.search).get("t") || 0);
+  S.offset = (isFinite(t) ? Math.min(600, Math.max(0, t)) : 0) * 1000;   // 上限も入れる
   stage.innerHTML = `<div id="count3">3</div>`;
   const el = $("count3");
   let n = 3;
@@ -402,8 +414,6 @@ function startRun() {
   S.run = 0;
   S.cleared = false;
   S.deadReason = null;
-  // 始めた時点で既に解禁済みのものは告知しない（?t= で途中から始めたとき用）
-  S.seen = new Set(tortureAt(S.offset / 1000));
 
   hud.classList.add("on");
   pad.classList.add("on");
@@ -412,7 +422,7 @@ function startRun() {
   stage.innerHTML = `
     <div id="field">
       <div class="pile" id="pileL"></div>
-      <div id="cardWrap"><div id="card"></div><div id="call"></div></div>
+      <div id="cardWrap"><div id="card"></div></div>
       <div class="pile" id="pileR"></div>
     </div>
     <div id="input">
@@ -422,16 +432,6 @@ function startRun() {
   `;
   nextCard();
   S.raf = requestAnimationFrame(tick);
-}
-
-/* 解禁された段階の名前を、札の上に一瞬だけ出す */
-function announce(text) {
-  const el = $("call");
-  if (!el) return;
-  el.textContent = text;
-  el.classList.remove("on");
-  void el.offsetWidth;          // アニメーションを頭から流し直すための小細工
-  el.classList.add("on");
 }
 
 /* ---------- 出題 ---------- */
@@ -466,13 +466,6 @@ function nextCard() {
   const kinds = tortureAt(sec);
   // 段階が増えたので、いま効いているうちの直近2つだけ出す（全部出すと横に伸びて読めない）
   tortureEl.textContent = D.torture.filter(t => kinds.includes(t.kind)).map(t => t.note).slice(-2).join(" / ");
-
-  // この回ではじめて解禁されたものを、札の上に一度だけ出す
-  const fresh = D.torture.filter(t => kinds.includes(t.kind) && !S.seen.has(t.kind));
-  if (fresh.length) {
-    fresh.forEach(t => S.seen.add(t.kind));
-    announce(fresh.map(t => t.note).join(" / "));
-  }
 
   const wrap = $("cardWrap"), el = $("card");
   if (!el) return;
@@ -685,8 +678,11 @@ function finish() {
   const isBest = !best || ms > best.ms;
   if (isBest) writeBest({ ms, sorted: S.sorted });
 
+  // Xの投稿文。画像はリンク先のOGP（下の og:image）が付く。
+  // X の intent には画像を直接添付する手段が無いので、絵はそこから出す。
+  const url = D.shareUrl || location.href.split(/[?#]/)[0];
   const share = encodeURIComponent(
-    `キキとキサキを ${fmt(ms)} まで見分けました。\n仕分け ${S.sorted}人\n#キキキサキ仕分け`
+    `キキとキサキを ${S.sorted}人仕分けました。\n${Math.floor(ms / 1000)}秒かかりました。\n${url}`
   );
 
   setTimeout(() => {
@@ -854,9 +850,10 @@ addEventListener("keydown", (e) => {
   if (S.phase === "play") { e.preventDefault(); press(e.key); }
 });
 
+/* パッドは1タップ＝1打鍵。PCのキーボードとまったく同じ扱いにする */
 pad.addEventListener("click", (e) => {
-  const b = e.target.closest("button[data-a]");
-  if (b && S.phase === "play" && S.card) { S.windowAt = S.windowAt || performance.now(); judge(b.dataset.a); }
+  const b = e.target.closest("button[data-k]");
+  if (b) { press(b.dataset.k); b.blur(); }
 });
 
 if (matchMedia("(hover:none)").matches) document.body.classList.add("touch");

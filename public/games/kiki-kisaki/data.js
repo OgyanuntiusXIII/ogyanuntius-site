@@ -140,6 +140,9 @@ window.KIKI_DATA = {
     loopEnd: null,
   },
 
+  /* Xへ投稿するときに載せるURL。null なら開いているページのURLを使う */
+  shareUrl: "https://ogyanuntiusxiii.com/games/kiki-kisaki",
+
   /* 称号（titleAtMs を超えたときに出る） */
   title: "キサキ識別士",
 };
