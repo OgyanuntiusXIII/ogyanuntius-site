@@ -197,15 +197,16 @@ body.pixel .chip img{image-rendering:pixelated;}
   display:flex;flex-direction:column;align-items:center;
   gap:clamp(10px,2.4vh,22px);min-width:0;
 }
-.pile.big{
+/* ★ .big は PLAYボタンのクラス。山に同じ名前を付けると黒背景とパディングを食う */
+.pile-lg{
   width:clamp(92px,16vw,196px);
   align-content:center;gap:5px;
   max-height:min(64vh,520px);
 }
-.pile.big .chip{width:44px;height:44px;}
+.pile-lg .chip{width:44px;height:44px;}
 @media (max-width:520px){
-  .pile.big{width:clamp(74px,22vw,96px);gap:4px;}
-  .pile.big .chip{width:34px;height:34px;}
+  .pile-lg{width:clamp(74px,22vw,96px);gap:4px;}
+  .pile-lg .chip{width:34px;height:34px;}
 }
 
 /* リザルト */
@@ -819,7 +820,7 @@ function finish() {
   setTimeout(() => {
     stage.innerHTML = `
       <div id="resultField">
-        <div class="pile big" id="rpileL">${pileHtml("KIKI")}</div>
+        <div class="pile pile-lg" id="rpileL">${pileHtml("KIKI")}</div>
         <div id="resultBody">
           ${S.cleared
             ? `<p class="kicker">Complete</p>`
@@ -836,7 +837,7 @@ function finish() {
           </div>
           <p class="best" id="pasteNote"></p>
         </div>
-        <div class="pile big" id="rpileR">${pileHtml("KISAKI")}</div>
+        <div class="pile pile-lg" id="rpileR">${pileHtml("KISAKI")}</div>
       </div>
     `;
     $("again").addEventListener("click", () => { S.offset = 0; startCountdown(); });
