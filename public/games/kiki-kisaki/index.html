@@ -541,7 +541,15 @@ function press(key) {
 
   const next = S.typed + k;
   const c = candidates(next);
-  if (!c.length) return dead("MISS");            // どちらの綴りにもならない
+
+  // ★どちらの綴りにもならない打鍵は「無視」する。**殺さない。**
+  //   ここで殺していたのが原因で、正しく打っているのにミス扱いになる事故が起きていた：
+  //   正解 → 次の札までの0.4秒に速い人は次の K を打ってしまう → その K は捨てられる →
+  //   次に届いた I が1打鍵目になる → 「Iで始まる綴りは無い」で即死。
+  //   1打鍵目と2打鍵目（K・I）はどちらの綴りでも同じで、**仕分けの判断を含まない**。
+  //   ここでの打ち間違いは誤仕分けではないので、時間を失うだけにする。
+  //   死ぬのは「3打鍵目で違うほうを選んだ（誤仕分け）」ときと「時間切れ」だけ。
+  if (!c.length) return;
 
   if (!S.typed) S.windowAt = performance.now();  // 1本目の開始
   S.typed = next;
@@ -689,7 +697,7 @@ function finish() {
     stage.innerHTML = `
       ${S.cleared
         ? `<p class="kicker">Complete</p>`
-        : `<p class="deadWord">${S.deadReason === "TIME UP" ? "時間切れ" : "誤仕分け"}</p>`}
+        : `<p class="deadWord">${S.deadReason === "WRONG" ? "誤仕分け" : "時間切れ"}</p>`}
       ${ms >= D.titleAtMs ? `<div class="crown">${D.title}</div>` : ``}
       <p class="kicker">${isBest ? "New Record" : "Record"}</p>
       <p class="resultTime">${fmt(ms)}</p>
@@ -845,6 +853,7 @@ function setVol(x) {
 
 addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.repeat) return;                     // キーを押しっぱなしにしたときの連射は数えない
   if (S.phase === "title" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); return startCountdown(); }
   if (S.phase === "over"  && (e.key === "r" || e.key === "R" || e.key === "Enter")) { e.preventDefault(); S.offset = 0; return startCountdown(); }
   if (S.phase === "play") { e.preventDefault(); press(e.key); }
