@@ -32,6 +32,7 @@ headlines:
   - ref: kiki-kisaki
     collection: works
     slot: side
+    catch: キキ？キサキ？
     badge: NEW
     no: 4
   - ref: /about
