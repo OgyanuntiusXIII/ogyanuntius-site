@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>キキ？キサキ？</title>
+<meta name="description" content="出てきた生徒がキキかキサキかを打ち分けるだけのゲーム。1ミスで終了。猶予はどんどん短くなる。">
+<link rel="icon" href="/favicon.svg">
+<style>
+/* =========================================================
+   『キキ？キサキ？』
+   素のHTML/CSS/JS 1枚。Astroのビルドを通らない（public/配下）。
+   消せば元通り。サイト本体には一切干渉しない。
+   ========================================================= */
+
+:root{
+  --ink:#101010;
+  --ink-mid:#6a6a6a;
+  --paper:#ffffff;
+  --paper-2:#f4f2ed;
+  --accent:#e0301e;
+  --ok:#1a7f37;
+  --font-jp:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP",system-ui,sans-serif;
+  --font-en:"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-jp);
+  -webkit-text-size-adjust:100%;
+  overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:manipulation;
+  user-select:none;-webkit-user-select:none;
+}
+button{font:inherit;color:inherit;}
+
+#app{
+  position:fixed;inset:0;
+  /* hud / bar / stage / pad / footer の5行。伸びるのは stage だけ */
+  display:grid;grid-template-rows:auto auto 1fr auto auto;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* --- 上段：時計とスコア（プレイ中だけ） ------------------ */
+#hud{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:1em;padding:10px clamp(14px,4vw,40px);
+  font-family:var(--font-en);font-size:12px;letter-spacing:.18em;
+  border-bottom:1px solid var(--ink);
+  visibility:hidden;
+}
+#hud.on{visibility:visible;}
+#clock{font-size:15px;font-variant-numeric:tabular-nums;}
+#count b{font-size:15px;}
+#torture{color:var(--accent);letter-spacing:.12em;font-family:var(--font-jp);}
+
+/* --- 猶予バー -------------------------------------------- */
+#bar{height:6px;background:var(--paper-2);position:relative;overflow:hidden;}
+#barFill{position:absolute;inset:0;transform-origin:left center;background:var(--ink);}
+#barFill.hot{background:var(--accent);}
+#bar.off{visibility:hidden;}
+
+/* --- 中段：本体 ------------------------------------------ */
+.stage{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:clamp(12px,3vh,28px);padding:clamp(14px,4vw,40px);text-align:center;
+  min-height:0;
+}
+
+/* タイトル */
+.kicker{
+  font-family:var(--font-en);font-size:11px;letter-spacing:.3em;
+  color:var(--accent);text-transform:uppercase;
+}
+h1{
+  margin:0;font-size:clamp(38px,11vw,86px);line-height:1;
+  letter-spacing:.02em;font-feature-settings:"palt" 1;
+}
+.lead{margin:0;font-size:clamp(14px,3.6vw,18px);line-height:1.9;}
+.keys{
+  display:flex;gap:.6em;align-items:center;justify-content:center;
+  font-family:var(--font-en);font-size:clamp(16px,4.6vw,24px);letter-spacing:.14em;
+}
+.key{border:1px solid var(--ink);padding:.28em .7em;}
+.keys em{font-style:normal;font-size:12px;color:var(--ink-mid);}
+.rule{font-size:13px;color:var(--ink-mid);letter-spacing:.06em;}
+.big{
+  border:none;background:var(--ink);color:var(--paper);
+  padding:.85em 2.6em;font-family:var(--font-en);
+  font-size:18px;letter-spacing:.28em;cursor:pointer;
+}
+.big:hover{background:var(--accent);}
+.best{font-family:var(--font-en);font-size:12px;letter-spacing:.14em;color:var(--ink-mid);}
+
+/* 出題札と、その両脇に積み上がる山 */
+#field{
+  display:flex;align-items:stretch;justify-content:center;
+  gap:clamp(6px,1.6vw,18px);max-width:100%;
+}
+.pile{
+  width:clamp(72px,11vw,118px);flex:none;
+  display:flex;flex-wrap:wrap;align-content:flex-end;gap:4px;
+  overflow:hidden;                     /* あふれたぶんは上から消える＝積み上がって見える */
+}
+#pileL{justify-content:flex-end;}      /* 左の山は札側（右）へ寄せる */
+#pileR{justify-content:flex-start;}
+.chip{
+  width:32px;height:32px;flex:none;overflow:hidden;
+  animation:pop 130ms ease-out;
+}
+/* 狭い画面では札と山がぶつかるので、山だけ小さくする */
+@media (max-width:520px){
+  .pile{width:clamp(52px,14vw,68px);gap:3px;}
+  .chip{width:24px;height:24px;}
+}
+/* チップは正方形なので、縦長の絵から上のほう＝顔を切り出す */
+.chip img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block;}
+.chip[data-k="KIKI"]{background:#ffe9c9;box-shadow:inset 0 0 0 1px #e2c8a0;}
+.chip[data-k="KISAKI"]{background:#d9e6ff;box-shadow:inset 0 0 0 1px #aec4ea;}
+/* 絵が入ったら、答えを示す色は消す（色でキキ／キサキが割れてしまうため） */
+.chip.hasimg{background:var(--paper-2);box-shadow:inset 0 0 0 1px #ddd8cf;}
+@keyframes pop{from{transform:scale(.4);opacity:0;}to{transform:scale(1);opacity:1;}}
+@media (prefers-reduced-motion:reduce){.chip{animation:none;}}
+
+#cardWrap{
+  /* ★ 比率は絵に合わせる。絵が 1:1.6 なので札も 1:1.6。
+     ここがズレると object-fit:cover で上下（天使の輪と足）が切られる。 */
+  width:min(52vw,36vh);aspect-ratio:1/1.6;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;position:relative;
+  border:1px solid var(--ink);background:var(--paper-2);
+}
+#card{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  transition:none;
+}
+#card img{width:100%;height:100%;object-fit:cover;}
+/* data.js の pixelArt を true にすると、拡大してもドットが潰れない */
+body.pixel #card img,
+body.pixel .chip img{image-rendering:pixelated;}
+#card.hidden{opacity:0;}
+/* プレースホルダーの札 */
+.ph{
+  width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:.4em;
+  font-size:clamp(20px,5.2vw,34px);letter-spacing:.14em;
+}
+.ph small{font-family:var(--font-en);font-size:11px;letter-spacing:.24em;opacity:.55;}
+.ph[data-k="KIKI"]{background:#ffe9c9;color:#6b3b00;}
+.ph[data-k="KISAKI"]{background:#d9e6ff;color:#123166;}
+
+/* 段階が解禁された瞬間に名前を出す。
+   これが無いと「札が突然消えた＝壊れた」に見える（実際そう報告された）。 */
+#call{
+  position:absolute;left:50%;top:6%;transform:translateX(-50%);
+  z-index:2;pointer-events:none;opacity:0;
+  width:max-content;max-width:90%;
+  background:var(--paper);border:1px solid var(--accent);
+  padding:.3em .8em;
+  font-size:clamp(11px,2.6vw,15px);letter-spacing:.18em;color:var(--accent);white-space:nowrap;
+}
+#call.on{animation:call 1200ms ease-out;}
+@keyframes call{ 0%{opacity:0;} 10%{opacity:1;} 72%{opacity:1;} 100%{opacity:0;} }
+@media (prefers-reduced-motion:reduce){ #call.on{animation:none;opacity:1;} }
+
+/* 入力表示（かなと、その下に打った文字） */
+#input{display:flex;flex-direction:column;align-items:center;gap:4px;}
+#typed{
+  height:1.3em;font-size:clamp(26px,7vw,44px);letter-spacing:.22em;line-height:1.3;
+}
+#typed.ghost{color:#c9c9c9;}
+#typed.ok{color:var(--ok);}
+#typed.ng{color:var(--accent);}
+/* 綴り。2本とも薄く出しておき、打った文字だけ濃くなる。
+   最初からどちらか一方だけ出すと答えが割れてしまうので、必ず両方出す。 */
+.romaji{
+  display:flex;gap:clamp(14px,4vw,34px);justify-content:center;align-items:baseline;
+  height:1.4em;line-height:1.4;
+  font-family:var(--font-en);font-size:clamp(13px,3.4vw,18px);
+  letter-spacing:.34em;
+}
+.romaji .w{color:#d6d6d6;transition:opacity 90ms linear;}
+.romaji .w b{color:var(--ink);font-weight:700;}   /* 打った分 */
+.romaji .w.dead{opacity:.2;}                      /* 綴りが決まって消えたほう */
+.romaji.ok .w b{color:var(--ok);}
+.romaji.ng .w b{color:var(--accent);}
+
+/* カウントダウン */
+#count3{font-size:clamp(70px,22vw,180px);line-height:1;font-family:var(--font-en);}
+
+/* リザルト */
+.resultTime{
+  font-family:var(--font-en);font-size:clamp(40px,13vw,96px);line-height:1;
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;margin:0;
+}
+.resultSub{font-size:clamp(15px,4vw,20px);margin:0;}
+.deadWord{
+  font-size:clamp(30px,9vw,64px);color:var(--accent);margin:0;letter-spacing:.06em;
+}
+.crown{
+  border:2px solid var(--accent);color:var(--accent);
+  padding:.5em 1.2em;font-size:clamp(18px,5vw,28px);letter-spacing:.16em;
+}
+.row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+.mini{
+  border:1px solid var(--ink);background:var(--paper);
+  padding:.7em 1.5em;font-size:14px;letter-spacing:.1em;cursor:pointer;
+  text-decoration:none;display:inline-block;
+}
+.mini:hover{background:var(--ink);color:var(--paper);}
+
+/* --- 下段：スマホ用ボタンと注記 -------------------------- */
+#pad{display:none;gap:10px;padding:0 12px 12px;}
+#pad button{
+  flex:1;padding:1.1em 0;border:2px solid var(--ink);background:var(--paper);
+  font-size:22px;letter-spacing:.16em;cursor:pointer;
+}
+#pad button:active{background:var(--ink);color:var(--paper);}
+body.touch #pad.on{display:flex;}
+
+/* 音の操作。プレイ中も触れるように画面へ固定する */
+#snd{
+  position:fixed;top:7px;right:10px;z-index:5;
+  display:flex;align-items:center;gap:7px;
+}
+#mute{
+  padding:.32em .5em;cursor:pointer;
+  border:1px solid var(--ink);background:var(--paper);color:var(--ink);
+  font-family:var(--font-en);font-size:9.5px;letter-spacing:.12em;line-height:1;
+}
+#mute.off{color:#bbb;border-color:#ddd;}
+#vol{
+  -webkit-appearance:none;appearance:none;
+  width:58px;height:12px;background:transparent;cursor:pointer;
+}
+#vol::-webkit-slider-runnable-track{height:2px;background:var(--ink);}
+#vol::-moz-range-track{height:2px;background:var(--ink);}
+#vol::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:9px;height:9px;margin-top:-3.5px;background:var(--ink);border:none;border-radius:0;
+}
+#vol::-moz-range-thumb{width:9px;height:9px;background:var(--ink);border:none;border-radius:0;}
+#snd.muted #vol::-webkit-slider-runnable-track{background:#ddd;}
+#snd.muted #vol::-moz-range-track{background:#ddd;}
+#snd.muted #vol::-webkit-slider-thumb{background:#ddd;}
+#snd.muted #vol::-moz-range-thumb{background:#ddd;}
+@media (max-width:520px){ #vol{width:42px;} }
+#hud{padding-right:132px;}   /* 音の操作と仕分け数が重ならないように */
+@media (max-width:520px){ #hud{padding-right:114px;} }
+
+footer{
+  padding:8px clamp(14px,4vw,40px) 12px;
+  font-size:10.5px;line-height:1.7;color:var(--ink-mid);text-align:center;
+}
+footer a{color:inherit;}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div id="snd">
+    <button id="mute" type="button" aria-label="音を消す">MUTE</button>
+    <input id="vol" type="range" min="0" max="100" step="5" value="50" aria-label="音量">
+  </div>
+
+  <!-- 上段 -->
+  <div id="hud">
+    <span id="clock">0:00.000</span>
+    <span id="torture"></span>
+    <span id="count">仕分け <b>0</b></span>
+  </div>
+  <div id="bar" class="off"><div id="barFill"></div></div>
+
+  <!-- 中段：画面はここを差し替える -->
+  <main class="stage" id="stage"></main>
+
+  <!-- 下段 -->
+  <div id="pad">
+    <button data-a="KIKI">キキ</button>
+    <button data-a="KISAKI">キサキ</button>
+  </div>
+  <footer>
+    『ブルーアーカイブ -Blue Archive-』の非公式ファンメイド作品であり、公式とは関係ありません。<br>
+    非営利のファンコンテンツです。
+  </footer>
+
+</div>
+
+<script>
+(() => {
+"use strict";
+
+let D, BASE;
+const $ = (id) => document.getElementById(id);
+const stage = $("stage"), hud = $("hud"), bar = $("bar"), barFill = $("barFill"),
+      clockEl = $("clock"), countEl = $("count").querySelector("b"),
+      tortureEl = $("torture"), pad = $("pad");
+
+const BEST_KEY = "kiki-kisaki:best";
+/* data.js には "img/kiki_01.webp" と短く書けるようにする。
+   相対のままだと URL の形で壊れるので、ここで解決する。 */
+const asset = (src) => (/^(https?:|\/)/.test(src) ? src : BASE + src);
+
+/* ---------- 小道具 ---------- */
+const fmt = (ms) => {
+  ms = Math.max(0, ms);
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor(ms % 60000 / 1000);
+  const f = Math.floor(ms % 1000);
+  return `${m}:${String(s).padStart(2,"0")}.${String(f).padStart(3,"0")}`;
+};
+
+/* 猶予カーブ：アンカーのあいだを直線で補間する */
+const graceAt = (sec) => {
+  const g = D.grace;
+  if (sec <= g[0].at) return g[0].ms;
+  for (let i = 1; i < g.length; i++) {
+    if (sec <= g[i].at) {
+      const a = g[i-1], b = g[i];
+      return a.ms + (b.ms - a.ms) * (sec - a.at) / (b.at - a.at);
+    }
+  }
+  return g[g.length-1].ms;
+};
+
+const tortureAt = (sec) => D.torture.filter(t => sec >= t.at).map(t => t.kind);
+
+const readBest = () => {
+  try { return JSON.parse(localStorage.getItem(BEST_KEY)) || null; } catch { return null; }
+};
+const writeBest = (rec) => {
+  try { localStorage.setItem(BEST_KEY, JSON.stringify(rec)); } catch {}
+};
+
+/* ---------- 状態 ---------- */
+const S = {
+  phase: "title",   // title | count | play | over
+  t0: 0,            // 開始時刻（performance.now）
+  offset: 0,        // デバッグ用の開始オフセット（ms）
+  elapsed: 0,
+  sorted: 0,
+  card: null,
+  shownAt: 0,
+  grace: 0,
+  typed: "",
+  windowAt: 0,      // いまの入力時間が始まった時刻。0 なら未入力
+  lastAnswer: null,
+  run: 0,
+  raf: 0,
+  timer: 0,
+  cleared: false,
+  seen: null,        // この回でもう告知した段階
+};
+
+/* ---------- 画面 ---------- */
+
+function showTitle() {
+  S.phase = "title";
+  hud.classList.remove("on");
+  bar.classList.add("off");
+  pad.classList.remove("on");
+
+  if (A.buf) bgmPlay();                  // タイトルでは鳴っていてよい
+  const best = readBest();
+  stage.innerHTML = `
+    <h1>キキ？キサキ？</h1>
+    <p class="lead">出てきた生徒の名前をタイプ</p>
+    <div class="romaji">${WORDS.map(w => `<span class="w">${w}</span>`).join("")}</div>
+    <button class="big" id="play">PLAY</button>
+    ${best ? `<p class="best">BEST ${fmt(best.ms)} / ${best.sorted}人仕分け</p>` : ``}
+  `;
+  $("play").addEventListener("click", startCountdown);
+}
+
+function startCountdown() {
+  S.phase = "count";
+  bgmPlay();                             // PLAY を押すたびに曲の頭から
+  preload();                             // カウントダウンのあいだに絵を落としておく
+  // 調整用の隠し入口：?t=40 で40秒地点から始める。画面には出さない
+  S.offset = Math.max(0, Number(new URLSearchParams(location.search).get("t") || 0)) * 1000;
+  stage.innerHTML = `<div id="count3">3</div>`;
+  const el = $("count3");
+  let n = 3;
+  S.timer = setInterval(() => {
+    n--;
+    if (n > 0) { el.textContent = n; }
+    else { clearInterval(S.timer); startRun(); }
+  }, 700);
+}
+
+function startRun() {
+  S.phase = "play";
+  S.t0 = performance.now() - S.offset;
+  S.elapsed = S.offset;
+  S.sorted = 0;
+  S.lastAnswer = null;
+  S.run = 0;
+  S.cleared = false;
+  S.deadReason = null;
+  // 始めた時点で既に解禁済みのものは告知しない（?t= で途中から始めたとき用）
+  S.seen = new Set(tortureAt(S.offset / 1000));
+
+  hud.classList.add("on");
+  pad.classList.add("on");
+  countEl.textContent = "0";
+
+  stage.innerHTML = `
+    <div id="field">
+      <div class="pile" id="pileL"></div>
+      <div id="cardWrap"><div id="card"></div><div id="call"></div></div>
+      <div class="pile" id="pileR"></div>
+    </div>
+    <div id="input">
+      <div id="typed"></div>
+      <div id="romaji" class="romaji"></div>
+    </div>
+  `;
+  nextCard();
+  S.raf = requestAnimationFrame(tick);
+}
+
+/* 解禁された段階の名前を、札の上に一瞬だけ出す */
+function announce(text) {
+  const el = $("call");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("on");
+  void el.offsetWidth;          // アニメーションを頭から流し直すための小細工
+  el.classList.add("on");
+}
+
+/* ---------- 出題 ---------- */
+
+function pickAnswer(sec) {
+  const bias = tortureAt(sec).includes("bias");
+  const cap = bias ? D.biasMaxRun : D.maxRun;
+
+  let want;
+  if (S.run >= cap) {
+    want = S.lastAnswer === "KIKI" ? "KISAKI" : "KIKI";     // 打ち止め、必ず切り替える
+  } else if (bias) {
+    // 偏る：直前と同じを出しやすくする
+    want = Math.random() < 0.72 && S.lastAnswer ? S.lastAnswer
+         : (Math.random() < 0.5 ? "KIKI" : "KISAKI");
+  } else {
+    want = Math.random() < 0.5 ? "KIKI" : "KISAKI";
+  }
+
+  S.run = (want === S.lastAnswer) ? S.run + 1 : 1;
+  S.lastAnswer = want;
+  return want;
+}
+
+function nextCard() {
+  const sec = S.elapsed / 1000;
+  const answer = pickAnswer(sec);
+  const pool = D.cards.filter(c => c.answer === answer);
+  const card = pool[Math.floor(Math.random() * pool.length)] || { answer, src:null, label:answer };
+  S.card = card;
+
+  const kinds = tortureAt(sec);
+  // 段階が増えたので、いま効いているうちの直近2つだけ出す（全部出すと横に伸びて読めない）
+  tortureEl.textContent = D.torture.filter(t => kinds.includes(t.kind)).map(t => t.note).slice(-2).join(" / ");
+
+  // この回ではじめて解禁されたものを、札の上に一度だけ出す
+  const fresh = D.torture.filter(t => kinds.includes(t.kind) && !S.seen.has(t.kind));
+  if (fresh.length) {
+    fresh.forEach(t => S.seen.add(t.kind));
+    announce(fresh.map(t => t.note).join(" / "));
+  }
+
+  const wrap = $("cardWrap"), el = $("card");
+  if (!el) return;
+
+  el.className = "";
+  el.innerHTML = card.src
+    ? `<img src="${asset(card.src)}" alt="">`
+    : `<div class="ph" data-k="${card.answer}">${card.label}<small>placeholder</small></div>`;
+
+  // 嫌がらせ
+  //
+  // 拡大の中心の決め方：`scale(S) translate(x%, y%)` は、
+  // **絵の (50-x)% , (50-y)% にあるものが画面の中央に来る**。
+  // 顔が絵の22%あたりにあるなら translate の y は +28% になる。符号を間違えると腹が映る。
+  let tf = "";
+  if (kinds.includes("flip") && Math.random() < 0.5) tf += " scaleX(-1)";
+
+  // 画角は、解禁済みのうち一番きついものを使う
+  if (kinds.includes("anywhere")) {
+    // どこか一点を大きく抜く。ただし**人物の中に収まる範囲**に限る
+    //（白紙だけが映ると、難しいのではなく運になってしまう）
+    const sc = 3.0 + Math.random() * 1.5;
+    const fx = 32 + Math.random() * 36;          // 絵の横 32〜68%
+    const fy = 14 + Math.random() * 46;          // 絵の縦 14〜60%（顔から胸のあたり）
+    tf += ` scale(${sc.toFixed(2)}) translate(${(50 - fx).toFixed(1)}%, ${(50 - fy).toFixed(1)}%)`;
+  } else if (kinds.includes("faceclose")) {
+    // 顔ドアップ。★ キキとキサキは同一人物なので、本来ここは判別不能になるはずだった。
+    //   髪型（下ろし／お団子）とリボンの色が顔の高さで割れている絵だから成立している。
+    //   絵を描き足すときも、**顔の高さに違いを残すこと**。
+    tf += ` scale(3.4) translate(${(Math.random()*6-3).toFixed(1)}%, 28%)`;
+  } else if (kinds.includes("face")) {
+    // 顔まわり。襟・肩が入る範囲（絵の 6%〜58% あたり）
+    tf += ` scale(1.9) translate(${(Math.random()*8-4).toFixed(1)}%, 18%)`;
+  } else if (kinds.includes("zoom")) {
+    tf += ` scale(1.55) translate(${(Math.random()*10-5).toFixed(1)}%, ${(Math.random()*10-5).toFixed(1)}%)`;
+  }
+  el.style.transform = tf;
+
+  if (kinds.includes("flash")) {
+    // 一瞬だけ見せて消す。猶予そのものは変えない
+    setTimeout(() => { if (S.card === card && el.isConnected) el.classList.add("hidden"); }, 220);
+  }
+
+  S.typed = "";
+  S.windowAt = 0;
+  S.shownAt = performance.now();
+  S.grace = graceAt(sec);
+  paintTyped();
+  bar.classList.remove("off");
+}
+
+/* ---------- 入力 ---------- */
+
+const WORDS = ["KIKI", "KISAKI"];
+
+/* いま打った文字列から、まだあり得る綴りを返す。
+   "KI" の時点では2本、"KIS" 以降は1本に決まる。 */
+const candidates = (t) => WORDS.filter(w => w.startsWith(t));
+
+/* 最後まで打たせる。KIKI は4打鍵、KISAKI は6打鍵。
+   文字数のハンデは **入力時間を2本に分ける** ことで消す（本人案・2026-08-28）。
+   基準は KIKI ちょうど1本ぶん（`inputMs`）で、
+   キサキは `KIS` を打った時点で **もう1本ぶん最初から始まる**。
+   つまり キキ＝1本 / キサキ＝2本。確定した瞬間に猶予バーが満タンへ戻るので、
+   「どっちか決めた」手応えがそのまま画面に出る。
+   仕分けの正誤は綴りが1本に決まった瞬間＝3打鍵目に分かるので、誤答の判定はそこで出す。 */
+function press(key) {
+  if (S.phase !== "play") return;
+  // 札が出ていないあいだ（正解後のインターバル）の打鍵は捨てる
+  if (!S.card) return;
+  const k = String(key).toUpperCase();
+  if (!/^[A-Z]$/.test(k)) return;
+
+  const next = S.typed + k;
+  const c = candidates(next);
+  if (!c.length) return dead("MISS");            // どちらの綴りにもならない
+
+  if (!S.typed) S.windowAt = performance.now();  // 1本目の開始
+  S.typed = next;
+
+  if (c.length === 1) {                          // 綴りが1本に決まった＝仕分けが確定した
+    if (c[0] !== S.card.answer) { paintTyped("ng"); return dead("WRONG"); }
+    if (next === c[0]) return judge(c[0]);       // 打ち切った
+    if (next === "KIS") S.windowAt = performance.now();   // キサキだけ、ここから2本目
+  }
+  paintTyped();
+}
+
+/* 仕分けた1枚を、キキなら左・キサキなら右の山へ積む */
+function stack(answer, card) {
+  const pile = $(answer === "KIKI" ? "pileL" : "pileR");
+  if (!pile) return;
+  const chip = document.createElement("div");
+  chip.className = "chip";
+  chip.dataset.k = answer;
+  if (card && card.src) {
+    chip.classList.add("hasimg");
+    chip.innerHTML = `<img src="${asset(card.src)}" alt="">`;
+  }
+  pile.appendChild(chip);
+}
+
+function judge(answer) {
+  if (answer === S.card.answer) {
+    S.sorted++;
+    countEl.textContent = S.sorted;
+    stack(answer, S.card);
+    S.typed = answer;
+    paintTyped("ok");
+    S.card = null;
+    bar.classList.add("off");
+    clearTimeout(S.timer);
+    S.timer = setTimeout(() => { if (S.phase === "play") nextCard(); }, D.intervalMs);
+  } else {
+    S.typed = answer;
+    paintTyped("ng");
+    dead("WRONG");
+  }
+}
+
+function paintTyped(cls) {
+  const el = $("typed"), ro = $("romaji");
+  if (el) {
+    const map = { "": "", K: "キ", KI: "キ", KIK: "キキ", KIKI: "キキ",
+                  KIS: "キサ", KISA: "キサ", KISAK: "キサキ", KISAKI: "キサキ" };
+    el.textContent = map[S.typed] ?? "";
+    el.className = cls || (WORDS.includes(S.typed) ? "" : (S.typed ? "ghost" : ""));
+  }
+  if (ro) {
+    // 2本とも薄く並べておき、打った分だけ濃くする。
+    // 綴りから外れたほうは dead にして落とす（KIS を打った瞬間に KIKI が消える）。
+    ro.innerHTML = WORDS.map(w => {
+      const alive = w.startsWith(S.typed);
+      const n = alive ? S.typed.length : 0;
+      return `<span class="w${alive ? "" : " dead"}"><b>${w.slice(0, n)}</b>${w.slice(n)}</span>`;
+    }).join("");
+    ro.className = cls || "";
+  }
+}
+
+/* ---------- ループ ---------- */
+
+function tick() {
+  if (S.phase !== "play") return;
+  const now = performance.now();
+  S.elapsed = now - S.t0;
+  clockEl.textContent = fmt(S.elapsed);
+
+  if (S.elapsed >= D.limitMs) { S.cleared = true; return finish(); }
+
+  if (S.card) {
+    let left, span;
+    if (S.windowAt) { span = D.inputMs; left = S.windowAt + D.inputMs - now; }
+    else            { span = S.grace;   left = S.shownAt  + S.grace   - now; }
+
+    const r = Math.max(0, left / span);
+    barFill.style.transform = `scaleX(${r})`;
+    barFill.classList.toggle("hot", r < 0.34);
+    if (left <= 0) return dead("TIME UP");
+  }
+  S.raf = requestAnimationFrame(tick);
+}
+
+/* ---------- 終わり ---------- */
+
+/* タブを離れると requestAnimationFrame が止まる（ブラウザの仕様）。
+   そのまま戻ると「猶予は過ぎているのに判定だけ遅れて即死」になるし、
+   逆に札を見たまま止められると考える時間を作れてしまう。
+   どちらも嫌なので、離れた時点で中断扱いにして記録も残さない。 */
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    if (S.phase === "play") abort();
+    bgmStop();
+  }
+});
+
+function abort() {
+  S.phase = "over";
+  bgmStop();
+  cancelAnimationFrame(S.raf);
+  clearTimeout(S.timer);
+  bar.classList.add("off");
+  hud.classList.remove("on");
+  pad.classList.remove("on");
+  stage.innerHTML = `
+    <p class="deadWord">中断</p>
+    <p class="rule">タブを離れたので、この回は記録に残りません。</p>
+    <div class="row"><button class="mini" id="home">タイトルへ</button></div>
+  `;
+  $("home").addEventListener("click", showTitle);
+}
+
+function dead(reason) {
+  if (S.phase !== "play") return;
+  S.deadReason = reason;
+  finish();
+}
+
+function finish() {
+  S.phase = "over";
+  bgmStop();                             // 失敗した瞬間に切る
+  cancelAnimationFrame(S.raf);
+  clearTimeout(S.timer);
+  bar.classList.add("off");
+  hud.classList.remove("on");
+  pad.classList.remove("on");
+
+  const ms = Math.min(S.elapsed, D.limitMs);
+  const best = readBest();
+  const isBest = !best || ms > best.ms;
+  if (isBest) writeBest({ ms, sorted: S.sorted });
+
+  const share = encodeURIComponent(
+    `キキとキサキを ${fmt(ms)} まで見分けました。\n仕分け ${S.sorted}人\n#キキキサキ仕分け`
+  );
+
+  setTimeout(() => {
+    stage.innerHTML = `
+      ${S.cleared
+        ? `<p class="kicker">Complete</p>`
+        : `<p class="deadWord">${S.deadReason === "TIME UP" ? "時間切れ" : "誤仕分け"}</p>`}
+      ${ms >= D.titleAtMs ? `<div class="crown">${D.title}</div>` : ``}
+      <p class="kicker">${isBest ? "New Record" : "Record"}</p>
+      <p class="resultTime">${fmt(ms)}</p>
+      <p class="resultSub">仕分け数 <b>${S.sorted}</b> キサキ</p>
+      ${!isBest && best ? `<p class="best">BEST ${fmt(best.ms)} / ${best.sorted}人仕分け</p>` : ``}
+      <div class="row">
+        <button class="mini" id="again">もう一度（R）</button>
+        <a class="mini" id="tweet" href="https://x.com/intent/post?text=${share}" target="_blank" rel="noopener">結果をXに投稿</a>
+        <button class="mini" id="home">タイトルへ</button>
+      </div>
+    `;
+    $("again").addEventListener("click", () => { S.offset = 0; startCountdown(); });
+    $("home").addEventListener("click", showTitle);
+  }, S.deadReason ? 420 : 0);   // ミスの瞬間を一拍見せる
+}
+
+/* 1枚目の札が一瞬空になるのを防ぐ。カウントダウンの2秒で足りる */
+let preloaded = false;
+function preload() {
+  if (preloaded || typeof Image === "undefined") return;
+  preloaded = true;
+  for (const src of new Set(D.cards.map(c => c.src).filter(Boolean))) new Image().src = asset(src);
+}
+
+/* ---------- BGM ---------- */
+/* 鳴らし方（2026-08-28 本人の指示）
+   ・PLAY を押すたびに **曲の頭から**
+   ・タイトル画面では鳴っていてよい
+   ・失敗したら **その場で切る**
+
+   ループは `<audio loop>` ではなく Web Audio。mp3 は仕様上、先頭と末尾に
+   エンコーダの詰め物が入るので、あれだと継ぎ目で切れる。
+   さらにこの曲は**曲尻に約0.34秒の減衰**があり、無音だけ削っても
+   「しぼんで、また飛び込む」音量のへこみが毎周回鳴る。両方 edges() で処理している。 */
+const A = { ctx: null, gain: null, src: null, buf: null, loop: null,
+            muted: false, vol: 0.5, loading: false };
+const MUTE_KEY = "kiki-kisaki:mute", VOL_KEY = "kiki-kisaki:vol";
+try {
+  A.muted = localStorage.getItem(MUTE_KEY) === "1";
+  const v = parseFloat(localStorage.getItem(VOL_KEY));
+  if (!isNaN(v)) A.vol = Math.min(1, Math.max(0, v));
+} catch {}
+
+const level = () => (A.muted ? 0 : A.vol);
+
+/* ループ点を決める。
+   ・先頭：本当の無音（mp3の詰め物）だけを削る。しきい値が極小なので意図的なフェードインは残る。
+   ・末尾：**曲尻の減衰を切り落とす**。末尾10秒の音量の中央値へ戻る位置まで遡って繋ぐ。
+   data.js で loopStart / loopEnd を秒で書けば、この自動検出より優先される（耳で詰めたいとき用）。 */
+function edges(buf) {
+  const rate = buf.sampleRate, n = buf.length, chs = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) chs.push(buf.getChannelData(c));
+
+  const thr = 3e-4;
+  const loud = (i) => chs.some(ch => Math.abs(ch[i]) > thr);
+  let a = 0;
+  const head = Math.min(n, Math.round(rate * 1.5));
+  while (a < head && !loud(a)) a++;
+
+  const w = Math.round(rate * 0.02);
+  const from = Math.max(a, n - Math.round(rate * 10));
+  const env = [];
+  for (let i = from; i + w <= n; i += w) {
+    let sum = 0;
+    for (let j = i; j < i + w; j++) for (const ch of chs) sum += ch[j] * ch[j];
+    env.push(Math.sqrt(sum / (w * chs.length)));
+  }
+  let b = n - 1;
+  if (env.length > 8) {
+    const med = [...env].sort((x, y) => x - y)[env.length >> 1];
+    let k = env.length - 1;
+    while (k > 0 && env[k] < med * 0.7) k--;
+    if (k < env.length - 1) b = from + (k + 1) * w - 1;
+  }
+  return { start: a / rate, end: (b + 1) / rate };
+}
+
+/* 音を用意する。**必ず操作（クリック・打鍵）の中から呼ぶこと。**
+   そうしないとブラウザの自動再生制限で AudioContext が止まったままになる。 */
+async function ensureAudio() {
+  if (A.buf) return true;
+  if (A.loading) return false;
+  if (!D.bgm || !D.bgm.src) return false;
+  if (typeof AudioContext === "undefined" || typeof fetch === "undefined") return false;
+  A.loading = true;
+  try {
+    A.ctx = new AudioContext();
+    A.gain = A.ctx.createGain();
+    A.gain.gain.value = level();
+    A.gain.connect(A.ctx.destination);
+    const res = await fetch(asset(D.bgm.src));
+    A.buf = await A.ctx.decodeAudioData(await res.arrayBuffer());
+    const auto = edges(A.buf);
+    A.loop = {
+      start: D.bgm.loopStart != null ? D.bgm.loopStart : auto.start,
+      end:   D.bgm.loopEnd   != null ? D.bgm.loopEnd   : auto.end,
+    };
+  } catch (e) { /* 音が出なくてもゲームは続ける */ }
+  A.loading = false;
+  return !!A.buf;
+}
+
+function bgmStop() {
+  if (!A.src) return;
+  try { A.src.stop(); A.src.disconnect(); } catch {}
+  A.src = null;
+}
+
+/* 曲の頭から鳴らし直す。BufferSource は使い捨てなので毎回作る */
+async function bgmPlay() {
+  if (!(await ensureAudio())) return;
+  if (A.ctx.state === "suspended") { try { await A.ctx.resume(); } catch {} }
+  bgmStop();
+  const s = A.ctx.createBufferSource();
+  s.buffer = A.buf;
+  s.loop = true;
+  s.loopStart = A.loop.start;
+  s.loopEnd = A.loop.end;
+  s.connect(A.gain);
+  A.gain.gain.value = 0;
+  s.start(0, A.loop.start);
+  A.gain.gain.linearRampToValueAtTime(level(), A.ctx.currentTime + 0.15);  // 頭のプツッを防ぐ
+  A.src = s;
+}
+
+function paintSnd() {
+  const b = $("mute"), v = $("vol"), box = $("snd");
+  if (b) {
+    b.classList.toggle("off", A.muted);
+    b.setAttribute("aria-label", A.muted ? "音を出す" : "音を消す");
+  }
+  if (box) box.classList.toggle("muted", A.muted);
+  if (v) v.value = String(Math.round(A.vol * 100));
+}
+function applyLevel() { if (A.gain) A.gain.gain.value = level(); }
+
+function toggleMute() {
+  A.muted = !A.muted;
+  try { localStorage.setItem(MUTE_KEY, A.muted ? "1" : "0"); } catch {}
+  applyLevel(); paintSnd();
+}
+function setVol(x) {
+  A.vol = Math.min(1, Math.max(0, x));
+  try { localStorage.setItem(VOL_KEY, String(A.vol)); } catch {}
+  if (A.vol > 0 && A.muted) {
+    A.muted = false;
+    try { localStorage.setItem(MUTE_KEY, "0"); } catch {}
+  }
+  applyLevel(); paintSnd();
+}
+
+/* ---------- 入り口 ---------- */
+
+addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (S.phase === "title" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); return startCountdown(); }
+  if (S.phase === "over"  && (e.key === "r" || e.key === "R" || e.key === "Enter")) { e.preventDefault(); S.offset = 0; return startCountdown(); }
+  if (S.phase === "play") { e.preventDefault(); press(e.key); }
+});
+
+pad.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-a]");
+  if (b && S.phase === "play" && S.card) { S.windowAt = S.windowAt || performance.now(); judge(b.dataset.a); }
+});
+
+if (matchMedia("(hover:none)").matches) document.body.classList.add("touch");
+
+/* 起動は data.js が届いてから（下のローダーが呼ぶ） */
+window.__kikiStart = (base) => {
+  D = window.KIKI_DATA; BASE = base;
+  if (D.pixelArt) document.body.classList.add("pixel");
+  const mb = $("mute"), vb = $("vol");
+  if (mb) mb.addEventListener("click", () => { toggleMute(); mb.blur(); });
+  if (vb) {
+    vb.addEventListener("input", () => setVol(+vb.value / 100));
+    vb.addEventListener("change", () => vb.blur());
+  }
+  paintSnd();
+  showTitle();
+};
+})();
+</script>
+
+<!-- data.js を読む。
+     astro.config が trailingSlash:"never" なので公開URLは /games/kiki-kisaki（末尾スラッシュ無し）に
+     なり、相対パスだと /games/data.js に化ける。一方 file:// で直接開くと絶対パスが死ぬ。
+     両方で動くように、ここで出し分けてから起動する。 -->
+<script>
+(() => {
+  const base = location.protocol === "file:" ? "" : "/games/kiki-kisaki/";
+  const s = document.createElement("script");
+  s.src = base + "data.js";
+  s.onload  = () => window.__kikiStart(base);
+  s.onerror = () => { document.getElementById("stage").textContent = "data.js が読み込めませんでした。"; };
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>
