@@ -7,6 +7,8 @@ status: published
 priceType: free
 thumbnail: /images/works/kiki-kisaki.webp
 heroImage: /images/works/kiki-kisaki.webp
+# X は webp のカード画像を取りこぼすことがあるので、OGPだけ jpg を指す
+ogImage: /games/kiki-kisaki/ogp.jpg
 description: 園児服のときは「キキ」、そうでないときは「キサキ」と名乗っている謎の女。時間内にタイプしろ！
 links:
   - label: 遊ぶ

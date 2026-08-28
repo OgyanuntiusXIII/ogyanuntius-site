@@ -188,6 +188,26 @@ body.pixel .chip img{image-rendering:pixelated;}
 /* カウントダウン */
 #count3{font-size:clamp(70px,22vw,180px);line-height:1;font-family:var(--font-en);}
 
+/* リザルト。仕分けた数だけ、キキを左・キサキを右に積んで見せる */
+#resultField{
+  display:flex;align-items:center;justify-content:center;
+  gap:clamp(10px,3vw,34px);width:100%;max-width:100%;
+}
+#resultBody{
+  display:flex;flex-direction:column;align-items:center;
+  gap:clamp(10px,2.4vh,22px);min-width:0;
+}
+.pile.big{
+  width:clamp(92px,16vw,196px);
+  align-content:center;gap:5px;
+  max-height:min(64vh,520px);
+}
+.pile.big .chip{width:44px;height:44px;}
+@media (max-width:520px){
+  .pile.big{width:clamp(74px,22vw,96px);gap:4px;}
+  .pile.big .chip{width:34px;height:34px;}
+}
+
 /* リザルト */
 .resultTime{
   font-family:var(--font-en);font-size:clamp(40px,13vw,96px);line-height:1;
@@ -366,6 +386,7 @@ const S = {
   raf: 0,
   timer: 0,
   cleared: false,
+  byAnswer: null,    // キキ／キサキをそれぞれ何枚さばいたか
 };
 
 /* ---------- 画面 ---------- */
@@ -414,6 +435,7 @@ function startRun() {
   S.run = 0;
   S.cleared = false;
   S.deadReason = null;
+  S.byAnswer = { KIKI: 0, KISAKI: 0 };
 
   hud.classList.add("on");
   pad.classList.add("on");
@@ -579,6 +601,7 @@ function stack(answer, card) {
 function judge(answer) {
   if (answer === S.card.answer) {
     S.sorted++;
+    S.byAnswer[answer]++;
     countEl.textContent = S.sorted;
     stack(answer, S.card);
     S.typed = answer;
@@ -637,6 +660,96 @@ function tick() {
   S.raf = requestAnimationFrame(tick);
 }
 
+/* ---------- 結果を1枚の画像にする ---------- */
+/* X の投稿画面（intent）には画像を添付する手段が仕様として無い。
+   なので結果を canvas に描いて、
+   ・スマホ … OSの共有シート（Web Share API）へ画像ごと渡す
+   ・PC   … クリップボードへコピーして、投稿欄に貼れる状態にする
+   の2経路にしている。どちらも使えない環境では、文だけの投稿になる。 */
+function renderCard(ms) {
+  const W = 1200, H = 630, PAD = 30;
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#f4f2ed"; g.fillRect(0, 0, W, H);
+
+  // 左右の山
+  const colW = 232;
+  const drawPile = (answer, x0) => {
+    const n = (S.byAnswer && S.byAnswer[answer]) || 0;
+    if (!n) return;
+    const cols = 4, gap = 6;
+    const size = Math.max(18, Math.min(58, Math.floor((colW - gap * (cols - 1)) / cols),
+                                       Math.floor((H - PAD * 2 - gap * (Math.ceil(n / cols) - 1)) / Math.max(1, Math.ceil(n / cols)))));
+    const rows = Math.ceil(n / cols);
+    const totalH = rows * size + (rows - 1) * gap;
+    const card = D.cards.find(c => c.answer === answer && c.src);
+    const im = card && IMGS.get(card.src);
+    for (let i = 0; i < n; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      const x = x0 + c * (size + gap);
+      const y = Math.round((H - totalH) / 2) + r * (size + gap);
+      if (im && im.complete && im.naturalWidth) {
+        // 縦長の絵から、上のほう（顔）を正方形で抜く
+        const sw = im.naturalWidth, sh = sw;
+        g.drawImage(im, 0, Math.round((im.naturalHeight - sh) * 0.12), sw, sh, x, y, size, size);
+      } else {
+        g.fillStyle = answer === "KIKI" ? "#ffe9c9" : "#d9e6ff";
+        g.fillRect(x, y, size, size);
+      }
+    }
+  };
+  drawPile("KIKI", PAD);
+  drawPile("KISAKI", W - PAD - colW);
+
+  // 真ん中
+  const JP = '"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif';
+  const EN = '"Helvetica Neue",Arial,sans-serif';
+  const cx = W / 2;
+  g.textAlign = "center"; g.textBaseline = "alphabetic";
+
+  g.fillStyle = "#e0301e"; g.font = `600 34px ${JP}`;
+  g.fillText(S.cleared ? "COMPLETE" : (S.deadReason === "WRONG" ? "誤仕分け" : "時間切れ"), cx, 200);
+
+  g.fillStyle = "#101010"; g.font = `700 116px ${EN}`;
+  g.fillText(fmt(ms), cx, 330);
+
+  g.font = `500 32px ${JP}`;
+  g.fillText(`仕分け数 ${S.sorted} キサキ`, cx, 392);
+
+  g.fillStyle = "#6a6a6a"; g.font = `600 26px ${JP}`;
+  g.fillText("キキ？キサキ？", cx, 460);
+  g.font = `400 19px ${EN}`;
+  g.fillText((D.shareUrl || "").replace(/^https?:\/\//, ""), cx, 492);
+
+  return cv;
+}
+
+const cardBlob = (cv) => new Promise(res => cv.toBlob(res, "image/png"));
+
+/* できる範囲でいちばん良い出し方を選ぶ */
+async function shareResult(ms, text, ev) {
+  let blob = null;
+  try { blob = await cardBlob(renderCard(ms)); } catch {}
+  if (!blob) return false;
+  const file = new File([blob], "kiki-kisaki.png", { type: "image/png" });
+
+  // スマホ：共有シートへ画像ごと渡す
+  if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+    if (ev) ev.preventDefault();
+    try { await navigator.share({ files: [file], text }); return true; } catch { return true; }
+  }
+  // PC：クリップボードへ入れて、投稿欄に貼れるようにする
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      const n = $("pasteNote");
+      if (n) n.textContent = "画像をコピーした。Xの投稿欄で Ctrl+V（Macは ⌘V）で貼れる。";
+    }
+  } catch {}
+  return false;
+}
+
 /* ---------- 終わり ---------- */
 
 /* タブを離れると requestAnimationFrame が止まる（ブラウザの仕様）。
@@ -672,6 +785,16 @@ function dead(reason) {
   finish();
 }
 
+/* リザルトに出す山のHTML。プレイ中と同じ絵を、数だけ並べる */
+function pileHtml(answer) {
+  const card = D.cards.find(c => c.answer === answer && c.src);
+  const n = (S.byAnswer && S.byAnswer[answer]) || 0;
+  const one = card
+    ? `<div class="chip hasimg" data-k="${answer}"><img src="${asset(card.src)}" alt=""></div>`
+    : `<div class="chip" data-k="${answer}"></div>`;
+  return one.repeat(n);
+}
+
 function finish() {
   S.phase = "over";
   bgmStop();                             // 失敗した瞬間に切る
@@ -695,31 +818,45 @@ function finish() {
 
   setTimeout(() => {
     stage.innerHTML = `
-      ${S.cleared
-        ? `<p class="kicker">Complete</p>`
-        : `<p class="deadWord">${S.deadReason === "WRONG" ? "誤仕分け" : "時間切れ"}</p>`}
-      ${ms >= D.titleAtMs ? `<div class="crown">${D.title}</div>` : ``}
-      <p class="kicker">${isBest ? "New Record" : "Record"}</p>
-      <p class="resultTime">${fmt(ms)}</p>
-      <p class="resultSub">仕分け数 <b>${S.sorted}</b> キサキ</p>
-      ${!isBest && best ? `<p class="best">BEST ${fmt(best.ms)} / ${best.sorted}人仕分け</p>` : ``}
-      <div class="row">
-        <button class="mini" id="again">もう一度（R）</button>
-        <a class="mini" id="tweet" href="https://x.com/intent/post?text=${share}" target="_blank" rel="noopener">結果をXに投稿</a>
-        <button class="mini" id="home">タイトルへ</button>
+      <div id="resultField">
+        <div class="pile big" id="rpileL">${pileHtml("KIKI")}</div>
+        <div id="resultBody">
+          ${S.cleared
+            ? `<p class="kicker">Complete</p>`
+            : `<p class="deadWord">${S.deadReason === "WRONG" ? "誤仕分け" : "時間切れ"}</p>`}
+          ${ms >= D.titleAtMs ? `<div class="crown">${D.title}</div>` : ``}
+          <p class="kicker">${isBest ? "New Record" : "Record"}</p>
+          <p class="resultTime">${fmt(ms)}</p>
+          <p class="resultSub">仕分け数 <b>${S.sorted}</b> キサキ</p>
+          ${!isBest && best ? `<p class="best">BEST ${fmt(best.ms)} / ${best.sorted}人仕分け</p>` : ``}
+          <div class="row">
+            <button class="mini" id="again">もう一度（R）</button>
+            <a class="mini" id="tweet" href="https://x.com/intent/post?text=${share}" target="_blank" rel="noopener">結果をXに投稿</a>
+            <button class="mini" id="home">タイトルへ</button>
+          </div>
+          <p class="best" id="pasteNote"></p>
+        </div>
+        <div class="pile big" id="rpileR">${pileHtml("KISAKI")}</div>
       </div>
     `;
     $("again").addEventListener("click", () => { S.offset = 0; startCountdown(); });
     $("home").addEventListener("click", showTitle);
+    const tw = $("tweet");
+    if (tw) tw.addEventListener("click", (ev) => { shareResult(ms, decodeURIComponent(share), ev); });
   }, S.deadReason ? 420 : 0);   // ミスの瞬間を一拍見せる
 }
 
 /* 1枚目の札が一瞬空になるのを防ぐ。カウントダウンの2秒で足りる */
 let preloaded = false;
+const IMGS = new Map();          // 結果画像を描くときにも使い回す
 function preload() {
   if (preloaded || typeof Image === "undefined") return;
   preloaded = true;
-  for (const src of new Set(D.cards.map(c => c.src).filter(Boolean))) new Image().src = asset(src);
+  for (const src of new Set(D.cards.map(c => c.src).filter(Boolean))) {
+    const im = new Image();
+    im.src = asset(src);
+    IMGS.set(src, im);
+  }
 }
 
 /* ---------- BGM ---------- */
