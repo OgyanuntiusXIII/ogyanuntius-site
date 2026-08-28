@@ -20,7 +20,6 @@ headlines:
   - ref: desk-takko
     collection: works
     slot: lead
-    badge: NEW
     no: 1
   - ref: shinari-make
     collection: works
@@ -30,6 +29,11 @@ headlines:
     collection: scenarios
     slot: side
     no: 3
+  - ref: kiki-kisaki
+    collection: works
+    slot: side
+    badge: NEW
+    no: 4
   - ref: /about
     collection: page
     catch: WHO IS OGYANUNTIUS XIII?
@@ -52,4 +56,4 @@ colophon:
   - X：@ogyanuntiusxiii
 ---
 
-創刊号。2026年9月号。作品は3つしかない。だから3つとも特集にした。
+創刊号。2026年9月号。作品は4つしかない。だから4つとも特集にした。
