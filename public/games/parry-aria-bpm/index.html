@@ -1249,11 +1249,13 @@ function gameOver(cleared){
   // 改行は文字コードで作る（ソースにバックスラッシュを残さない）
   const LF = String.fromCharCode(10);
   const rk = rankOf(reached);
+  // ⚠️ Xへ流す文だけ「おけつ」にしてある（本人指示・2026-08-30）。
+  //    「ケツ」だと投稿が規制に触れる可能性があるため。ゲームの題名はそのまま。
   const text = [
-    (S.cleared ? "クリアした！！ アリアのケツで" : "アリアのケツで") +
+    (S.cleared ? "クリアした！！ アリアのおけつで" : "アリアのおけつで") +
       S.killed + "体エーテリアスを倒した！",
     "称号：" + rk.now.name + "（" + reached + " BPM ／ 最大 " + S.bestCombo + " 連続）",
-    "#アリアのケツで刻め"
+    "#アリアのおけつで刻め"
   ].join(LF);
   const share = "https://x.com/intent/post?text=" + encodeURIComponent(text) +
                 "&url=" + encodeURIComponent(SHARE_URL);
