@@ -48,21 +48,29 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
     <div class="plays" hidden><dt>プレイ</dt><dd><span id="playCount"></span> play</dd></div>
   </dl>
 
-  <!-- プレイ回数。KVが繋がるまでは数が返らないので、この枠は出ない -->
+  <!-- プレイ回数。D1が繋がるまでは数が返らないので、この枠は出ない -->
   <script is:inline>
+    /* ⚠️ このサイトは ClientRouter（クライアント遷移）を使っている。
+       リンクから来たときはページが再読み込みされず、インラインscriptは**一度しか走らない**。
+       そのため `astro:page-load` で毎回呼ぶ。これが無いと
+       「F5したときだけ数字が出る」という状態になる（実際にそうなっていた）。 */
     (() => {
-      const box = document.querySelector('.meta .plays');
-      const out = document.getElementById('playCount');
-      if (!box || !out) return;
-      const slug = location.pathname.replace(/\/$/, '').split('/').pop();
-      fetch('/api/plays?g=' + encodeURIComponent(slug))
-        .then((r) => (r.ok && r.status !== 204 ? r.json() : null))
-        .then((d) => {
-          if (!d || typeof d.count !== 'number') return;
-          out.textContent = d.count.toLocaleString('ja-JP');
-          box.hidden = false;
-        })
-        .catch(() => {});
+      function showPlays(){
+        const box = document.querySelector('.meta .plays');
+        const out = document.getElementById('playCount');
+        if (!box || !out) return;
+        const slug = location.pathname.replace(/\/$/, '').split('/').pop();
+        fetch('/api/plays?g=' + encodeURIComponent(slug))
+          .then((r) => (r.ok && r.status !== 204 ? r.json() : null))
+          .then((d) => {
+            if (!d || typeof d.count !== 'number') return;
+            out.textContent = d.count.toLocaleString('ja-JP');
+            box.hidden = false;
+          })
+          .catch(() => {});
+      }
+      showPlays();                                  // 直接開いたとき
+      document.addEventListener('astro:page-load', showPlays);  // リンクで来たとき
     })();
   </script>
 

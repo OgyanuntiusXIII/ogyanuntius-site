@@ -364,12 +364,26 @@ function initAudio(){
   audioEpoch = actx.currentTime - performance.now() / 1000;
 }
 const atTime = ms => ms / 1000 + audioEpoch;
+
+/* 予約したい時刻を返す。**すでに過ぎていたら null**（鳴らさない）。
+   ⚠️ 以前は `Math.max(atTime(ms), currentTime)` で「今」へ寄せていた。
+      これだと、何かの理由で処理が詰まったり音の準備が遅れたりしたとき、
+      **溜まっていた音がまとめて一度に鳴る**（曲がもう一度流れたように聞こえる）。
+      遅れた音は鳴らさないほうが正しい。 */
+function slot(whenMs, graceMs){
+  if (!actx) return null;
+  const t = atTime(whenMs);
+  const now = actx.currentTime;
+  if (t < now - (graceMs || 60) / 1000) return null;   // 手遅れ。捨てる
+  return Math.max(t, now);
+}
 const freqOf = midi => 440 * Math.pow(2, (midi - 69) / 12);
 
 /* メロディの1音。BPMが上がると音が重なって溶けていく — それが狙い。 */
 function playNote(midi, whenMs, bpm, quiet){
   if (!actx) return;
-  const t = Math.max(atTime(whenMs), actx.currentTime);
+  const t = slot(whenMs);
+  if (t === null) return;
   const dur  = Math.min(0.16, (60 / bpm) * 0.85);
   const peak = quiet ? 0.10 : 0.26;
 
@@ -618,7 +632,8 @@ function scheduleCover(beat, tMs, beatMs){
 /* 1音鳴らす。voice で音色を変える */
 function coverNote(midi, whenMs, lenMs, voice, vol){
   if (!actx) return;
-  const t = Math.max(atTime(whenMs), actx.currentTime);
+  const t = slot(whenMs);
+  if (t === null) return;                    // 遅れた音は鳴らさない
   const dur = Math.max(0.05, Math.min(voice === "pad" ? 2.4 : 0.42, lenMs / 1000));
   const o = actx.createOscillator(), g = actx.createGain();
   o.type = voice === "bass" ? "triangle" : (voice === "pad" ? "triangle" : "square");
@@ -2113,6 +2128,8 @@ document.getElementById("startBtn").onclick = () => {
 
   const hero = document.getElementById("hero");
   if (!hero || hero.classList.contains("go")) return;
+  // resume は非同期。演出のあいだに整わないことがあるので、開始直前にもう一度確かめる
+  setTimeout(() => { if (actx && actx.state === "suspended") actx.resume(); }, 700);
   hero.classList.add("go");
   setTimeout(() => playParry(156, 1), 450);      // 着地の瞬間に鳴らす
   setTimeout(() => veil.classList.add("leaving"), 620);
