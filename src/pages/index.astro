@@ -64,7 +64,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
         <span class="cover__price">定価 ¥0</span>
         {/* 表紙に来た人の数。D1が繋がっていないときは出ない */}
         <span class="cover__views" id="viewBox" hidden>
-          本日 <b id="viewToday"></b>　累計 <b id="viewTotal"></b>
+          本日 <b id="viewToday"></b>　累計 <b id="viewTotal"></b> <span class="cover__viewsUnit">view</span>
         </span>
       </span>
     </div>
@@ -252,6 +252,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   /* 定価の右。誌面の情報なので、主張させず罫の一部として置く */
   .cover__views { color: var(--ink-mid, #7a7a86); letter-spacing: .04em; white-space: nowrap; }
   .cover__views b { font-family: var(--font-en); font-weight: 700; color: var(--ink); }
+  .cover__viewsUnit { font-family: var(--font-en); letter-spacing: .1em; }
 
   .cover__title { margin: 0; }
   .cover__title-jp {
