@@ -181,6 +181,13 @@ button:active{transform:translateY(1px);}
   position:absolute;left:0;right:0;bottom:.5rem;text-align:center;
   font-size:.72rem;color:#4a4a52;line-height:1.7;padding:0 1rem;pointer-events:none;
 }
+/* 脚注は触れないようにしてあるので、リンクだけ触れるよう戻す */
+#back{
+  display:inline-block;margin-bottom:5px;pointer-events:auto;
+  font-size:.72rem;letter-spacing:.08em;color:var(--ink-mid);
+  text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;
+}
+#back:hover{color:var(--flash);}
 </style>
 </head>
 <body>
@@ -246,6 +253,7 @@ button:active{transform:translateY(1px);}
   </div>
 </div>
 <div id="note">
+  <a id="back" href="/">← オギャヌンティウス十三世</a><br>
   ゼンレスゾーンゼロの非公式二次創作ゲームです。
 </div>
 
