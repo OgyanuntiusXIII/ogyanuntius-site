@@ -20,6 +20,7 @@ export async function GET() {
     '/about',
     '/contents',
     '/blog',
+    '/sessions',
     ...works.map((entry) => `/works/${entry.id}`),
     ...scenarios.map((entry) => `/scenario/${entry.id}`),
     ...blog.map((entry) => `/blog/${entry.id}`),

@@ -1,5 +1,5 @@
 import { defineCollection, z } from 'astro:content';
-import { glob } from 'astro/loaders';
+import { glob, file } from 'astro/loaders';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -154,4 +154,32 @@ const nowmaking = defineCollection({
   }),
 });
 
-export const collections = { works, scenarios, issues, news, nowmaking, blog };
+/**
+ * 卓の記録（SESSION LOG）。**ここだけ md ではなく JSON 1本。**
+ * 1件が「日付＋一言＋スクショ」しかないので、md を25枚置くほうが嵩む。
+ *
+ * 手で書かない。**正本は Vault の `TRPG/シナリオ記録/*.md`。**
+ *   Vault で `卓報告: true` にする
+ *   → `python 開発/Vault保守/trpg_sessions_export.py --apply`
+ *   → sessions.json と public/images/sessions/ が更新される
+ * ここを直接編集すると、次の書き出しで消える。
+ */
+const sessions = defineCollection({
+  loader: file('./src/content/sessions/sessions.json'),
+  schema: z.object({
+    title: z.string(),
+    /** 卓を回した日。Vault側で空のものは null */
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD で書く').nullable(),
+    role: z.enum(['KP', 'PL']),
+    style: z.enum(['オンライン', 'オフライン']).nullable().default(null),
+    system: z.string(),
+    types: z.array(z.string()).default([]),
+    kp: z.string(),
+    pl: z.array(z.string()).default([]),
+    /** 一言感想。**エンディングに触れるので一覧には出さない**（ポップの中だけ） */
+    comment: z.string(),
+    images: z.array(publicPath).default([]),
+  }),
+});
+
+export const collections = { works, scenarios, issues, news, nowmaking, blog, sessions };

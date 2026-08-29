@@ -11,6 +11,7 @@ const works = await getCollection('works');
 const scenarios = await getCollection('scenarios');
 const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order);
 const news = (await getCollection('news')).sort((a, b) => +b.data.date - +a.data.date);
+const sessions = await getCollection('sessions');
 /* url が無い行は素の文字のままで、押せなかった。ref から作品ページへ繋ぐ */
 const newsLink = await buildNewsLinker();
 
@@ -78,6 +79,11 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
     ) : (
       <p class="dim">準備中。</p>
     )}
+
+    <h2 class="h2">SESSION LOG ／ 卓の記録</h2>
+    <ul class="plain">
+      <li><a class="link" href="/sessions">回した卓と、座った卓（{sessions.length}卓）</a></li>
+    </ul>
 
     <h2 class="h2">制作の裏側</h2>
     <ul class="plain">

@@ -1,0 +1,124 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+/**
+ * 卓の記録。**一覧は「いつ・何を・どっちで」だけ。**
+ * 一言感想はエンディングに触れる（「初ロスト」「全員生還」など）ので、
+ * 押して開くまで見えない位置に置いている。ここを一覧へ出さないこと。
+ */
+const sessions = (await getCollection('sessions')).sort((a, b) => {
+  const x = a.data.date ?? '', y = b.data.date ?? '';
+  return y.localeCompare(x);
+});
+
+const kp = sessions.filter((s) => s.data.role === 'KP').length;
+const jp = (d: string | null) =>
+  d ? `${d.slice(0, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}` : '——.——.——';
+---
+<Base title="卓の記録" description="回した卓、座った卓。25卓ぶんのクトゥルフ神話TRPGのプレイ記録。">
+  <div class="wrap measure">
+    <p class="kicker">SESSION LOG</p>
+    <h1 class="h1">卓の記録</h1>
+    <p class="lead">回した卓と、座った卓。押すと、その日のことが出る。</p>
+
+    <dl class="stats">
+      <div><dt>卓</dt><dd>{sessions.length}</dd></div>
+      <div><dt>KP</dt><dd>{kp}</dd></div>
+      <div><dt>PL</dt><dd>{sessions.length - kp}</dd></div>
+    </dl>
+
+    <ol class="log">
+      {sessions.map((s, i) => (
+        <li class="log__item">
+          <button class="log__row" type="button" data-open={`s-${s.id}`}>
+            <span class="log__no">{String(i + 1).padStart(2, '0')}</span>
+            <span class="log__body">
+              <span class="log__ttl">{s.data.title}</span>
+              <span class="log__meta">
+                <time>{jp(s.data.date)}</time>
+                <span class={`badge badge--${s.data.role.toLowerCase()}`}>{s.data.role}</span>
+                <span class="dim">{s.data.system}</span>
+                {s.data.images.length > 0 && <span class="dim" aria-label="スクショあり">📷</span>}
+              </span>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ol>
+
+    <p class="back"><a class="link" href="/contents">← 目次へ戻る</a></p>
+  </div>
+
+  {sessions.map((s) => (
+    <dialog class="pop" id={`s-${s.id}`}>
+      <form method="dialog"><button class="pop__x" aria-label="閉じる">×</button></form>
+      <p class="pop__date">{jp(s.data.date)}</p>
+      <h2 class="pop__ttl">{s.data.title}</h2>
+
+      <ul class="pop__facts">
+        <li><span>立場</span>{s.data.role === 'KP' ? 'KP（回した）' : 'PL（座った）'}</li>
+        <li><span>システム</span>{s.data.system}</li>
+        {s.data.types.length > 0 && <li><span>タイプ</span>{s.data.types.join('・')}</li>}
+        {s.data.kp && <li><span>KP</span>{s.data.kp}</li>}
+        {s.data.pl.length > 0 && <li><span>PL</span>{s.data.pl.join('、')}</li>}
+        {s.data.style && <li><span>形式</span>{s.data.style}</li>}
+      </ul>
+
+      {s.data.comment && <p class="pop__note">{s.data.comment}</p>}
+
+      {s.data.images.map((src) => (
+        <img class="pop__img" src={src} alt={`${s.data.title} のスクリーンショット`} loading="lazy" />
+      ))}
+    </dialog>
+  ))}
+</Base>
+
+<script>
+  for (const b of document.querySelectorAll<HTMLElement>('[data-open]')) {
+    b.addEventListener('click', () => {
+      const d = document.getElementById(b.dataset.open!) as HTMLDialogElement | null;
+      d?.showModal();
+    });
+  }
+  /* 外側を押しても閉じる。dialog の当たり判定は箱の外まで及ぶので target で見る */
+  for (const d of document.querySelectorAll<HTMLDialogElement>('dialog.pop')) {
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+  }
+</script>
+
+<style>
+  .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
+  .h1 { font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: -.02em; margin: 0 0 .6rem; }
+  .lead { color: var(--ink-mid); margin: 0 0 2rem; }
+
+  .stats { display: flex; gap: clamp(18px, 5vw, 44px); margin: 0 0 2.4rem; padding: 0 0 1.4rem; border-bottom: 2px solid var(--rule); }
+  .stats dt { font-family: var(--font-en); font-size: 10px; letter-spacing: .2em; color: var(--ink-mid); }
+  .stats dd { font-family: var(--font-en); font-size: clamp(1.8rem, 6vw, 2.8rem); font-weight: 700; font-style: italic; line-height: 1; margin: .1em 0 0; }
+
+  .log { list-style: none; margin: 0; padding: 0; }
+  .log__item { border-top: 1px solid var(--rule); }
+  .log__item:last-child { border-bottom: 1px solid var(--rule); }
+  .log__row { display: flex; gap: clamp(12px, 3vw, 28px); align-items: baseline; width: 100%; padding: 1rem 0; background: none; border: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+  .log__row:hover .log__ttl, .log__row:focus-visible .log__ttl { text-decoration: underline; }
+  .log__no { font-family: var(--font-en); font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 700; font-style: italic; color: var(--accent); line-height: 1; min-width: 2.2ch; flex: none; }
+  .log__body { display: block; }
+  .log__ttl { display: block; font-size: clamp(1rem, 2.2vw, 1.35rem); font-weight: 700; line-height: 1.35; }
+  .log__meta { display: flex; flex-wrap: wrap; gap: .6em; align-items: center; margin-top: .25em; font-family: var(--font-en); font-size: .8rem; color: var(--ink-mid); }
+  .badge { font-size: 10px; font-weight: 700; letter-spacing: .12em; padding: .15em .5em; border: 1px solid currentColor; }
+  .badge--kp { color: var(--accent); }
+  .dim { color: var(--ink-mid); }
+
+  .pop { width: min(560px, calc(100vw - 2rem)); max-height: 86vh; padding: clamp(1.4rem, 4vw, 2.4rem); border: 1px solid var(--ink); border-radius: 0; background: var(--paper); color: inherit; }
+  .pop::backdrop { background: rgba(20, 20, 20, .62); }
+  .pop__x { position: sticky; top: 0; float: right; width: 2rem; height: 2rem; margin: -.6rem -.6rem 0 0; background: none; border: 0; font-size: 1.4rem; line-height: 1; cursor: pointer; color: var(--ink-mid); }
+  .pop__x:hover { color: var(--ink); }
+  .pop__date { font-family: var(--font-en); font-size: .8rem; letter-spacing: .12em; color: var(--accent); margin: 0 0 .2rem; }
+  .pop__ttl { font-size: clamp(1.2rem, 3.4vw, 1.6rem); line-height: 1.3; margin: 0 0 1.2rem; }
+  .pop__facts { list-style: none; margin: 0 0 1.2rem; padding: 0; border-top: 1px solid var(--rule); font-size: .9rem; }
+  .pop__facts li { display: flex; gap: 1em; padding: .5rem 0; border-bottom: 1px solid var(--rule); }
+  .pop__facts span { flex: none; width: 5.5em; color: var(--ink-mid); font-size: .82rem; }
+  .pop__note { margin: 0 0 1.2rem; padding: .9rem 1rem; background: var(--paper-2); border-left: 3px solid var(--accent); line-height: 1.8; }
+  .pop__img { display: block; width: 100%; height: auto; margin-top: .8rem; border: 1px solid var(--rule); }
+  .back { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
+</style>
