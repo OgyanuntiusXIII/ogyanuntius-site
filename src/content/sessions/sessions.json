@@ -15,6 +15,9 @@
       "ゆうなり"
     ],
     "comment": "ゆうなりくんはかなり勘がよかった。ベストエンド。",
+    "spoiler": "自作",
+    "author": "オギャヌンティウス十三世",
+    "sourceUrl": "https://tiiinnstudio.booth.pm/items/8616258",
     "images": []
   },
   {
@@ -33,6 +36,9 @@
       "konbu"
     ],
     "comment": "PL初プレイだが、とんでもなくクトゥルフ筋がある。将来有望。",
+    "spoiler": "要配慮",
+    "author": "泥紳士",
+    "sourceUrl": null,
     "images": []
   },
   {
@@ -52,11 +58,14 @@
       "すず"
     ],
     "comment": "二人ともほぼ初クトゥルフ。全員生還。普通にしにかけた",
+    "spoiler": "不明",
+    "author": null,
+    "sourceUrl": "https://booth.pm/ja/items/5649642",
     "images": []
   },
   {
-    "id": "2026-08-18-ff107",
-    "title": "毒入りスープ2陣",
+    "id": "2026-08-18-877e1",
+    "title": "毒入りスープ（第2陣）",
     "date": "2026-08-18",
     "role": "KP",
     "style": null,
@@ -70,6 +79,9 @@
       "えぬえぬ"
     ],
     "comment": "2回目のプレイで生還。センスがある。",
+    "spoiler": "要配慮",
+    "author": "泥紳士",
+    "sourceUrl": null,
     "images": []
   },
   {
@@ -91,6 +103,9 @@
       "影狼"
     ],
     "comment": "因習村。わるものは化け物に食わせたらええねん",
+    "spoiler": "不明",
+    "author": null,
+    "sourceUrl": "https://booth.pm/ja/items/6897815",
     "images": [
       "/images/sessions/2026-08-16-b2609-1.png",
       "/images/sessions/2026-08-16-b2609-2.png"
@@ -114,13 +129,16 @@
       "こがらし"
     ],
     "comment": "全員生還。サメをヘリで爆破",
+    "spoiler": "不明",
+    "author": null,
+    "sourceUrl": "https://booth.pm/ja/items/5969392",
     "images": [
       "/images/sessions/2026-08-15-a4cce-1.png"
     ]
   },
   {
-    "id": "2026-08-13-0b0ed",
-    "title": "コーヒー一杯分の恐怖_2026-08-13",
+    "id": "2026-08-13-aca2b",
+    "title": "コーヒー一杯分の恐怖（第2陣）",
     "date": "2026-08-13",
     "role": "KP",
     "style": null,
@@ -134,6 +152,9 @@
       "えぬえぬ"
     ],
     "comment": "初めてにしてはかなり上出来では？生存。",
+    "spoiler": "不明",
+    "author": null,
+    "sourceUrl": "https://booth.pm/ja/items/5649642",
     "images": []
   },
   {
@@ -154,6 +175,9 @@
       "6696"
     ],
     "comment": "Exit.C 最後に南極にてルリム・シャイコースの巣にワープ　初ロスト ドーパミンは猫をも殺す",
+    "spoiler": "要配慮",
+    "author": "ゆめたろう",
+    "sourceUrl": "https://booth.pm/ja/items/5081953",
     "images": [
       "/images/sessions/2026-08-09-25441-1.png"
     ]
@@ -176,9 +200,166 @@
       "ゆうなり"
     ],
     "comment": "全員生還トゥルー",
+    "spoiler": "不明",
+    "author": null,
+    "sourceUrl": null,
     "images": [
       "/images/sessions/2026-08-03-54313-1.png"
     ]
+  },
+  {
+    "id": "2026-07-29-a5e9b",
+    "title": "ドロップアウトディスパイア",
+    "date": "2026-07-29",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "同人",
+      "現代日本"
+    ],
+    "kp": "ホルモン",
+    "pl": [
+      "みのる",
+      "オギャヌンティウス十三世"
+    ],
+    "comment": "トゥルーエンド　最後のINTロールなんていらねえ！",
+    "spoiler": "要配慮",
+    "author": "茶々丸",
+    "sourceUrl": "https://booth.pm/ja/items/1907819",
+    "images": []
+  },
+  {
+    "id": "2026-07-26-f84cf",
+    "title": "プルガトニウムの夜",
+    "date": "2026-07-26",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "同人",
+      "現代日本"
+    ],
+    "kp": "ミオン",
+    "pl": [
+      "ホルモン",
+      "オギャヌンティウス十三世"
+    ],
+    "comment": "HO2　ENDC:贖罪　この命で、生きていく。",
+    "spoiler": "要配慮",
+    "author": "中尾ヤスヒロ",
+    "sourceUrl": "https://booth.pm/ja/items/3408537",
+    "images": []
+  },
+  {
+    "id": "2026-07-22-11425",
+    "title": "奇妙な共闘",
+    "date": "2026-07-22",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7パルプクトゥルフ",
+    "types": [
+      "公式",
+      "現代日本"
+    ],
+    "kp": "さめぺ",
+    "pl": [
+      "なんとしてもクリティカルを出したいーうい",
+      "ハナミズキ",
+      "泡沫"
+    ],
+    "comment": "グールと共闘。圧勝",
+    "spoiler": "不明",
+    "author": "坂東真紅郎",
+    "sourceUrl": null,
+    "images": []
+  },
+  {
+    "id": "2026-07-22-1f09e",
+    "title": "崩壊装置",
+    "date": "2026-07-22",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7パルプクトゥルフ",
+    "types": [
+      "公式",
+      "海外1920s"
+    ],
+    "kp": "さめぺ",
+    "pl": [
+      "泡沫"
+    ],
+    "comment": "うおおおおお！すべてを焼き付くす！！",
+    "spoiler": "不明",
+    "author": "Alan Bray",
+    "sourceUrl": null,
+    "images": []
+  },
+  {
+    "id": "2026-07-18-71889",
+    "title": "竜が墜ちるとき",
+    "date": "2026-07-18",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7パルプクトゥルフ",
+    "types": [
+      "同人",
+      "現代日本"
+    ],
+    "kp": "minami",
+    "pl": [
+      "ルカオ"
+    ],
+    "comment": "龍が如くってかんじ",
+    "spoiler": "OK",
+    "author": "黒崎江治",
+    "sourceUrl": "https://booth.pm/ja/items/6614821",
+    "images": []
+  },
+  {
+    "id": "2026-07-15-9f602",
+    "title": "5次元宇宙のひ孫様",
+    "date": "2026-07-15",
+    "role": "KP",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "同人",
+      "現代日本"
+    ],
+    "kp": "オギャヌンティウス十三世",
+    "pl": [
+      "ホルモン"
+    ],
+    "comment": "初回。かなり面白くできていて自分でも驚き。反省点は多い。",
+    "spoiler": "自作",
+    "author": "オギャヌンティウス十三世",
+    "sourceUrl": null,
+    "images": []
+  },
+  {
+    "id": "2026-07-08-597b2",
+    "title": "「The Lightless Beacon」光なき灯台",
+    "date": "2026-07-08",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "公式",
+      "海外1920s",
+      "海外産シナリオ"
+    ],
+    "kp": "やどりぎ",
+    "pl": [
+      "よしの",
+      "操司",
+      "オギャヌンティウス十三世"
+    ],
+    "comment": "海外公式。タワーディフェンスって感じ。インスマスをいっぱいやったぜ。",
+    "spoiler": "OK",
+    "author": "Chaosium",
+    "sourceUrl": "https://www.chaosium.com/fan-use-and-licensing-q-a/",
+    "images": []
   },
   {
     "id": "2026-07-05-5b794",
@@ -197,9 +378,146 @@
       "みのる"
     ],
     "comment": "全員生還！！",
+    "spoiler": "不明",
+    "author": null,
+    "sourceUrl": null,
     "images": [
       "/images/sessions/2026-07-05-5b794-1.png"
     ]
+  },
+  {
+    "id": "2026-07-04-ae749",
+    "title": "同じ空には昇れない",
+    "date": "2026-07-04",
+    "role": "PL",
+    "style": null,
+    "system": "CoC6",
+    "types": [
+      "同人",
+      "現代日本"
+    ],
+    "kp": "みのる",
+    "pl": [
+      "ホルモン"
+    ],
+    "comment": "神シナリオ。レロリラと共にこれからも征こう。",
+    "spoiler": "要配慮",
+    "author": "〇助（多箱屋商会）",
+    "sourceUrl": "https://booth.pm/ja/items/5202796",
+    "images": []
+  },
+  {
+    "id": "2026-07-03-8e6b9",
+    "title": "【Rivers of London】(ヤギ男が来る！)",
+    "date": "2026-07-03",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "海外産シナリオ",
+      "現代海外"
+    ],
+    "kp": "okome",
+    "pl": [
+      "りゅう",
+      "たっつん",
+      "夜市"
+    ],
+    "comment": "やぎにされてかわいそうに・・・",
+    "spoiler": "OK",
+    "author": "Chaosium",
+    "sourceUrl": "https://www.chaosium.com/rivers-of-london-underground-overground-hardcover/",
+    "images": [
+      "/images/sessions/2026-07-03-8e6b9-1.png"
+    ]
+  },
+  {
+    "id": "2026-06-29-c8194",
+    "title": "８００万の美の頂点",
+    "date": "2026-06-29",
+    "role": "KP",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "同人",
+      "現代日本"
+    ],
+    "kp": "オギャヌンティウス十三世",
+    "pl": [
+      "75"
+    ],
+    "comment": "微バッドエンド。生きてるだけマシか",
+    "spoiler": "自作",
+    "author": "オギャヌンティウス十三世",
+    "sourceUrl": "https://tiiinnstudio.booth.pm/items/8539940",
+    "images": []
+  },
+  {
+    "id": "2026-06-28-ddf9b",
+    "title": "Bloodline(血脈)",
+    "date": "2026-06-28",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "海外1920s",
+      "海外産シナリオ"
+    ],
+    "kp": "あんかけ蛍",
+    "pl": [
+      "おさむ",
+      "平蜘蛛"
+    ],
+    "comment": "１００日後に死なないワニ",
+    "spoiler": "不明",
+    "author": null,
+    "sourceUrl": null,
+    "images": []
+  },
+  {
+    "id": "2026-06-28-3aa7e",
+    "title": "コーヒー一杯分の恐怖",
+    "date": "2026-06-28",
+    "role": "KP",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "公式",
+      "現代日本"
+    ],
+    "kp": "オギャヌンティウス十三世",
+    "pl": [
+      "75"
+    ],
+    "comment": "生存エンド",
+    "spoiler": "不明",
+    "author": null,
+    "sourceUrl": "https://booth.pm/ja/items/5649642",
+    "images": []
+  },
+  {
+    "id": "2026-06-27-0e20e",
+    "title": "夢のナチャ大橋建設プロジェクト",
+    "date": "2026-06-27",
+    "role": "PL",
+    "style": null,
+    "system": "CoC7",
+    "types": [
+      "同人",
+      "現代日本"
+    ],
+    "kp": "NekoMimi",
+    "pl": [
+      "カレーのルー",
+      "ましろ",
+      "ホルモン",
+      "jyonsoon(シナリオ製作者、見学)"
+    ],
+    "comment": "ブラック企業爆破って感じ。ベストエンド",
+    "spoiler": "不明",
+    "author": "jyonsoon",
+    "sourceUrl": "https://booth.pm/ja/items/8718670",
+    "images": []
   },
   {
     "id": "2026-06-25-3934b",
@@ -215,6 +533,9 @@
     "kp": "ホルモン",
     "pl": [],
     "comment": "ベストエンド？　KPがめっちゃ演出凝ってくれた。最高の体験。ありがとう。",
+    "spoiler": "不明",
+    "author": "KADOKAWA",
+    "sourceUrl": "https://product.kadokawa.co.jp/cthulhu/scenario/entry-640737.html",
     "images": []
   },
   {
@@ -233,255 +554,9 @@
       "75"
     ],
     "comment": "無謀にも神話生物に挑み死亡。かわいそうに！",
-    "images": []
-  },
-  {
-    "id": "undated-9f602",
-    "title": "5次元宇宙のひ孫様",
-    "date": null,
-    "role": "KP",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "同人",
-      "現代日本"
-    ],
-    "kp": "オギャヌンティウス十三世",
-    "pl": [
-      "ホルモン"
-    ],
-    "comment": "初回。かなり面白くできていて自分でも驚き。反省点は多い。",
-    "images": []
-  },
-  {
-    "id": "undated-ddf9b",
-    "title": "Bloodline(血脈)",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "海外1920s",
-      "海外産シナリオ"
-    ],
-    "kp": "あんかけ蛍",
-    "pl": [
-      "おさむ",
-      "平蜘蛛"
-    ],
-    "comment": "１００日後に死なないワニ",
-    "images": []
-  },
-  {
-    "id": "undated-597b2",
-    "title": "「The Lightless Beacon」光なき灯台",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "公式",
-      "海外1920s",
-      "海外産シナリオ"
-    ],
-    "kp": "やどりぎ",
-    "pl": [
-      "よしの",
-      "操司",
-      "オギャヌンティウス十三世"
-    ],
-    "comment": "海外公式。タワーディフェンスって感じ。インスマスをいっぱいやったぜ。",
-    "images": []
-  },
-  {
-    "id": "undated-8e6b9",
-    "title": "【Rivers of London】(ヤギ男が来る！)",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "海外産シナリオ",
-      "現代海外"
-    ],
-    "kp": "okome",
-    "pl": [
-      "りゅう",
-      "たっつん",
-      "夜市"
-    ],
-    "comment": "やぎにされてかわいそうに・・・",
-    "images": [
-      "/images/sessions/undated-8e6b9-1.png"
-    ]
-  },
-  {
-    "id": "undated-3aa7e",
-    "title": "コーヒー一杯分の恐怖",
-    "date": null,
-    "role": "KP",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "公式",
-      "現代日本"
-    ],
-    "kp": "オギャヌンティウス十三世",
-    "pl": [
-      "75"
-    ],
-    "comment": "生存エンド",
-    "images": []
-  },
-  {
-    "id": "undated-a5e9b",
-    "title": "ドロップアウトディスパイア",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "同人",
-      "現代日本"
-    ],
-    "kp": "ホルモン",
-    "pl": [
-      "みのる",
-      "オギャヌンティウス十三世"
-    ],
-    "comment": "トゥルーエンド　最後のINTロールなんていらねえ！",
-    "images": []
-  },
-  {
-    "id": "undated-f84cf",
-    "title": "プルガトニウムの夜",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "同人",
-      "現代日本"
-    ],
-    "kp": "ミオン",
-    "pl": [
-      "ホルモン",
-      "オギャヌンティウス十三世"
-    ],
-    "comment": "HO2　ENDC:贖罪　この命で、生きていく。",
-    "images": []
-  },
-  {
-    "id": "undated-ae749",
-    "title": "同じ空には昇れない",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC6",
-    "types": [
-      "同人",
-      "現代日本"
-    ],
-    "kp": "みのる",
-    "pl": [
-      "ホルモン"
-    ],
-    "comment": "神シナリオ。レロリラと共にこれからも征こう。",
-    "images": []
-  },
-  {
-    "id": "undated-0e20e",
-    "title": "夢のナチャ大橋建設プロジェクト",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "同人",
-      "現代日本"
-    ],
-    "kp": "NekoMimi",
-    "pl": [
-      "カレーのルー",
-      "ましろ",
-      "ホルモン",
-      "jyonsoon(シナリオ製作者、見学)"
-    ],
-    "comment": "ブラック企業爆破って感じ。ベストエンド",
-    "images": []
-  },
-  {
-    "id": "undated-11425",
-    "title": "奇妙な共闘",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7パルプクトゥルフ",
-    "types": [
-      "公式",
-      "現代日本"
-    ],
-    "kp": "さめぺ",
-    "pl": [
-      "なんとしてもクリティカルを出したいーうい",
-      "ハナミズキ",
-      "泡沫"
-    ],
-    "comment": "グールと共闘。圧勝",
-    "images": []
-  },
-  {
-    "id": "undated-1f09e",
-    "title": "崩壊装置",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7パルプクトゥルフ",
-    "types": [
-      "公式",
-      "海外1920s"
-    ],
-    "kp": "さめぺ",
-    "pl": [
-      "泡沫"
-    ],
-    "comment": "うおおおおお！すべてを焼き付くす！！",
-    "images": []
-  },
-  {
-    "id": "undated-71889",
-    "title": "竜が墜ちるとき",
-    "date": null,
-    "role": "PL",
-    "style": null,
-    "system": "CoC7パルプクトゥルフ",
-    "types": [
-      "同人",
-      "現代日本"
-    ],
-    "kp": "minami",
-    "pl": [
-      "ルカオ"
-    ],
-    "comment": "龍が如くってかんじ",
-    "images": []
-  },
-  {
-    "id": "undated-c8194",
-    "title": "８００万の美の頂点",
-    "date": null,
-    "role": "KP",
-    "style": null,
-    "system": "CoC7",
-    "types": [
-      "同人",
-      "現代日本"
-    ],
-    "kp": "オギャヌンティウス十三世",
-    "pl": [
-      "75"
-    ],
-    "comment": "微バッドエンド。生きてるだけマシか",
+    "spoiler": "要配慮",
+    "author": "泥紳士",
+    "sourceUrl": null,
     "images": []
   }
 ]

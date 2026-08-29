@@ -65,7 +65,21 @@ const jp = (d: string | null) =>
         {s.data.style && <li><span>形式</span>{s.data.style}</li>}
       </ul>
 
-      {s.data.comment && <p class="pop__note">{s.data.comment}</p>}
+      {s.data.comment && (
+        <details class="spoil">
+          <summary class="spoil__btn">⚠ ネタバレを含みます — 押すと表示</summary>
+          <p class="pop__note">{s.data.comment}</p>
+        </details>
+      )}
+
+      {(s.data.author || s.data.sourceUrl) && (
+        <p class="pop__credit">
+          {s.data.author && <>シナリオ：{s.data.author}　</>}
+          {s.data.sourceUrl && (
+            <a href={s.data.sourceUrl} rel="noopener" target="_blank">頒布ページ ↗</a>
+          )}
+        </p>
+      )}
 
       {s.data.images.map((src) => (
         <img class="pop__img" src={src} alt={`${s.data.title} のスクリーンショット`} loading="lazy" />
@@ -118,7 +132,14 @@ const jp = (d: string | null) =>
   .pop__facts { list-style: none; margin: 0 0 1.2rem; padding: 0; border-top: 1px solid var(--rule); font-size: .9rem; }
   .pop__facts li { display: flex; gap: 1em; padding: .5rem 0; border-bottom: 1px solid var(--rule); }
   .pop__facts span { flex: none; width: 5.5em; color: var(--ink-mid); font-size: .82rem; }
-  .pop__note { margin: 0 0 1.2rem; padding: .9rem 1rem; background: var(--paper-2); border-left: 3px solid var(--accent); line-height: 1.8; }
+  /* ネタバレは押すまで出さない。details なので JS 無しでも必ず閉じている */
+  .spoil { margin: 0 0 1.2rem; }
+  .spoil__btn { cursor: pointer; list-style: none; padding: .7rem 1rem; border: 1px dashed var(--rule); font-size: .85rem; color: var(--ink-mid); text-align: center; user-select: none; }
+  .spoil__btn::-webkit-details-marker { display: none; }
+  .spoil__btn:hover { color: var(--ink); border-color: var(--ink-mid); }
+  .spoil[open] .spoil__btn { border-style: solid; border-bottom: 0; }
+  .pop__note { margin: 0; padding: .9rem 1rem; background: var(--paper-2); border-left: 3px solid var(--accent); line-height: 1.8; }
+  .pop__credit { margin: 0 0 1rem; font-size: .78rem; color: var(--ink-mid); }
   .pop__img { display: block; width: 100%; height: auto; margin-top: .8rem; border: 1px solid var(--rule); }
   .back { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
 </style>

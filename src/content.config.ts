@@ -176,8 +176,18 @@ const sessions = defineCollection({
     types: z.array(z.string()).default([]),
     kp: z.string(),
     pl: z.array(z.string()).default([]),
-    /** 一言感想。**エンディングに触れるので一覧には出さない**（ポップの中だけ） */
+    /**
+     * 一言感想。**エンディングに触れる。**
+     * 一覧には出さず、ポップを開いた先で **さらに「ネタバレ注意」を押させてから**出す。
+     * 本人の指示（2026-08-29）:「いかなる感想も公開時は一回ネタバレ注意ボタンつくって、
+     * そのうえで押したら見れるようにしよう。それで対応する」
+     */
     comment: z.string(),
+    /** 頒布規約の調査結果。既定は安全側の「不明」 */
+    spoiler: z.enum(['自作', 'OK', '要配慮', '不明']).default('不明'),
+    /** クレジット表記用。『同じ空には昇れない』は作者名・タイトル・URLの明記が必須 */
+    author: z.string().nullable().default(null),
+    sourceUrl: z.string().url().nullable().default(null),
     images: z.array(publicPath).default([]),
   }),
 });
