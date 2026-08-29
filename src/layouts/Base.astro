@@ -169,36 +169,50 @@ const structuredDataJson = structuredData
     </script>
     <script is:inline>
       /* 公式サイトTOP（表紙）の閲覧数。
+         ⚠️ **1人1日1回しか数えない。** 更新するたびに増えると数字が実態より膨らむので、
+            ブラウザに「最後に数えた日」を持たせて、同じ日の2回目以降は数えない
+            （表示は毎回する）。日付は**日本時間**でサーバ側と揃える。
+            シークレットウィンドウ・別ブラウザ・履歴削除は別人として数える。
+            そこはIPを見れば潰せるが、個人サイトの数字に個人情報を持ち出すのは
+            釣り合わないので採らなかった（本人と相談のうえ・2026-08-30）。
          ⚠️ このサイトは ClientRouter を使っているので、
-            インラインscriptは**最初の1回しか走らない**。
-            astro:page-load を併用しないと、リンク移動が数に入らないし表示も出ない
+            インラインscriptは**最初の1回しか走らない**。astro:page-load を併用する
             （プレイ回数のほうで実際にそれを踏んだ）。
          D1が繋がっていないときは204が返るので、その場合は何も出さない。 */
       (() => {
-        let last = 0;
-        function countView(){
-          // **表紙（/）に来た人だけを数える。** 作品ページや卓報告では数えないし出さない
-          const isTop = location.pathname === '/' || location.pathname === '/index.html';
-          if (!isTop) return;
-          const now = Date.now();
-          if (now - last < 800) return;          // 二重発火よけ
-          last = now;
+        const KEY = 'ogyanun.viewed';
+        /** 日本時間の YYYY-MM-DD。サーバ側の切り方と揃える */
+        function jstDay(){
+          return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+        }
+        function show(d){
           const box = document.getElementById('viewBox');
           const t = document.getElementById('viewToday');
           const a = document.getElementById('viewTotal');
-          if (!box || !t || !a) return;
-          fetch('/api/views', { method: 'POST' })
+          if (!box || !t || !a || !d || typeof d.total !== 'number') return;
+          t.textContent = d.today.toLocaleString('ja-JP');
+          a.textContent = d.total.toLocaleString('ja-JP');
+          box.hidden = false;
+        }
+        function tick(){
+          if (location.pathname !== '/' && location.pathname !== '/index.html') return;
+          if (!document.getElementById('viewBox')) return;
+          const today = jstDay();
+          let seen = null;
+          try { seen = localStorage.getItem(KEY); } catch (e) {}
+          // 今日まだ数えていなければ1増やす。数えていれば読むだけ
+          const first = seen !== today;
+          fetch('/api/views', first ? { method: 'POST' } : {})
             .then((r) => (r.ok && r.status !== 204 ? r.json() : null))
             .then((d) => {
-              if (!d || typeof d.total !== 'number') return;
-              t.textContent = d.today.toLocaleString('ja-JP');
-              a.textContent = d.total.toLocaleString('ja-JP');
-              box.hidden = false;
+              if (!d) return;
+              if (first) { try { localStorage.setItem(KEY, today); } catch (e) {} }
+              show(d);
             })
             .catch(() => {});
         }
-        countView();
-        document.addEventListener('astro:page-load', countView);
+        tick();
+        document.addEventListener('astro:page-load', tick);
       })();
     </script>
   </body>
