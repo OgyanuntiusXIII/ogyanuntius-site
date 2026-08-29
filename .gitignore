@@ -3,3 +3,6 @@ dist/
 .astro/
 .DS_Store
 *.log
+
+# wrangler のローカル状態（ローカルD1の中身などが入る）
+.wrangler/

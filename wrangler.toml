@@ -1,0 +1,17 @@
+# Cloudflare Pages の設定。
+# ここに置くのは「プレイ回数を数えるD1の紐づけ」だけ。
+# サイト自体は静的のままで、ビルド方法（astro build → dist）は変わらない。
+#
+# ⚠️ **wrangler.toml があると、Pagesはダッシュボード側のバインド／環境変数を無視する。**
+#    このサイトはビルドが環境変数に一切依存していない（.env も無い）ので問題ない。
+#    もし将来ダッシュボードで環境変数を足したくなったら、ここに書くこと。
+
+name = "ogyanuntius-site"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-01-01"
+
+# functions/api/plays.js から env.DB として触る
+[[d1_databases]]
+binding = "DB"
+database_name = "ogyanun-plays"
+database_id = "fee14b32-dadd-4b12-8036-43d555c8eb48"

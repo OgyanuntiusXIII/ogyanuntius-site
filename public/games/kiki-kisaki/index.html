@@ -435,7 +435,26 @@ function startCountdown() {
   }, 700);
 }
 
+
+/* --- プレイ回数を数える -----------------------------------------------
+   1プレイ＝1回。サイト側の /api/plays へ送る。
+   ⚠️ D1が繋がるまでは204が返るだけで、何も起きない（失敗しても無視する）。
+   連打で増えないよう、3秒以内の二度打ちは送らない。
+------------------------------------------------------------------- */
+const PLAY_SLUG = "kiki-kisaki";
+let lastCount = 0;
+function countPlay(){
+  const now = Date.now();
+  if (now - lastCount < 3000) return;
+  lastCount = now;
+  try {
+    fetch("/api/plays?g=" + PLAY_SLUG, { method: "POST", keepalive: true })
+      .catch(() => {});
+  } catch (e) {}
+}
+
 function startRun() {
+  countPlay();
   S.phase = "play";
   S.t0 = performance.now() - S.offset;
   S.elapsed = S.offset;

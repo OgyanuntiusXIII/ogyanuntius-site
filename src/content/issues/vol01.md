@@ -35,6 +35,12 @@ headlines:
     catch: キキ？キサキ？
     badge: NEW
     no: 4
+  - ref: parry-aria-bpm
+    collection: works
+    slot: side
+    catch: アリアのケツで刻め！
+    badge: NEW
+    no: 5
   - ref: /about
     collection: page
     catch: WHO IS OGYANUNTIUS XIII?

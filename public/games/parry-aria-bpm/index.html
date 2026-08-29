@@ -1,0 +1,2129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>アリアのケツで刻め！</title>
+<meta name="description" content="1本のラインを走りながら、敵をケツでパリィし続ける。4拍ごとにBPMが上がって、止まらない。人類は何BPMまでパリィできるのか。">
+<link rel="icon" href="/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="オギャヌンティウス十三世">
+<meta property="og:title" content="アリアのケツで刻め！">
+<meta property="og:description" content="1本のラインを走りながら、敵をケツでパリィし続ける。4拍ごとにBPMが上がる。止まらない。">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/games/parry-aria-bpm">
+<meta property="og:image" content="https://ogyanuntiusxiii.com/games/parry-aria-bpm/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+/* =========================================================
+   『何BPMまでパリィできる？』
+   素のHTML/CSS/JS 1枚。Astroのビルドを通らない（public/配下）。
+   消せば元通り。サイト本体には一切干渉しない。
+
+   非公式のファンゲーム。公式素材は一切使っていない（全部その場で図形を描いている）。
+   ========================================================= */
+
+:root{
+  --bg:#07070a;
+  --bg-2:#141419;
+  --ink:#f2f2f0;
+  --ink-mid:#8d8d95;
+  --flash:#ffe11a;      /* パリィの合図 */
+  --bad:#ff3b3b;
+  --font-jp:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP",system-ui,sans-serif;
+  --font-en:"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  overscroll-behavior:none;touch-action:manipulation;
+  font-family:var(--font-jp);
+  -webkit-text-size-adjust:100%;
+  overflow:hidden;
+  user-select:none;-webkit-user-select:none;
+}
+/* 100% だとスマホのアドレスバーで下が切れる。dvh があればそちらを使う */
+#stage{position:fixed;inset:0;height:100vh;height:100dvh;}
+canvas{display:block;width:100%;height:100%;touch-action:none;}
+
+/* --- HUD（盤面に重ねる） ------------------------------------------ */
+#hud{
+  position:absolute;left:0;right:0;top:0;
+  display:flex;align-items:baseline;gap:1.2rem;
+  padding:.7rem 1.1rem;font-family:var(--font-en);
+  pointer-events:none;text-shadow:0 2px 12px rgba(0,0,0,.9);
+}
+#bpm{font-size:clamp(2rem,7vw,3.6rem);font-weight:700;line-height:1;letter-spacing:-.02em;}
+#bpm small{font-size:.32em;font-weight:400;color:var(--ink-mid);margin-left:.35em;letter-spacing:.08em;}
+#best{font-size:.95rem;color:var(--ink-mid);letter-spacing:.06em;}
+#combo{
+  font-size:clamp(1rem,3.2vw,1.6rem);font-weight:700;letter-spacing:-.01em;
+  color:var(--flash);opacity:0;transition:opacity .15s;
+  transform-origin:left center;
+}
+#life{margin-left:auto;display:flex;gap:.35rem;align-items:center;}
+.pip{width:.7rem;height:.7rem;border-radius:50%;background:var(--flash);box-shadow:0 0 10px var(--flash);}
+.pip.gone{background:#2a2a32;box-shadow:none;}
+
+/* --- 覆い（タイトル / 結果） -------------------------------------- */
+#veil{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1rem;
+  background:rgba(7,7,10,.93);text-align:center;padding:1.2rem;
+}
+#veil.hidden{display:none;}
+#veil h1{font-size:clamp(1.4rem,5vw,2.4rem);margin:0;letter-spacing:.02em;}
+
+/* --- タイトルの上の一枚絵 → 「はじめる」でアリアが落ちてくる ---------- */
+#hero{
+  position:relative;width:170px;height:190px;margin:0 auto -.4rem;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+#hero img{image-rendering:auto;display:block;}
+#heroEther{height:104px;width:auto;
+  animation:etherBob 2.4s ease-in-out infinite;}
+@keyframes etherBob{
+  0%,100%{transform:translateY(0)      rotate(-2deg);}
+  50%    {transform:translateY(-7px)   rotate( 2deg);}
+}
+#heroAria{
+  position:absolute;left:50%;bottom:52px;height:112px;width:auto;
+  transform:translate(-50%,-260px) rotate(0deg);
+  opacity:0;
+}
+#heroBurst{
+  position:absolute;left:50%;bottom:64px;width:14px;height:14px;
+  margin-left:-7px;border-radius:50%;
+  border:3px solid var(--flash);opacity:0;
+}
+
+/* はじめる を押したら走る演出 */
+#hero.go #heroAria{
+  /* 上から一回転しながら落ちてきて、最後は真下へ加速 */
+  animation:ariaDrop .46s cubic-bezier(.55,.02,.85,.5) forwards;
+}
+@keyframes ariaDrop{
+  0%  {opacity:0;transform:translate(-50%,-260px) rotate(0deg);}
+  12% {opacity:1;}
+  70% {transform:translate(-50%,-120px) rotate(360deg);}
+  100%{opacity:1;transform:translate(-50%,0)      rotate(360deg);}
+}
+#hero.go #heroEther{ animation:etherHit .5s .44s ease-out forwards; }
+@keyframes etherHit{
+  0%  {transform:scaleY(1)   translateY(0);}
+  18% {transform:scaleY(.55) translateY(10px);}
+  100%{transform:scale(.7) translate(70px,-90px) rotate(120deg);opacity:0;}
+}
+#hero.go #heroBurst{ animation:burst .42s .44s ease-out forwards; }
+@keyframes burst{
+  0%  {opacity:1;transform:scale(.3);}
+  100%{opacity:0;transform:scale(9);}
+}
+#veil.leaving{ opacity:0; transition:opacity .28s ease-out; }
+@media (prefers-reduced-motion:reduce){
+  #heroEther,#hero.go #heroAria,#hero.go #heroEther,#hero.go #heroBurst{animation:none;}
+  #hero.go #heroAria{opacity:1;transform:translate(-50%,0);}
+}
+#veil p{margin:0;color:var(--ink-mid);font-size:.92rem;line-height:1.8;max-width:42rem;}
+#veil .keys{font-family:var(--font-en);font-size:1.05rem;color:var(--ink);letter-spacing:.3em;}
+#veil .big{font-family:var(--font-en);font-size:clamp(2.6rem,12vw,5rem);font-weight:700;line-height:1;}
+#veil .rank{
+  font-size:clamp(1.15rem,4.4vw,1.9rem);font-weight:700;letter-spacing:.06em;
+  color:var(--flash);text-shadow:0 0 22px rgba(255,225,26,.35);
+}
+#veil .nextrank{color:#7a7a86;font-size:.9em;}
+#veil .clear{
+  font-family:var(--font-en);font-size:clamp(1.6rem,6vw,2.8rem);font-weight:700;
+  letter-spacing:.34em;color:#fff;text-shadow:0 0 30px rgba(255,225,26,.7);
+}
+.row{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;justify-content:center;}
+label{font-size:.85rem;color:var(--ink-mid);}
+input[type=number]{
+  width:5.5rem;background:var(--bg-2);border:1px solid #2a2a33;color:var(--ink);
+  font-family:var(--font-en);font-size:1rem;padding:.4rem .5rem;border-radius:.3rem;text-align:center;
+}
+select{
+  background:var(--bg-2);border:1px solid #2a2a33;color:var(--ink);
+  font-size:.9rem;padding:.4rem .5rem;border-radius:.3rem;font-family:inherit;
+}
+button{
+  font:inherit;cursor:pointer;border:none;border-radius:.3rem;
+  padding:.6rem 1.4rem;background:var(--flash);color:#111;font-weight:700;letter-spacing:.04em;
+}
+button.ghost{background:transparent;color:var(--ink-mid);border:1px solid #2a2a33;font-weight:400;}
+a.btn-x{
+  display:inline-block;font:inherit;font-weight:700;letter-spacing:.04em;
+  padding:.6rem 1.4rem;border-radius:.3rem;text-decoration:none;
+  background:#f2f2f0;color:#111;
+}
+a.btn-x:active{transform:translateY(1px);}
+button.link{
+  background:none;border:none;color:#5a5a64;font-weight:400;font-size:.78rem;
+  padding:.2rem .4rem;text-decoration:underline;letter-spacing:.04em;
+}
+#cfg{display:flex;flex-direction:column;gap:.7rem;align-items:center;
+     padding:.9rem 1rem;border:1px solid #24242c;border-radius:.4rem;}
+#cfg.hidden{display:none;}
+#pitchName{font-size:.8rem;color:var(--ink-mid);}
+button:active{transform:translateY(1px);}
+#judge{
+  position:absolute;left:0;right:0;bottom:3.1rem;text-align:center;
+  pointer-events:none;font-family:var(--font-en);font-weight:700;
+  font-size:clamp(1rem,3.4vw,1.5rem);letter-spacing:.04em;
+  text-shadow:0 2px 14px rgba(0,0,0,.95);
+}
+#judge .ms{font-size:.62em;font-weight:400;opacity:.75;margin-left:.5em;}
+#judge.just{color:#ffe11a;}
+#judge.near{color:#dcd6ea;}
+#judge.off {color:#ff9d5c;}
+#judge.miss{color:#ff5a5a;}
+#note{
+  position:absolute;left:0;right:0;bottom:.5rem;text-align:center;
+  font-size:.72rem;color:#4a4a52;line-height:1.7;padding:0 1rem;pointer-events:none;
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div id="bpm">156<small>BPM</small></div>
+    <div id="best">BEST —</div>
+    <div id="combo"></div>
+    <div id="life"></div>
+  </div>
+  <div id="judge"></div>
+  <div id="veil">
+    <div id="hero">
+      <img id="heroAria"  src="aria.png"  alt="">
+      <div id="heroBurst"></div>
+      <img id="heroEther" src="ether.png" alt="">
+    </div>
+    <h1>アリアのケツで刻め！</h1>
+    <p id="howto">SPACE（もしくは D / F / J / K）で踏める。リズミカルに踏め！どんどん早くなるぞ</p>
+    <button id="startBtn">はじめる</button>
+
+    <!-- 説明を削ったぶん、設定はここへ畳んだ。既定のままで遊べる。
+         「道のうねり」は酔い対策なので、消さずに残してある。 -->
+    <button class="link" id="cfgBtn">設定</button>
+    <div id="cfg" class="hidden">
+      <div class="row">
+        <label>開始BPM <input id="startBpm" type="number" value="156" min="40" max="400" step="1"></label>
+        <button class="ghost" id="tapBtn">タップで測る</button>
+      </div>
+      <div class="row">
+        <label>予告 <select id="lead">
+          <option value="1" selected>1拍前</option>
+          <option value="0.5">半拍前</option>
+        </select></label>
+        <label>加速 <select id="ramp">
+          <option value="2:4" selected>2拍ごとに +4（速い）</option>
+          <option value="4:4">4拍ごとに +4</option>
+          <option value="4:1">4拍ごとに +1（じっくり）</option>
+        </select></label>
+      </div>
+      <div class="row">
+        <label>繰り返す音 <input id="repeatAt" type="number" value="9" min="2" max="14" step="1"></label>
+        <span id="pitchName"></span>
+        <button class="ghost" id="pitchBtn">♪ 試聴</button>
+      </div>
+      <div class="row">
+        <label>曲 <select id="cover">
+          <option value="1.15">大きめ</option>
+          <option value="0.85" selected>標準</option>
+          <option value="0.5">小さめ</option>
+          <option value="0">なし</option>
+        </select></label>
+      </div>
+      <div class="row">
+        <label>道のうねり <select id="cam">
+          <option value="1" selected>標準</option>
+          <option value="0.5">控えめ</option>
+          <option value="0.15">ほぼまっすぐ（酔いやすい人向け）</option>
+        </select></label>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="note">
+  ゼンレスゾーンゼロの非公式二次創作ゲームです。
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   設定
+   ========================================================================= */
+
+/* --- メロディ（イントロ8音）------------------------------------------
+   本人の指示で、最初に作った8音へ戻した（2026-08-29）。
+   出どころは公式8bit音源から耳コピした ReDreaming Angel の冒頭
+   「無我夢中で踊る」の8音で、9音目の D#5 からがゲーム本体。
+   ※音源そのものは同梱していない。ここにあるのは音の高さと拍位置の数字だけで、
+     鳴らしているのはその場で作った三角波。
+
+     1  G#4   む      拍 0
+     2  A#4   が      拍 0.5
+     3  C#5   む      拍 1
+     4  F5    ちゅう  拍 1.5
+     5  F5    で      拍 2.5
+     6  D#5   お      拍 3.5
+     7  C#5   ど      拍 4
+     8  A#4   る      拍 4.5
+     9  D#5   デ      拍 5   ← ここから延々この音だけを刻む
+
+   テンポ 156.00 BPM は曲全体の自己相関から実測した値。
+--------------------------------------------------------------------- */
+const MELODY      = [68, 70, 73, 77, 77, 75, 73, 70, 75, 75, 75, 68,  70,  73];
+/* 1音目からの拍数。イントロはこの通りに鳴らす（等間隔ではない＝原曲のリズム） */
+const MELODY_BEAT = [ 0, .5,  1, 1.5, 2.5, 3.5, 4, 4.5,  5,  6,  7,  8, 8.5,   9];
+let  REPEAT_AT = 9;                  // 何音目から繰り返すか（1始まり）
+let  DE_MIDI   = MELODY[8];          // 刻む音 = D#5
+let  INTRO     = MELODY.slice(0, 8); // イントロ（敵は出ない）
+let  PHRASE    = [DE_MIDI];
+
+const KEYS       = ["KeyD", "KeyF", "KeyJ", "KeyK", "Space"];
+let   RAMP_EVERY = 2;        // 何拍ごとにBPMを上げるか（既定2拍＝加速は従来の2倍）
+/* 到達までの時間 = (60 × 周期 ÷ 上げ幅) × ln(目標 ÷ 開始) 秒
+     2拍ごとに+4 … 156→600 で約40秒 / 156→1000 で約56秒
+     4拍ごとに+4 … 156→600 で約81秒 / 156→1000 で約112秒 */
+const LIVES      = 3;
+const RESULT_LOCK_MS = 1100;  // 結果が出てからキーを受け付けるまでの間
+const WIN_RATIO  = 0.45;     // 判定窓＝拍間隔のこの割合（±）
+const WIN_MAX_MS = 100;      // ただし最大でも ±100ms
+let   COUNT_IN   = 2;        // 敵が出はじめる拍。
+                             // 曲の4つ目の音 F5 が16分6つ目＝1.5拍目なので、
+                             // その直後の拍＝2拍目から敵を出す（本人指定）
+const SECTION    = 16;       // 何拍ごとに道の曲がり方とカメラの型を変えるか
+
+/* =========================================================================
+   音
+   ========================================================================= */
+let actx = null, master = null, audioEpoch = 0, noiseBuf = null;
+
+function initAudio(){
+  if (actx) return;
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  master = actx.createGain();
+  master.gain.value = 0.9;
+  // 高BPMでは毎秒10発以上鳴るので、潰れる前に軽く抑える
+  const comp = actx.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.knee.value = 22;
+  comp.ratio.value = 7; comp.attack.value = 0.002; comp.release.value = 0.12;
+  master.connect(comp); comp.connect(actx.destination);
+
+  // 金属音のもと（1秒ぶんのホワイトノイズ）
+  noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  // performance.now()(ms) と actx.currentTime(s) の対応をここで1回だけ取る
+  audioEpoch = actx.currentTime - performance.now() / 1000;
+}
+const atTime = ms => ms / 1000 + audioEpoch;
+const freqOf = midi => 440 * Math.pow(2, (midi - 69) / 12);
+
+/* メロディの1音。BPMが上がると音が重なって溶けていく — それが狙い。 */
+function playNote(midi, whenMs, bpm, quiet){
+  if (!actx) return;
+  const t = Math.max(atTime(whenMs), actx.currentTime);
+  const dur  = Math.min(0.16, (60 / bpm) * 0.85);
+  const peak = quiet ? 0.10 : 0.26;
+
+  const osc = actx.createOscillator();
+  const g   = actx.createGain();
+  osc.type = "triangle";
+  osc.frequency.value = freqOf(midi);
+  osc.connect(g); g.connect(master);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.start(t); osc.stop(t + dur + 0.02);
+}
+
+/* ノイズを帯域で削って作る金属質の短い音 */
+function noiseBurst(t, dur, freq, q, amp){
+  if (!noiseBuf) return;
+  const src = actx.createBufferSource();
+  src.buffer = noiseBuf;
+  src.playbackRate.value = 1 + Math.random() * 0.2;
+  const bp = actx.createBiquadFilter();
+  bp.type = "bandpass"; bp.frequency.value = freq; bp.Q.value = q;
+  const g = actx.createGain();
+  src.connect(bp); bp.connect(g); g.connect(master);
+  g.gain.setValueAtTime(amp, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02);
+}
+
+/* --- パリィが通った瞬間の音 -------------------------------------------
+   本人が持ってきた参考動画（`Videos\画面録画\パリィ音参考.mp4`）の実音を
+   FFTで測って、その配分に合わせてある。測ったのは4発ぶん。
+
+     0-  200 Hz  35〜58 %   ← ここが一番重い。ピークは 35〜59 Hz
+     200- 600 Hz   6〜12 %
+     600-1500 Hz   7〜16 %
+    1500-3500 Hz  11〜16 %
+    3500-8000 Hz  11〜25 %   ← 金属の「キーン」。3199 / 3668 / 4465 / 6035 Hz
+    8000 Hz 以上   2〜5 %
+
+   前の版は 1046Hz を基準に 9kHz まで倍音を伸ばしていて、
+   **実音よりずっと軽く、低音が足りていなかった。**
+   高域も 9kHz ではなく 3.2k〜6.7k に寄っている。そこへ寄せ直した。
+------------------------------------------------------------------- */
+function playParry(bpm, combo){
+  if (!actx) return;
+  const t = actx.currentTime;
+  // ★連続で決めるほど上へ抜ける音が高くなる。マリオの連続踏みと同じ仕掛けで、
+  //   「途切れさせたくない」という気持ちを音だけで作る。ミスで0に戻る。
+  const step = Math.min(combo || 0, 16);
+  const up   = Math.pow(2, step / 12);
+  // 速いほど尾を切る。毎秒10発で長く鳴かせると音が団子になる
+  const tail = Math.min(0.34, (60 / Math.max(60, bpm || 200)) * 1.1);
+
+  // ① 低音。実音ではここが支配的だった
+  const lo = actx.createOscillator(), lg = actx.createGain();
+  lo.type = "sine";
+  lo.frequency.setValueAtTime(132, t);
+  lo.frequency.exponentialRampToValueAtTime(44, t + 0.09);
+  lo.connect(lg); lg.connect(master);
+  lg.gain.setValueAtTime(0.52, t);
+  lg.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(0.22, tail));
+  lo.start(t); lo.stop(t + 0.26);
+
+  // ② サブ。胸に来る重さ
+  const sub = actx.createOscillator(), sg = actx.createGain();
+  sub.type = "sine"; sub.frequency.value = 58;
+  sub.connect(sg); sg.connect(master);
+  sg.gain.setValueAtTime(0.0001, t);
+  sg.gain.exponentialRampToValueAtTime(0.30, t + 0.006);
+  sg.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(0.18, tail));
+  sub.start(t); sub.stop(t + 0.22);
+
+  // ③ 当たりの瞬間。パチッという極短の芯を足して、輪郭を立てる
+  noiseBurst(t, 0.006, 9500, 0.7, 0.34);
+  noiseBurst(t, 0.026, 3400, 1.0, 0.32);
+  noiseBurst(t, 0.010, 6500, 0.8, 0.26);
+
+  // ④ 金属の鳴き。実音で立っていた周波数をそのまま置く
+  const modes = [
+    [ 420, 0.075, 0.45],
+    [ 632, 0.070, 0.50],
+    [1000, 0.060, 0.55],
+    [3199, 0.085, 0.90],
+    [3668, 0.095, 1.00],   // 実音で一番強かった高域
+    [4465, 0.070, 0.85],
+    [6035, 0.055, 0.70],
+  ];
+  for (const m of modes){
+    for (const d of [1, 1.004]){         // 少しずらした2本でシャリつきを出す
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = m[0] * d;
+      o.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(m[1] * (d === 1 ? 1 : 0.6), t + 0.0015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + tail * m[2]);
+      o.start(t); o.stop(t + tail * m[2] + 0.02);
+    }
+  }
+  // ⑤ 尾に金属ノイズ。澄みすぎないように
+  noiseBurst(t + 0.005, tail * 0.7, 4200, 6, 0.05);
+
+  // ⑥ ★上へ抜けるキラッ。連続数ぶん高くなる。ここが「もう一回」を作る
+  for (const v of [[2200, 6800, 0.155], [3300, 9200, 0.085]]){
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(v[0] * up, t + 0.008);
+    o.frequency.exponentialRampToValueAtTime(Math.min(v[1] * up, 15000), t + 0.055);
+    o.connect(g); g.connect(master);
+    g.gain.setValueAtTime(0.0001, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(v[2], t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.17);
+    o.start(t + 0.008); o.stop(t + 0.20);
+  }
+
+  // ⑦ 節目（8連ごと）は一段太くする
+  if (step && step % 8 === 0){
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "triangle"; o.frequency.setValueAtTime(880 * up, t);
+    o.frequency.exponentialRampToValueAtTime(1760 * up, t + 0.10);
+    o.connect(g); g.connect(master);
+    g.gain.setValueAtTime(0.14, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+    o.start(t); o.stop(t + 0.26);
+  }
+}
+
+function playMiss(){
+  if (!actx) return;
+  const t = actx.currentTime;
+  const osc = actx.createOscillator(), g = actx.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(180, t);
+  osc.frequency.exponentialRampToValueAtTime(55, t + 0.2);
+  osc.connect(g); g.connect(master);
+  g.gain.setValueAtTime(0.24, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  osc.start(t); osc.stop(t + 0.24);
+  noiseBurst(t, 0.09, 300, 1.2, 0.12);
+}
+
+/* =========================================================================
+   カバー（ReDreaming Angel / HOYO-MiX の非公式カバー）
+   -------------------------------------------------------------------------
+   **音源は使っていない。** 公式の8bit音源をFFTで解析して旋律を採譜し、
+   それをその場で作る波形で弾き直している。つまり打ち込みのカバー。
+
+     旋律 … 原曲から採譜し、**8分音符のグリッドへ揃えた**（263音・48小節）
+
+   ⚠️ **なぜ8分に丸めたか。** 自動採譜は音の始まりを平均22ms・最大48msの誤差で
+      しか取れない。16分（96ms）に置くと、その誤差が「隣の16分」に化けて
+      リズムが1つぶんズレた音が混ざる。それが「微妙に乗れてない」の正体だった。
+      8分（192ms）へ丸めると誤差が粒に吸収され、拍とは絶対にズレなくなる。
+      ニュアンスは多少落ちるが、**ゲームの拍に旋律が乗る割合が 44% → 83%** になる。
+      あわせて、倍音を掴んだ音をオクターブ戻し、調外の外れ値を捨ててある。
+     和音 … 小節ごとに旋律の音を G#マイナーの全音階三和音へ当てて判定
+             （出てきた進行は G#m×19・C#m×17・D#m×9 ＝ i・iv・v）
+     パッド … その進行に対してこちら側で編曲した（薄く支えるだけ）
+     ベース … 一度書いたが**鳴らしていない**。原曲の低音は分離できなかったので
+             こちらで作ったものだったが、曲に合わず本人指示で外した。
+             データは COVER.bass に残っているので、戻したければ generateUpTo で拾う
+
+   ⚠️ **位置は「時刻」ではなく「16分音符の番号」で持っている。**
+      だから BPM が上がっても書き換えが要らない。加速に勝手についてくる。
+      音源を速回しする方式と違って音程も上がらない。
+   ========================================================================= */
+/* 16分の位置は「前の音からの差」。 位置.音の高さ.長さ */
+const COVER_LEAD = "0.68.2 2.70.2 2.73.2 2.77.2 2.68.2 2.77.4 4.75.2 2.73.2 2.70.2 2.75.4 4.75.4 4.75.4 4.68.2 2.70.2 2.73.2 2.77.2 2.68.2 2.77.4 4.75.2 2.73.2 2.70.2 2.75.4 4.77.8 8.68.2 2.70.2 2.73.2 2.77.4 4.77.4 4.75.2 2.73.2 2.70.2 2.75.4 4.75.4 4.75.4 4.77.6 6.73.4 4.73.6 6.75.4 4.73.4 4.75.4 4.73.4 4.68.2 2.70.2 2.73.2 2.77.4 4.77.4 4.75.2 2.73.2 2.70.2 2.77.4 4.77.4 4.75.4 4.73.2 2.70.4 4.77.2 2.68.2 2.77.2 2.72.2 2.75.2 2.73.4 4.77.4 4.73.4 4.65.4 4.68.2 2.70.2 2.73.2 2.77.4 4.77.2 2.73.2 2.75.2 2.73.2 2.70.2 2.77.4 4.77.4 4.75.4 4.77.6 6.73.2 2.72.2 2.73.6 6.75.4 4.73.2 2.68.2 2.75.4 4.73.2 2.69.2 2.75.4 4.73.4 4.70.4 4.70.4 4.68.2 2.73.2 2.72.2 2.68.2 2.72.2 2.73.2 2.68.2 2.72.2 2.68.4 4.65.2 2.73.2 2.68.2 2.68.2 2.73.2 2.68.2 2.65.4 4.68.4 4.73.4 4.71.4 4.71.4 4.68.4 4.73.4 4.73.2 2.70.2 2.68.2 2.68.2 2.68.4 4.65.2 2.68.2 2.73.2 2.73.8 10.69.2 2.73.2 2.66.2 2.73.2 2.69.4 4.68.4 4.72.2 2.72.2 2.72.2 2.75.2 2.72.4 4.80.2 2.80.2 2.80.2 2.73.2 2.68.2 2.75.4 4.82.2 2.80.2 2.80.2 2.78.4 4.77.4 4.78.2 2.78.2 2.80.2 2.80.2 2.80.2 2.80.2 2.80.2 2.72.2 2.72.4 4.73.2 2.73.4 4.73.2 2.73.2 2.75.2 2.77.4 4.80.2 2.80.2 2.73.4 4.75.4 4.75.2 2.82.2 2.80.2 2.80.2 2.80.2 2.78.2 2.77.2 2.77.2 2.78.4 4.75.2 2.77.4 4.77.2 2.77.2 2.77.2 2.68.2 2.73.2 2.75.4 4.75.4 4.75.4 4.73.2 2.71.2 2.80.2 2.80.2 2.80.2 2.73.2 2.68.2 2.75.2 2.75.2 2.82.2 2.80.2 2.80.2 2.80.2 2.78.2 2.77.2 2.77.2 2.78.2 2.78.2 2.80.4 4.80.4 4.80.2 2.84.2 2.84.4 4.85.4 4.85.4 4.75.6 6.80.4 4.78.2 2.78.2 2.77.2 2.75.2 2.75.2 2.68.2 2.73.2 2.73.2 2.73.2 2.73.2 2.73.2 2.73.2 2.73.2 2.80.2 2.80.4 4.78.2 2.78.2 2.77.2 2.75.2 2.75.2 2.73.2 2.73.4 4.75.2 2.72.8 8.82.4 4.80.8 8.80.4 4.80.4 4.80.4 4.80.4 4.80.6 6.75.4 4.77.2 2.77.4 4.77.4 4.73.4 4.75.4 4.71.2 2.77.2 2.77.4 4.75.4 4.75.6 6.83.6 6.68.2 2.77.2 2.78.8 10.75.2 2.75.4 4.68.8 8.77.2 2.68.2 2.73.2 2.73.2 2.73.4 4.80.4 4.75.2";
+const COVER_BASS = "0.44.6 6.44.2 2.51.6 6.44.2 2.39.6 6.39.2 2.46.6 6.39.2 2.44.6 6.44.2 2.51.6 6.44.2 2.39.6 6.39.2 2.46.6 6.39.2 2.44.6 6.44.2 2.51.6 6.44.2 2.39.6 6.39.2 2.46.6 6.39.2 2.37.6 6.37.2 2.44.6 6.37.2 2.37.6 6.37.2 2.44.6 6.37.2 2.37.6 6.37.2 2.44.6 6.37.2 2.39.6 6.39.2 2.46.6 6.39.2 2.44.6 6.44.2 2.51.6 6.44.2 2.37.6 6.37.2 2.44.6 6.37.2 2.37.6 6.37.2 2.44.6 6.37.2 2.39.6 6.39.2 2.46.6 6.39.2 2.37.6 6.37.2 2.44.6 6.37.2 2.37.6 6.37.2 2.44.6 6.37.2 2.39.6 6.39.2 2.46.6 6.39.2 2.37.6 6.37.2 2.44.6 6.37.2 2.37.6 6.37.2 2.44.6 6.37.2 2.37.6 6.37.2 2.44.6 6.37.2 2.37.6 6.37.2 2.44.6 6.37.2 2.37.6 6.37.2 2.44.6 6.37.2 2.42.6 6.42.2 2.49.6 6.42.2 2.44.6 6.44.2 2.51.6 6.44.2 2.44.6 6.44.2 2.51.6 6.44.2 2.42.6 6.42.2 2.49.6 6.42.2 2.44.6 6.44.2 2.51.6 6.44.2 2.37.6 6.37.2 2.44.6 6.37.2 2.44.6 6.44.2 2.51.6 6.44.2 2.44.6 6.44.2 2.51.6 6.44.2 2.39.6 6.39.2 2.46.6 6.39.2 2.44.6 6.44.2 2.51.6 6.44.2 2.44.6 6.44.2 2.51.6 6.44.2 2.44.6 6.44.2 2.51.6 6.44.2 2.44.6 6.44.2 2.51.6 6.44.2 2.37.6 6.37.2 2.44.6 6.37.2 2.44.6 6.44.2 2.51.6 6.44.2 2.37.6 6.37.2 2.44.6 6.37.2 2.44.6 6.44.2 2.51.6 6.44.2 2.37.6 6.37.2 2.44.6 6.37.2 2.44.6 6.44.2 2.51.6 6.44.2 2.44.6 6.44.2 2.51.6 6.44.2 2.39.6 6.39.2 2.46.6 6.39.2 2.47.6 6.47.2 2.54.6 6.47.2 2.44.6 6.44.2 2.51.6 6.44.2 2.39.6 6.39.2 2.46.6 6.39.2 2.44.6 6.44.2 2.51.6 6.44.2 2.37.6 6.37.2 2.44.6 6.37.2";
+const COVER_PAD  = "0.68-71-63.16 16.63-66-70.16 32.68-71-63.16 48.63-66-70.16 64.68-71-63.16 80.63-66-70.16 96.61-64-68.16 112.61-64-68.16 128.61-64-68.16 144.63-66-70.16 160.68-71-63.16 176.61-64-68.16 192.61-64-68.16 208.63-66-70.16 224.61-64-68.16 240.61-64-68.16 256.63-66-70.16 272.61-64-68.16 288.61-64-68.16 304.61-64-68.16 320.61-64-68.16 336.61-64-68.16 352.66-70-61.16 368.68-71-63.16 384.68-71-63.16 400.66-70-61.16 416.68-71-63.16 432.61-64-68.16 448.68-71-63.16 464.68-71-63.16 480.63-66-70.16 496.68-71-63.16 512.68-71-63.16 528.68-71-63.16 544.68-71-63.16 560.61-64-68.16 576.68-71-63.16 592.61-64-68.16 608.68-71-63.16 624.61-64-68.16 640.68-71-63.16 656.68-71-63.16 672.63-66-70.16 688.71-63-66.16 704.68-71-63.16 720.63-66-70.16 736.68-71-63.16 752.61-64-68.16";
+
+/* "差分.音の高さ.長さ" を並べた文字列をほどく */
+function unpack(str, chord){
+  const out = []; let at = 0;
+  for (const tok of str.split(" ")){
+    if (!tok) continue;
+    const p = tok.split(".");
+    at += Number(p[0]);
+    out.push({ s: at,
+               m: chord ? p[1].split("-").map(Number) : Number(p[1]),
+               L: Number(p[2]) });
+  }
+  return out;
+}
+const COVER = {
+  lead: unpack(COVER_LEAD, false),
+  bass: unpack(COVER_BASS, false),
+  pad:  unpack(COVER_PAD,  true),
+};
+const COVER_LEN = 48 * 16;              // 48小節 × 16分16個
+/* 曲のどこをゲームの拍0に置くか（16分単位）。
+   採譜したリードの頭は 0:G#4  2:A#4  4:C#5  6:F5 …
+   **6 にすると4音目の F5 がちょうど拍0（1拍目）に乗る。**（本人指示） */
+/* 曲のどこをゲームの拍0に置くか（16分単位）。
+   ⚠️ **4の倍数にすること。** そのときだけゲームの拍が曲の表拍と重なり、
+      一定に叩くことが曲に乗ることと一致する。
+      2/6/10/14 にすると裏拍を叩き続ける形になり「若干ずれてる」感じになる
+      （実測：表拍で旋律が乗る割合44%、裏拍55%。数は裏が多いが拍として気持ちよくない）。
+   実測（8分へ揃えたあとのリード）：
+     ずらし  0 → 曲の1音目から / 拍に音が乗る 83.3%
+     ずらし  4 → 曲の3音目から / 83.2%
+     ずらし  6 → 曲の4音目から / **53.7%**（裏拍。ここだけ極端に落ちる）
+     ずらし  8 → 曲の5音目から / 83.2%
+   **0 を採用。曲はずらさず頭から普通に流す。**
+   「4つ目の音からスタート」は曲ではなく**敵の出はじめ**のこと（本人確認済み）。
+   → COUNT_IN で調整する。曲の4つ目の音（F5）は16分6つ目＝1.5拍目にあるので、
+      その直後の拍＝2拍目から敵が出る。 */
+const COVER_OFFSET = 0;
+/* 曲を後ろへずらす量（16分単位）。
+   曲の4つ目の音 F5 は16分6つ目＝1.5拍目にあり、拍と拍の間に落ちる。
+   2つぶん（＝半拍）後ろへずらすと 2.0拍目に来て、敵の出はじめとぴったり重なる。
+   ⚠️ そのぶん叩く位置は曲の裏拍側になる（表拍83% → 裏拍54%）。
+      「半拍早く」を優先した結果なので、乗り心地が落ちたら 0 に戻す。 */
+const SONG_DELAY = 2;
+let coverLevel = 0.85;                  // 0=なし。本人指示で 0.5 → 0.85
+
+/* 拍の中にある16分を、その拍の正しい位置へ置く。
+   ゲームの拍が曲の表拍と重なるので、**一定に叩けば曲に乗る**。
+   鳴らすのはリードだけ（ベースとパッドは本人指示で外した）。 */
+function scheduleCover(beat, tMs, beatMs){
+  if (coverLevel <= 0) return;
+  const raw  = beat * 4 + COVER_OFFSET - SONG_DELAY;
+  const step = beatMs / 4;
+  for (let k = 0; k < 4; k++){
+    const r = raw + k;
+    if (r < 0) continue;                       // 曲が始まる前は鳴らさない
+    const pos = ((r % COVER_LEN) + COVER_LEN) % COVER_LEN;
+    const at  = tMs + k * step;
+    for (const n of COVER.lead) if (n.s === pos) coverNote(n.m, at, n.L * step, "lead", 0.10);
+  }
+}
+
+/* 1音鳴らす。voice で音色を変える */
+function coverNote(midi, whenMs, lenMs, voice, vol){
+  if (!actx || coverLevel <= 0) return;
+  const t = Math.max(atTime(whenMs), actx.currentTime);
+  const dur = Math.max(0.05, Math.min(voice === "pad" ? 2.4 : 0.42, lenMs / 1000));
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = voice === "bass" ? "triangle" : (voice === "pad" ? "triangle" : "square");
+  o.frequency.value = freqOf(midi);
+  let node = g;
+  if (voice === "lead"){                 // 角を丸めて耳に刺さらないように
+    const lp = actx.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 3200;
+    o.connect(lp); lp.connect(g); node = g;
+  } else {
+    o.connect(g);
+  }
+  node.connect(master);
+  const peak = vol * coverLevel;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + (voice === "pad" ? dur * 0.25 : 0.006));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+
+/* 譜面＝旋律そのものなので、音は「拍を埋める」のではなく
+   **1音ごとに、その音符の位置で**鳴らす（generateUpTo から呼ぶ）。
+   パッドとベースは本人指示で鳴らしていない（データは COVER に残っている）。 */
+
+/* =========================================================================
+   下地の音（パッドとベース）
+   毎拍鳴らすとメトロノームになるので廃止したが、そのぶん音が寂しくなった。
+   **拍に乗らない音**で埋める：
+     ・パッド … 鳴りっぱなしの和音。16拍ごとに和音だけ変わる
+     ・ベース … 4拍にひとつ。拍の1/4の密度なので、速くなっても団子にならない
+   刻む音が D#5 なので G#マイナー圏の4和音を回す（下地は既定で切ってある）。
+
+   ⚠️ **BPMが上がるとパッドのフィルタが開く**。速くなるほど音が明るく・厚くなる。
+      加速そのものが「曲が盛り上がっていく」ように聞こえる。
+   ========================================================================= */
+const CHORDS = [                      // 16拍ごとに切り替わる
+  [56, 59, 63],   // G#m  (G#3 B3 D#4)
+  [52, 56, 59],   // E    (E3  G#3 B3)
+  [59, 63, 66],   // B    (B3  D#4 F#4)
+  [54, 58, 61],   // F#   (F#3 A#3 C#4)
+];
+const chordAt = (beat) => CHORDS[Math.floor(Math.max(0, beat) / 16) % CHORDS.length];
+
+/* =========================================================================
+   【撤去済み】曲をゲームのBPMに追従させる案（2026-08-29）
+   -------------------------------------------------------------------------
+   「再生速度 = 今のBPM ÷ 156」にすれば、4拍ごとの加速に曲が完全に噛み合う、
+   という仕掛けを一度実装した（ループも拍の整数倍で切る）。動きはした。
+
+   **が、載せられない。** 使おうとしたのは公式の8bit音源そのものだった
+   （本人のアレンジだと私が勝手に思い込んでいたが、8bit版も公式リリース）。
+   サイトに置いて配れば、公式の音源を頒布することになる。
+   本人の指摘（「この音自体は公式の音なんだから」「この8bitも公式なんだよ」）で撤去。
+   同じ音源から耳コピしていたイントロ8音も、自作のフレーズへ差し替えた。
+
+   ⚠️ 復活させるなら**自作の曲**に対してだけ。仕掛け自体は再利用できる：
+      ・拍0の時刻に `src.start(t, 曲の1音目の位置)`
+      ・BPMが上がる瞬間に `playbackRate.setValueAtTime(bpm / 曲のBPM, その時刻)`
+      ・`loopStart` / `loopEnd` は拍の整数倍で切る（外すとリズムが崩れる）
+   ========================================================================= */
+
+/* 下地の音量。0=なし / 0.55=控えめ / 1=標準
+   ⚠️ **既定は「なし」**（2026-08-29 本人「背景の音いらないわ」）。
+      仕組みは残してあるので、設定から戻せる。鳴るのはパリィ音・ミス音・
+      イントロの8音・50連ごとの歓声だけ。 */
+let bedLevel = 0;
+
+/* --- 和音を「持続音」ではなく「そのつど鳴らす音」で出す ----------------
+   ⚠️ 最初はノコギリ波を鳴らしっぱなしにして、和音が変わるたびに周波数を
+      滑らせていた。**あれはピッチが繋がって聞こえるのでサイレンになる。**
+      和音ごとに鳴らし直す形にすれば滑らない。音色も三角波にして、
+      音域をベースより上へ逃がした（低いノコギリは濁りの元）。
+--------------------------------------------------------------------- */
+function playPad(midis, whenMs, lenMs){
+  if (!actx || bedLevel <= 0) return;
+  const t   = Math.max(atTime(whenMs), actx.currentTime);
+  const len = Math.min(4.5, lenMs / 1000);
+  for (const m of midis){
+    for (const det of [-4, 4]){            // 薄くずらして2本。厚みだけ足す
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "triangle";
+      o.frequency.value = freqOf(m);
+      o.detune.value = det;
+      o.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.030 * bedLevel, t + len * 0.30);  // ゆっくり出て
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);                    // ゆっくり消える
+      o.start(t); o.stop(t + len + 0.05);
+    }
+  }
+}
+
+/* 4拍にひとつのベース。短く切って次を邪魔しない */
+function playBass(midi, whenMs, bpm){
+  if (!actx || bedLevel <= 0) return;
+  const t = Math.max(atTime(whenMs), actx.currentTime);
+  const dur = Math.min(0.30, (60 / bpm) * 1.8);
+  const o = actx.createOscillator(), g = actx.createGain();
+  const lp = actx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(900, t);
+  lp.frequency.exponentialRampToValueAtTime(220, t + dur * 0.8);
+  o.type = "triangle";
+  o.frequency.value = freqOf(midi - 24);
+  o.connect(lp); lp.connect(g); g.connect(master);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.16 * bedLevel, t + 0.010);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+
+/* --- 50連ごとの歓声 ----------------------------------------------------
+   帯域を絞ったノイズをゆっくり立ち上げて長く引くと「わあああ」に聞こえる。
+   拍手はパチパチを散らして重ねる。段が上がるほど和音が高くなる。
+   ⚠️ 画面側は**明るさを一段上げるのではなく、波を横に走らせる**。
+      面積の広い背景を一気に光らせると、そこだけ光過敏の危険が出るため。
+------------------------------------------------------------------- */
+function cheer(combo){
+  const step = Math.min(Math.floor(combo / 50), 5);
+  S.cheer  = 1;
+  S.cheerX = -0.15;                      // 波は画面の左から入ってくる
+  if (!actx) return;
+  const t = actx.currentTime;
+
+  // ① 歓声のうねり
+  const src = actx.createBufferSource();
+  src.buffer = noiseBuf; src.loop = true;
+  const bp = actx.createBiquadFilter();
+  bp.type = "bandpass"; bp.Q.value = 0.65;
+  bp.frequency.setValueAtTime(650, t);
+  bp.frequency.linearRampToValueAtTime(1500, t + 0.45);
+  bp.frequency.linearRampToValueAtTime(800,  t + 1.4);
+  const g = actx.createGain();
+  src.connect(bp); bp.connect(g); g.connect(master);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.30, t + 0.20);
+  g.gain.exponentialRampToValueAtTime(0.11, t + 0.85);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.60);
+  src.start(t); src.stop(t + 1.7);
+
+  // ② 拍手。前半に密度を寄せる
+  for (let i = 0; i < 30; i++){
+    const at = t + Math.pow(i / 30, 0.65) * 1.0 + Math.random() * 0.03;
+    noiseBurst(at, 0.018, 2200 + (i % 7) * 420, 3, 0.045);
+  }
+
+  // ③ 上がっていく和音
+  const up = Math.pow(2, step * 2 / 12);
+  [523.25, 659.25, 783.99].forEach((f, i) => {
+    const o = actx.createOscillator(), og = actx.createGain();
+    o.type = "triangle"; o.frequency.value = f * up;
+    o.connect(og); og.connect(master);
+    og.gain.setValueAtTime(0.0001, t + i * 0.05);
+    og.gain.exponentialRampToValueAtTime(0.10, t + i * 0.05 + 0.02);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.start(t + i * 0.05); o.stop(t + 1.0);
+  });
+}
+
+/* =========================================================================
+   キャンバス
+   ========================================================================= */
+const cv  = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+let W = 0, H = 0;
+
+function resize(){
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width  = Math.max(1, Math.round(r.width  * dpr));
+  cv.height = Math.max(1, Math.round(r.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  W = r.width; H = r.height;
+}
+window.addEventListener("resize", resize);
+
+/* =========================================================================
+   道（1本のライン）
+   1拍 = 1単位の長さ。拍ごとに少しずつ向きが変わる。
+   SECTION 拍ごとに「曲がり方」と「カメラの型」が切り替わる。
+   ========================================================================= */
+/* 1拍で進む道の長さ（ワールド単位）。
+   ⚠️ **間隔を広げたいときに触るのはここ。ズームではない。**
+      ズームを上げると敵もアリアも一緒に拡大されるだけで、間隔は開かない。
+      ここを伸ばすと、絵の大きさはそのままで敵と敵が離れ、
+      同じ拍数でより長い距離を進むので画面も速く流れる。 */
+const STEP = 2.2;
+/* ⚠️ ここを上げるほど間隔と速度は増えるが、**画面に映る敵の数は減る**。
+   画面の横幅は決まっているので、これは避けられない引き換え。
+     STEP 1.0（初期） … 隙間 60px  / 先に見える敵 4.5体
+     STEP 2.2（現在） … 隙間 222px / 先に見える敵 2.3体
+     STEP 2.6         … 隙間 359px / 先に見える敵 1.5体（先が読めなくなる）
+   合図は1拍前に出るので、遊べる下限は「先に1.5体」あたり。 */
+
+const PATH = [];              // { x, y, a }  a=進行方向
+const SECTIONS = new Map();   // セクション番号 → { turn(i), cam }
+
+/* カメラの型。
+   ⚠️ **進行方向は常に画面の右**に固定する。ここは動かせない。
+      アリアが「のぼって落ちる」ので、画面の上下が本当の上下でないと読めなくなる。
+      型ごとに違うのは、寄り引きと立ち位置だけ。
+   酔い対策は回転を止めることではなく、**道のうねり自体を弱める**side（S.turnGain）で持つ。 */
+const CAM_KINDS = [
+  { zoom:1.00, ax:0.16, ay:0.58 },   // 標準
+  { zoom:0.70, ax:0.22, ay:0.54 },   // 引き。道の形が見える
+  { zoom:1.15, ax:0.14, ay:0.60 },   // 寄り
+  { zoom:0.88, ax:0.18, ay:0.44 },   // 少し引いて、低い位置から
+];
+
+function sectionOf(s){
+  if (SECTIONS.has(s)) return SECTIONS.get(s);
+  const kind = Math.floor(Math.random() * 5);
+  const dir  = Math.random() < 0.5 ? -1 : 1;
+  const amp  = 0.10 + Math.random() * 0.14;
+  let turn;
+  if      (kind === 0) turn = () => 0;                                    // まっすぐ
+  else if (kind === 1) turn = () => dir * amp;                            // 大きな弧
+  else if (kind === 2) turn = i => dir * amp * 1.4 * Math.sin(i * 0.30);  // S字（ゆるやか）
+  // 旧ジグザグ（拍ごとに反転）は酔うので、4拍かけて振れる長いうねりにした
+  else if (kind === 3) turn = i => dir * amp * 1.2 * Math.sin(i * Math.PI / 4);
+  else                 turn = () => dir * (0.18 + amp);                   // 巻き込む
+  const conf = { turn, cam: CAM_KINDS[Math.floor(Math.random() * CAM_KINDS.length)] };
+  SECTIONS.set(s, conf);
+  return conf;
+}
+
+function extendPath(toBeat){
+  if (!PATH.length) PATH.push({ x:0, y:0, a:-Math.PI / 2 });
+  while (PATH.length <= toBeat + 2){
+    const i = PATH.length;
+    const p = PATH[i - 1];
+    const a = p.a + sectionOf(Math.floor(i / SECTION)).turn(i) * S.turnGain;
+    PATH.push({ x: p.x + Math.cos(a) * STEP, y: p.y + Math.sin(a) * STEP, a });
+  }
+}
+
+/* 連続した拍位置 u における道の上の座標 */
+function pathAt(u){
+  extendPath(Math.ceil(u) + 1);
+  const i = Math.max(0, Math.floor(u));
+  const f = u - i;
+  const p = PATH[i], q = PATH[i + 1] || p;
+  let da = q.a - p.a;
+  while (da >  Math.PI) da -= Math.PI * 2;
+  while (da < -Math.PI) da += Math.PI * 2;
+  return { x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f, a: p.a + da * f };
+}
+
+/* =========================================================================
+   背景：客席のペンライト
+   アリアのモチーフがペンライトなので、走っている場所を「ライブ会場」にした。
+   （元の着想メモでも「ペンライトが流れてくる」だったので、ここに戻ってきた形）
+
+   ⚠️ **明るさは連続数でゆっくり上げる。1発ごとに明滅させない。**
+      背景は面積が大きいので、ここを拍ごとに光らせると一番目に来る。
+      S.glow は毎フレーム 4% ずつしか動かないので、数秒かけて明るくなる。
+   ========================================================================= */
+const PEN_COLORS = ["#ff8fb0", "#7fe3d0", "#ffd66b", "#c9a6ff", "#f2f2f0"];
+/* 飛び散るペンライト用。A のところに不透明度を差し込んで使う */
+const PEN_RGBA = [
+  "rgba(255,143,176,A)", "rgba(127,227,208,A)", "rgba(255,214,107,A)",
+  "rgba(201,166,255,A)", "rgba(255,251,224,A)",
+];
+const CROWD = [];
+(function buildCrowd(){
+  // 位置は「決まった乱数」で散らす。素直に等間隔で置くと、
+  // 画面上で斜めの格子に見えてしまい、客席ではなく模様になる。
+  // 毎回同じ並びにしたいので Math.random は使わず、番号から作る。
+  const h = (n) => { const v = Math.sin(n * 127.1) * 43758.5453; return v - Math.floor(v); };
+  for (let layer = 0; layer < 2; layer++){
+    const n = layer ? 120 : 80;
+    for (let i = 0; i < n; i++){
+      const s1 = h(i + layer * 500), s2 = h(i * 1.7 + layer * 900), s3 = h(i * 3.1 + layer * 77);
+      CROWD.push({
+        layer,
+        x: s1,
+        y: layer ? 0.82 + s2 * 0.20 : 0.66 + s2 * 0.11,
+        len: layer ? 16 + s3 * 14 : 8 + s3 * 6,
+        ph: s3 * Math.PI * 2,
+        col: PEN_COLORS[Math.floor(s1 * PEN_COLORS.length) % PEN_COLORS.length],
+      });
+    }
+  }
+  CROWD.sort((a, b) => a.layer - b.layer);      // 奥から描く
+})();
+
+/* --- ペンライトは1本ずつ描かず、焼いた絵を貼る -------------------------
+   ⚠️ **ここが背景の重さの正体になりやすい。**
+      ctx.shadowBlur は1回ごとにぼかしを作り直すので、200本ぶん毎フレーム
+      回すとGPU側が詰まる。色ごとに1枚だけ焼いておいて、あとは drawImage
+      で貼るだけにすれば、ぼかしの計算は起動時の5回で終わる。
+--------------------------------------------------------------------- */
+const PEN_H = 72;                      // 焼いた絵の中の「長さ1」に当たる高さ
+const PEN_SPRITE = {};
+function penSprite(col){
+  if (PEN_SPRITE[col]) return PEN_SPRITE[col];
+  const pad = 26;
+  const c = document.createElement("canvas");
+  c.width = pad * 2; c.height = PEN_H + pad * 2;
+  const g = c.getContext("2d");
+  g.translate(pad, PEN_H + pad);
+  g.lineCap = "round";
+  g.strokeStyle = "rgba(205,205,220,.55)";
+  g.lineWidth = PEN_H * 0.13;
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -PEN_H * 0.42); g.stroke();
+  g.shadowColor = col; g.shadowBlur = PEN_H * 0.42;
+  g.strokeStyle = col; g.lineWidth = PEN_H * 0.20;
+  for (let i = 0; i < 2; i++){        // 二度塗りで芯を強く
+    g.beginPath(); g.moveTo(0, -PEN_H * 0.40); g.lineTo(0, -PEN_H); g.stroke();
+  }
+  PEN_SPRITE[col] = { img: c, ox: pad, oy: PEN_H + pad };
+  return PEN_SPRITE[col];
+}
+PEN_COLORS.forEach(penSprite);
+
+/* 焼いた絵を、位置・角度・長さを指定して貼る */
+function penlight(x, y, len, ang, col, a){
+  const sp = penSprite(col);
+  const k = len / PEN_H;
+  ctx.globalAlpha = a;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);          // 背景は画面座標のまま
+  ctx.translate(x, y); ctx.rotate(ang); ctx.scale(k, k);
+  ctx.drawImage(sp.img, -sp.ox, -sp.oy);
+}
+
+/* --- 描く本数は実測フレーム時間で自動調整する -------------------------
+   非力な端末では減らし、余裕があれば戻す。数字を出すのは fpsAvg。 */
+let crowdShown = 999, fpsAvg = 16.7;
+function tuneCrowd(dt){
+  fpsAvg += (Math.min(dt, 60) - fpsAvg) * 0.05;
+  if (fpsAvg > 21 && crowdShown > 60)        crowdShown = Math.max(60, crowdShown - 6);
+  else if (fpsAvg < 13 && crowdShown < CROWD.length) crowdShown = Math.min(CROWD.length, crowdShown + 2);
+}
+
+/* --- 上半分：ステージの照明とトラス ------------------------------------
+   下は客席で埋まったが、上が黒いままだと「会場」に見えない。
+   ⚠️ ビームはゆっくり首を振らせる（1往復6〜11秒）。速いと酔うし、
+      濃さも 0.10 前後に抑える。ここが明滅すると一番目に来る。
+--------------------------------------------------------------------- */
+const BEAMS = [
+  { x:0.16, sp:0.00021, ph:0.0, sw:0.55, col:"255,143,176" },
+  { x:0.38, sp:0.00015, ph:2.1, sw:0.42, col:"127,227,208" },
+  { x:0.63, sp:0.00018, ph:4.0, sw:0.50, col:"201,166,255" },
+  { x:0.86, sp:0.00013, ph:5.3, sw:0.38, col:"255,214,107" },
+];
+const MOTES = Array.from({length:34}, (_, i) => {
+  const h = (n) => { const v = Math.sin(n * 91.7) * 24634.6; return v - Math.floor(v); };
+  return { x:h(i), y:h(i*2.3), sp:0.004 + h(i*3.7) * 0.010, r:0.7 + h(i*5.1) * 1.6 };
+});
+
+function drawStage(now){
+  const g = S.glow;
+
+  // 天井のトラス（奥行きの手がかり。動かない）
+  ctx.fillStyle = "#0e0e15";
+  ctx.fillRect(0, 0, W, H * 0.055);
+  ctx.strokeStyle = "#191922"; ctx.lineWidth = 2;
+  for (let i = 0; i <= 14; i++){
+    const x = (i / 14) * W;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + W * 0.03, H * 0.055); ctx.stroke();
+  }
+
+  // 照明のビーム
+  // ⚠️ 通常合成だと半透明の灰色を塗ることになり、光ではなく「帯」に見える。
+  //    加算にすると背景より暗くならないので、初めて光として読める。
+  ctx.globalCompositeOperation = "lighter";
+  for (const b of BEAMS){
+    const ang = Math.sin(now * b.sp + b.ph) * b.sw;
+    const top = b.x * W;
+    const len = H * 0.92;
+    const bot = top + Math.tan(ang) * len;
+    const half = W * (0.012 + 0.055 * (0.5 + 0.5 * Math.sin(now * b.sp * 1.7 + b.ph)));
+    const a = 0.042 + g * 0.060 + S.cheer * 0.045;
+    const grd = ctx.createLinearGradient(top, 0, bot, len);
+    grd.addColorStop(0,   "rgba(" + b.col + "," + a * 1.6 + ")");
+    grd.addColorStop(0.55,"rgba(" + b.col + "," + a * 0.55 + ")");
+    grd.addColorStop(1,   "rgba(" + b.col + ",0)");
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.moveTo(top - W * 0.008, H * 0.05);
+    ctx.lineTo(top + W * 0.008, H * 0.05);
+    ctx.lineTo(bot + half, len);
+    ctx.lineTo(bot - half, len);
+    ctx.closePath(); ctx.fill();
+    // 灯体
+    ctx.fillStyle = "rgba(" + b.col + "," + (0.5 + g * 0.4) + ")";
+    ctx.beginPath(); ctx.arc(top, H * 0.05, 3.2, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalCompositeOperation = "source-over";
+
+  // 舞う光の粒（会場のもや）
+  for (const m of MOTES){
+    const y = (((m.y - now * 0.00002 * m.sp * 1000) % 1) + 1) % 1;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = (0.10 + g * 0.16) * (1 - y * 0.6);
+    ctx.fillStyle = "#fff6d8";
+    ctx.beginPath();
+    ctx.arc(m.x * W, y * H * 0.85, m.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+}
+
+function drawCrowd(now){
+  const g = S.glow;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawStage(now);                     // 先に会場（照明・トラス・もや）
+
+  // 会場の床明かり
+  const grd = ctx.createLinearGradient(0, H * 0.55, 0, H);
+  grd.addColorStop(0, "rgba(20,16,34,0)");
+  grd.addColorStop(1, "rgba(46,28,66," + (0.30 + g * 0.35 + S.cheer * 0.18) + ")");
+  ctx.fillStyle = grd; ctx.fillRect(0, H * 0.55, W, H * 0.45);
+
+  const t = now * (0.0016 + g * 0.0012);
+  const n = Math.min(crowdShown, CROWD.length);
+  for (let i = 0; i < n; i++){
+    const c = CROWD[i];
+    const par = c.layer ? 0.030 : 0.011;
+    const x = (((c.x - S.cam.x * par) % 1) + 1) % 1 * (W + 60) - 30;
+    if (x < -40 || x > W + 40) continue;                    // 画面外は描かない
+    // 歓声の波。左から右へ抜けていく
+    const wave = S.cheer > 0.01
+      ? Math.max(0, 1 - Math.abs((x / W) - S.cheerX) * 3.2) * S.cheer
+      : 0;
+    const y   = c.y * H - wave * 26;
+    const ang = Math.sin(t + c.ph * (1 - g * 0.75)) * (0.22 + g * 0.34) + wave * 0.5;
+    const a   = Math.min(1, (c.layer ? 0.42 : 0.26) + g * 0.40 + wave * 0.5);
+    penlight(x, y, c.len * (1 + g * 0.10 + wave * 0.25), ang, c.col, a);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.globalAlpha = 1;
+}
+
+/* =========================================================================
+   ゲーム状態
+   ========================================================================= */
+const S = {
+  running:false,
+  bpm:156,            // 生成中のBPM（先読みなので画面より先を走る）
+  playBpm:156,        // いま判定点に届いている拍のBPM（表示するのはこっち）
+  startBpm:156, maxBpm:156,
+  leadBeats:1, rampAmount:4, turnGain:1,
+  lives:LIVES,
+  beatIndex:0,        // 生成した音の通し番号（道の歩数でもある）
+  beatsSinceRamp:0,   // 前回の加速から何拍進んだか
+  prevGap:400,        // ひとつ前の音との間隔ms（先読みの幅に使う）
+  nextBeatMs:0,
+  notes:[],           // { i, t, midi, bpm, win, state, scheduled, flashed }
+  fx:[],              // { u, t, kind }
+  u:0,                // アリアがいまいる拍位置（連続値）
+  cam:{ x:0, y:0, rot:0, zoom:135, ax:.16, ay:.58 },
+  shake:0, hitGlow:0, judgeAt:-9999, combo:0, bestCombo:0, killed:0, glow:0, cleared:false,
+  resultAt:-9999,     // 結果を出した時刻。しばらくキーを受け付けない
+  cheer:0, cheerX:0,          // 歓声の強さと、波がいま画面のどこにいるか
+};
+
+/* --- パリィの飛沫 ------------------------------------------------------
+   ⚠️ **画面全体を明滅させないこと。** 毎秒10発なので、広い面積の明るさを
+      変える演出は体に来る。派手さは「小さいものを沢山・速く動かす」で出す。
+      面積を増やさずに情報量だけ増やすのが、目に悪くない派手さ。
+   連続数が伸びるほど粒が増え、8連ごとに一段大きくなる。
+--------------------------------------------------------------------- */
+function spawnBurst(u, t, combo){
+  const n = Math.min(6 + Math.floor(combo * 0.9), 20);
+  const big = combo > 0 && combo % 8 === 0;
+  const bits = [];
+  for (let i = 0; i < n; i++){
+    // 乱数は生成時に1回だけ引く（毎フレーム引くとチラついて見づらい）
+    const ang = (i / n) * Math.PI * 2 + (i * 2.399);
+    const sp  = 0.55 + (i % 5) * 0.22 + (big ? 0.5 : 0);
+    bits.push({
+      a: ang, sp, len: 0.12 + (i % 3) * 0.07,
+      col: PEN_RGBA[i % PEN_RGBA.length],       // 散るペンライトの色
+    });
+  }
+  S.fx.push({ u, t, kind: "parry", combo, big, bits });
+}
+
+const SHARE_URL = "https://ogyanuntiusxiii.com/games/parry-aria-bpm";
+
+/* --- 称号 --------------------------------------------------------------
+   境目のBPMは、到達までの時間と1秒あたりの打鍵数から割り当てた。
+   到達時間は `60 × ln(目標 ÷ 156)` 秒（4拍ごとに+4のとき）。
+
+     600 BPM = 毎秒10打。音ゲー上級者が本気を出す境目 → 熟練プロキシ
+     1000 BPM = 毎秒16.7打          → 伝説プロキシ
+   下の3段（エーテリアス）は短く刻んで、最初の数回でも段が上がるようにした。
+--------------------------------------------------------------------- */
+const RANKS = [
+  { bpm:   0, name: "小型エーテリアス級" },
+  { bpm: 200, name: "中型エーテリアス級" },
+  { bpm: 250, name: "大型エーテリアス級" },
+  { bpm: 300, name: "ワニ弟子級" },
+  { bpm: 360, name: "兄弟子級" },
+  { bpm: 420, name: "見習いプロキシ級" },
+  { bpm: 500, name: "正式プロキシ級" },
+  { bpm: 600, name: "熟練プロキシ級" },
+  { bpm: 720, name: "精鋭プロキシ級" },
+  { bpm: 850, name: "虚狩り級" },
+  { bpm:1000, name: "伝説プロキシ級" },
+  { bpm:3000, name: "フェアリィ級" },      // ここに到達したらクリア
+];
+const CLEAR_BPM = 3000;                    // 毎秒50打。到達したら終わり
+function rankOf(bpm){
+  let i = 0;
+  while (i + 1 < RANKS.length && bpm >= RANKS[i + 1].bpm) i++;
+  return { now: RANKS[i], next: RANKS[i + 1] || null };
+}
+
+const best = () => Number(localStorage.getItem("parrybpm.best") || 0);
+function setBest(v){ if (v > best()) localStorage.setItem("parrybpm.best", String(v)); }
+
+const elJudge = document.getElementById("judge");
+
+/* --- 判定の言い方 ------------------------------------------------------
+   ずれは「判定窓に対する割合」で言う。BPMが上がると窓自体が狭くなるので、
+   固定msでしきい値を切ると、速い所ほど全部「はやい」になってしまう。
+--------------------------------------------------------------------- */
+function showJudge(dt, win){
+  const r = Math.abs(dt) / win;
+  let text, cls;
+  if (dt === null)      { text = "ミス";          cls = "miss"; }
+  else if (r <= 0.25)   { text = "ジャスト";      cls = "just"; }
+  else if (dt < 0)      { text = r <= 0.60 ? "ちょっとはやい" : "はやい"; cls = r <= 0.60 ? "near" : "off"; }
+  else                  { text = r <= 0.60 ? "ちょっとおそい" : "おそい"; cls = r <= 0.60 ? "near" : "off"; }
+
+  elJudge.className = cls;
+  elJudge.innerHTML = text + (dt === null ? ""
+    : '<span class="ms">' + (dt > 0 ? "+" : "") + dt.toFixed(0) + " ms</span>");
+  S.judgeAt = performance.now();
+}
+
+const elCombo = document.getElementById("combo");
+const elBpm  = document.getElementById("bpm");
+const elBest = document.getElementById("best");
+const elLife = document.getElementById("life");
+const veil   = document.getElementById("veil");
+
+function drawLife(){
+  elLife.innerHTML = "";
+  for (let i = 0; i < LIVES; i++){
+    const d = document.createElement("div");
+    d.className = "pip" + (i < S.lives ? "" : " gone");
+    elLife.appendChild(d);
+  }
+}
+function drawHud(){
+  elBpm.innerHTML = Math.round(S.playBpm) + "<small>BPM</small>";
+  elCombo.textContent = S.combo >= 3 ? ("×" + S.combo) : "";
+  elCombo.style.opacity = S.combo >= 3 ? 1 : 0;
+  // 50連の直後だけ数字が膨らむ
+  elCombo.style.transform = S.cheer > 0.01
+    ? "scale(" + (1 + S.cheer * 0.55) + ")" : "";
+  const b = best();
+  elBest.textContent = b ? ("BEST " + b) : "BEST —";
+}
+
+/* --- 譜面の生成（先読み）------------------------------------------------
+   ⚠️ **1拍 = 1入力。等間隔。**
+      叩く場所を旋律そのものにすると、8分16分4分が混ざって普通の音ゲーになり、
+      「曲に乗りながら一定に叩いていたら成功する」という手触りが消える。
+      ここは等間隔でなければならない。曲は裏で流す（scheduleCover）。
+--------------------------------------------------------------------- */
+function generateUpTo(untilMs){
+  let guard = 0;
+  while (S.nextBeatMs < untilMs && guard++ < 512){
+    const beatMs = 60000 / S.bpm;
+    S.notes.push({
+      i: S.beatIndex,
+      t: S.nextBeatMs,
+      midi: DE_MIDI,
+      bpm: S.bpm,
+      win: Math.min(WIN_MAX_MS, beatMs * WIN_RATIO),
+      state: "wait",
+      scheduled: false,
+      flashed: false,
+      lead: beatMs,                            // 合図から到達までの長さ
+      countIn: S.beatIndex < COUNT_IN,
+    });
+    S.prevGap    = beatMs;
+    S.nextBeatMs += beatMs;
+    S.beatIndex++;
+
+    if (S.beatIndex > COUNT_IN){
+      S.beatsSinceRamp++;
+      if (S.beatsSinceRamp >= RAMP_EVERY){
+        S.beatsSinceRamp = 0;
+        S.bpm += S.rampAmount;
+      }
+    }
+  }
+}
+
+/* =========================================================================
+   開始 / 終了
+   ========================================================================= */
+
+/* --- プレイ回数を数える -----------------------------------------------
+   「はじめる」を押した回数＝1プレイ。サイト側の /api/plays へ送る。
+   ⚠️ KVが繋がるまでは204が返るだけで、何も起きない（失敗しても無視する）。
+   連打で増えないよう、3秒以内の二度打ちは送らない。
+------------------------------------------------------------------- */
+const PLAY_SLUG = "parry-aria-bpm";
+let lastCount = 0;
+function countPlay(){
+  const now = Date.now();
+  if (now - lastCount < 3000) return;
+  lastCount = now;
+  try {
+    fetch("/api/plays?g=" + PLAY_SLUG, { method: "POST", keepalive: true })
+      .catch(() => {});
+  } catch (e) {}
+}
+
+function start(){
+  const hero = document.getElementById("hero");
+  if (hero) hero.classList.remove("go");
+  elJudge.innerHTML = ""; S.judgeAt = -9999;
+  initAudio();
+  if (actx.state === "suspended") actx.resume();
+
+  // ⚠️ 結果画面では覆いの中身を差し替えているので、設定欄のDOMはもう無い。
+  //    「もう一回」から呼ばれたときは、前回の値をそのまま使う。
+  //    （ここを素直に getElementById().value と書いていて、再挑戦が即死していた）
+  const num = (id, cur) => {
+    const el = document.getElementById(id);
+    return el ? Number(el.value) : cur;
+  };
+  S.startBpm   = Math.max(40, Math.min(400, num("startBpm", S.startBpm) || 156));
+  S.leadBeats  = num("lead", S.leadBeats) || 1;
+  const rampEl = document.getElementById("ramp");
+  if (rampEl){
+    const v = String(rampEl.value).split(":");
+    RAMP_EVERY   = Number(v[0]) || 2;
+    S.rampAmount = Number(v[1]) || 4;
+  }
+  S.turnGain   = num("cam",  S.turnGain);
+  const cvEl = document.getElementById("cover");
+  if (cvEl) coverLevel = Number(cvEl.value);
+
+  if (!(S.turnGain >= 0)) S.turnGain = 1;
+  REPEAT_AT    = Math.max(2, Math.min(MELODY.length, num("repeatAt", REPEAT_AT) || 9));
+  DE_MIDI      = MELODY[REPEAT_AT - 1];
+  INTRO        = MELODY.slice(0, REPEAT_AT - 1);
+  COUNT_IN     = 2;
+  PHRASE       = [DE_MIDI];
+
+  PATH.length = 0; SECTIONS.clear();
+
+  S.running = true;
+  countPlay();
+  S.bpm = S.startBpm; S.playBpm = S.startBpm; S.maxBpm = S.startBpm;
+  S.lives = LIVES;
+  S.beatIndex = 0; S.beatsSinceRamp = 0; S.prevGap = 60000 / S.startBpm;
+  S.notes = []; S.fx = []; S.u = 0; S.combo = 0; S.bestCombo = 0; S.killed = 0; S.glow = 0; S.cheer = 0; S.cleared = false;
+  S.shake = 0; S.hitGlow = 0;
+  S.nextBeatMs = performance.now() + 1200;
+  S.cam = { x:0, y:0, rot:0, zoom:135, ax:.16, ay:.58 };
+
+  veil.classList.add("hidden");
+  drawLife(); drawHud();
+}
+
+function gameOver(cleared){
+  S.running = false;
+  S.cleared = !!cleared;
+  S.resultAt = performance.now();
+  const reached = Math.round(S.maxBpm);   // 実際に判定の輪を通った拍の最高BPM
+  setBest(reached);
+  drawHud();
+
+  // Xの共有文。押した本人のブラウザで下書きが開くだけで、勝手には投稿されない。
+  // 改行は文字コードで作る（ソースにバックスラッシュを残さない）
+  const LF = String.fromCharCode(10);
+  const rk = rankOf(reached);
+  const text = [
+    (S.cleared ? "クリアした！！ アリアのケツで" : "アリアのケツで") +
+      S.killed + "体エーテリアスを倒した！",
+    "称号：" + rk.now.name + "（" + reached + " BPM ／ 最大 " + S.bestCombo + " 連続）",
+    "#アリアのケツで刻め"
+  ].join(LF);
+  const share = "https://x.com/intent/post?text=" + encodeURIComponent(text) +
+                "&url=" + encodeURIComponent(SHARE_URL);
+
+  veil.classList.remove("hidden");
+  veil.innerHTML =
+    (S.cleared ? '<div class="clear">CLEAR</div>' : '') +
+    '<p>アリアのケツで倒したエーテリアス</p>' +
+    '<div class="big">' + S.killed +
+      '<span style="font-size:.28em;color:var(--ink-mid);letter-spacing:.1em"> 体</span></div>' +
+    '<div class="rank">' + rk.now.name + '</div>' +
+    '<p>到達 <strong>' + reached + ' BPM</strong>（毎秒 ' + (reached / 60).toFixed(1) +
+      ' 打&nbsp;/&nbsp;1打 ' + (60000 / reached).toFixed(0) + ' ミリ秒）<br>' +
+      '最大 ' + S.bestCombo + ' 連続&nbsp;/&nbsp;BEST ' + best() + ' BPM' +
+      (rk.next && !S.cleared
+        ? '<br><span class="nextrank">あと ' + (rk.next.bpm - reached) +
+          ' BPM で <strong>' + rk.next.name + '</strong></span>'
+        : '') + '</p>' +
+    '<div class="row">' +
+      '<button id="againBtn">もう一回</button>' +
+      '<a class="btn-x" href="' + share + '" target="_blank" rel="noopener">Xで共有する</a>' +
+    '</div>' +
+    '<button class="link" id="backBtn">タイトルに戻る</button>';
+  document.getElementById("againBtn").onclick = start;
+  document.getElementById("backBtn").onclick  = () => location.reload();
+}
+
+function loseLife(u){
+  S.combo = 0;                 // 音の高さもここで戻る
+  S.lives--;
+  S.shake = 1;
+  S.fx.push({ u, t: performance.now(), kind: "miss" });
+  playMiss();
+  drawLife();
+  if (S.lives <= 0) gameOver();
+}
+
+/* =========================================================================
+   入力 — 1ラインなので、DFJK / SPACE のどれでもいい。
+   速くなったら4本指で回す前提（それが600BPM以上に届く唯一の道）。
+   ========================================================================= */
+/* --- 入力 ---------------------------------------------------------------
+   キーでもタップでも同じ処理を通す。1ラインなので「押した」だけが情報。
+--------------------------------------------------------------------- */
+function press(){
+  if (!S.running) return;
+  const now = performance.now();
+  let target = null, nearest = Infinity;
+  for (const n of S.notes){
+    if (n.state !== "wait" || n.countIn) continue;
+    const dt = Math.abs(n.t - now);
+    if (dt < nearest){ nearest = dt; target = n; }
+  }
+  if (target && nearest <= target.win){
+    target.state = "hit";
+    S.hitGlow = 1;
+    S.combo++;
+    S.killed++;                                 // 倒したエーテリアスの数（共有文に出す）
+    if (S.combo % 50 === 0) cheer(S.combo);     // 50連ごとに客席が沸く
+    if (S.combo > S.bestCombo) S.bestCombo = S.combo;
+    spawnBurst(target.i, now, S.combo);
+    showJudge(now - target.t, target.win);      // 負=はやい / 正=おそい
+    playParry(target.bpm, S.combo);
+  } else {
+    // 空振りも1ミス。連打で押し切れないようにする
+    showJudge(null, 1);
+    loseLife(S.u);
+  }
+}
+
+window.addEventListener("keydown", e => {
+  if (e.repeat) return;
+
+  if (!S.running){
+    // ⚠️ 死んだ瞬間はスペースを連打している最中なので、そのまま受け付けると
+    //    結果を読む前に次の回が始まってしまう。少しのあいだ鍵を閉める。
+    if (performance.now() - S.resultAt < RESULT_LOCK_MS){ e.preventDefault(); return; }
+    if (e.code === "Space" || e.code === "Enter"){
+      e.preventDefault();
+      const btn = document.getElementById("againBtn") || document.getElementById("startBtn");
+      if (btn) btn.click();
+    }
+    return;
+  }
+  if (KEYS.indexOf(e.code) < 0) return;
+  e.preventDefault();
+  press();
+});
+
+/* --- タップ（スマホ・タブレット）--------------------------------------
+   画面のどこを触っても1入力。1ラインなので押し分けは要らない。
+   覆い（タイトル・結果）が出ているあいだは、そちらのボタンが受け取る。
+------------------------------------------------------------------- */
+cv.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  press();
+}, { passive: false });
+
+/* 触る機械なら、操作の説明をタップ向けに書き換える */
+const IS_TOUCH = window.matchMedia("(pointer: coarse)").matches ||
+                 ("ontouchstart" in window);
+if (IS_TOUCH){
+  const k = document.querySelector("#veil .keys");
+  const h = document.getElementById("howto");
+  if (k) k.textContent = "画面をタップ";
+  if (h) h.innerHTML = "<strong>画面のどこでもタップ</strong>で踏める。リズミカルに踏め！どんどん早くなるぞ";
+}
+
+/* =========================================================================
+   ループ
+   ========================================================================= */
+let lastFrameMs = 0;
+
+function frame(){
+  requestAnimationFrame(frame);
+  const now = performance.now();
+
+  // ⚠️ タブが隠れると requestAnimationFrame は止まる（裏に回した・最小化した等）。
+  //    そのあいだ時計だけは進むので、何もしないと戻ってきた1フレームで
+  //    溜まった拍が一斉に「取りこぼし」判定になり、即ゲームオーバーになる。
+  //    間が空いた分だけ、これから来る拍を丸ごと後ろへずらして「止まっていた」ことにする。
+  const gap = lastFrameMs ? now - lastFrameMs : 0;
+  lastFrameMs = now;
+  if (gap > 0 && gap < 100) tuneCrowd(gap);    // 重ければ客席を減らす
+  if (S.running && gap > 200){
+    for (const n of S.notes){
+      n.t += gap;
+      if (!n.scheduled) continue;
+      n.scheduled = false;                 // 鳴らし直す（古い予約は捨てる）
+    }
+    S.nextBeatMs += gap;
+    S.judgeAt    += gap;
+  }
+
+  if (S.running){
+    generateUpTo(now + Math.max(1800, S.prevGap * (S.leadBeats + 8)));
+
+    for (const n of S.notes){
+      // 閃光は「ひとつ前の音から」。音符の間隔が広いほど早く出る
+      const lead = n.lead * S.leadBeats;
+      if (!n.flashed && n.t - now <= lead){ n.flashed = true; n.flashAt = now; }
+      // 音を鳴らすのは**イントロだけ**。
+      // ・半拍前のパリィ警告音は廃止（2026-08-29 本人指示）
+      // ・本編で毎拍鳴らしていた刻み音も廃止。同じ音が等間隔で続くとメトロノームに
+      //   しか聞こえず、パリィの手応えを濁らせていた。本編の拍は
+      //   **パリィが決まった音そのもの**が刻む。
+      if (!n.scheduled && n.t - now < 250){
+        n.scheduled = true;
+        scheduleCover(n.i, n.t, 60000 / n.bpm);   // 曲は裏で流れ続ける
+      }
+      if (n.state === "wait" && !n.countIn && now > n.t + n.win){
+        n.state = "miss";
+        showJudge(null, 1);
+        loseLife(n.i);
+      }
+      if (n.countIn && n.state === "wait" && now > n.t) n.state = "hit";
+      // 判定の輪を通った拍のBPMを、表示用に引き継ぐ
+      if (!n.countIn && now >= n.t && n.bpm > S.playBpm){
+        S.playBpm = n.bpm; S.maxBpm = n.bpm;
+        if (S.playBpm >= CLEAR_BPM){ gameOver(true); break; }   // クリア
+      }
+    }
+
+    // アリアの現在位置（拍位置の連続値）
+    let prev = null, next = null;
+    for (const n of S.notes){
+      if (n.t <= now && (!prev || n.t > prev.t)) prev = n;
+      if (n.t >  now && (!next || n.t < next.t)) next = n;
+    }
+    if (prev && next)      S.u = prev.i + (now - prev.t) / (next.t - prev.t);
+    else if (next)         S.u = next.i - (next.t - now) / (60000 / next.bpm);
+    else if (prev)         S.u = prev.i;
+
+    S.notes = S.notes.filter(n => now < n.t + 900);
+    S.fx    = S.fx.filter(f => now < f.t + 520);
+    S.shake   *= 0.86;
+    S.hitGlow *= 0.88;
+    // 客席の盛り上がり。30連続で最大。1フレームで4%しか動かないので、
+    // 明るさが急に変わることはない（＝目に来ない）
+    S.glow += (Math.min(1, S.combo / 30) - S.glow) * 0.04;
+    if (S.cheer > 0.001){
+      S.cheer  -= 0.014;                   // 1.2秒ほどで収まる
+      S.cheerX += 0.016;                   // 波が左から右へ抜けていく
+      if (S.cheer < 0) S.cheer = 0;
+    }
+
+    updateCamera();
+    drawHud();
+  }
+  {
+    const age = (now - S.judgeAt) / 700;
+    elJudge.style.opacity = age >= 1 ? 0 : (age < 0.55 ? 1 : (1 - age) / 0.45);
+  }
+  render(now);
+}
+
+function updateCamera(){
+  const kind = sectionOf(Math.floor(S.u / SECTION)).cam;
+  const p = pathAt(S.u);
+
+  // BPMが上がるほど道が速く流れるので、その分だけ引く（読める速度に保つ）
+  // ズームは「絵の大きさ」を決める係数。間隔と速度は STEP 側で持つ。
+  //   画面上の1拍 = STEP × zoom px。1.7 × 135 ≒ 230px/拍
+  //   → 156BPM で毎秒約600px、600BPM では毎秒1900px を超える
+  // 高BPMでは平方根で少しずつ引く（線形に引くと速くしたぶんが打ち消される）
+  const taper = Math.min(1, Math.sqrt(420 / Math.max(156, S.playBpm)));
+  // 画面が狭い（スマホ縦）ときは引く。引かないと先の敵が1体も入らない
+  const narrow = Math.min(1, Math.max(0.52, W / 760));
+  const target = 135 * kind.zoom * taper * narrow;
+
+  // PATH の a は巻き戻していない連続値なので、重みを掛けても飛ばない
+  // 進行方向が画面の右を向くように回す。『のぼって落ちる』が本当の上下になる
+  const rot = -p.a;
+
+  let dr = rot - S.cam.rot;
+  while (dr >  Math.PI) dr -= Math.PI * 2;
+  while (dr < -Math.PI) dr += Math.PI * 2;
+
+  const k = 0.08;
+  // ⚠️ 酔い対策の要：1フレームで回せる角度に上限をかける。
+  //    これが無いと、急カーブや高BPMで画面が一気に振り回される。
+  const MAX_SPIN = 0.045;                      // rad/frame ≒ 155°/秒
+  const step = Math.max(-MAX_SPIN, Math.min(MAX_SPIN, dr * k));
+
+  S.cam.x    += (p.x - S.cam.x) * 0.35;
+  S.cam.y    += (p.y - S.cam.y) * 0.35;
+  S.cam.rot  += step;
+  S.cam.zoom += (target - S.cam.zoom) * k;
+  S.cam.ax   += (kind.ax - S.cam.ax) * k;
+  S.cam.ay   += (kind.ay - S.cam.ay) * k;
+}
+
+/* =========================================================================
+   描画
+   ========================================================================= */
+function render(now){
+  ctx.save();
+  ctx.fillStyle = "#07070a";
+  ctx.fillRect(0, 0, W, H);
+  drawCrowd(now);            // 背景の客席。カメラの回転は受けない（受けると酔う）
+
+  // 画面全体を光らせるのはやめた（毎秒10回の明滅は体に悪い）。
+  // パリィの手応えはアリアの周りの光と衝撃波だけで出す。
+
+  // 画面 ← 世界 の変換。ここから先は世界座標で描ける。
+  const sh = S.shake > 0.01 ? S.shake * 11 : 0;
+  ctx.translate(W * S.cam.ax + (Math.random() - .5) * sh,
+                H * S.cam.ay + (Math.random() - .5) * sh);
+  ctx.rotate(S.cam.rot);
+  ctx.scale(S.cam.zoom, S.cam.zoom);
+  ctx.translate(-S.cam.x, -S.cam.y);
+  const px = 1 / S.cam.zoom;                 // 世界単位での「1画面ピクセル」
+
+  const from = Math.max(0, Math.floor(S.u) - 6);
+  const to   = Math.floor(S.u) + 14;
+  extendPath(to + 2);
+
+  // --- 道：太い下地 → 細い芯 ---------------------------------------
+  ctx.lineJoin = ctx.lineCap = "round";
+  // 会場を明るくしたので、道もそのぶん明るくする。
+  // ここが暗いままだと、照明の中に道と敵が沈んで見えなくなる。
+  for (const pass of [{ w: 28 * px, c: "#2a2a3a" }, { w: 20 * px, c: "#3d3d52" },
+                      { w: 3.5 * px, c: "#8f8fae" }]){
+    ctx.beginPath();
+    for (let i = from; i <= to; i++){
+      const p = PATH[i];
+      i === from ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = pass.c; ctx.lineWidth = pass.w; ctx.stroke();
+  }
+
+  // --- 通り過ぎた道は光の帯として残す -------------------------------
+  ctx.beginPath();
+  for (let i = from; i <= Math.floor(S.u); i++){
+    const p = PATH[i];
+    i === from ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+  }
+  const a = pathAt(S.u);
+  ctx.lineTo(a.x, a.y);
+  // 連続しているほど、通ってきた道が強く光る
+  ctx.strokeStyle = "rgba(255,225,26," + (0.45 + S.glow * 0.45) + ")";
+  ctx.lineWidth = (3.5 + S.glow * 3) * px;
+  ctx.shadowColor = "rgba(255,225,26,.75)"; ctx.shadowBlur = 16 + S.glow * 22;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // --- 速度線 --------------------------------------------------------
+  //     道と平行に、アリアの後ろへ流れる短い線。**爽快感はここで出る。**
+  //     本数と長さをBPMに比例させると、加速がそのまま速さに見える。
+  {
+    const spd = Math.min(1, (S.playBpm - 156) / 500);
+    const num = Math.round(6 + spd * 22);
+    ctx.lineCap = "round";
+    for (let i = 0; i < num; i++){
+      const h  = (Math.sin(i * 43.7) * 9871.3) % 1;      // 番号から決まる散らばり
+      const h2 = (Math.sin(i * 12.9) * 4133.7) % 1;
+      const back = 0.25 + ((i * 0.37 + now * 0.0012 * (1 + spd * 3)) % 3.6);
+      const uu = S.u - back;
+      if (uu < from) continue;
+      const pp = pathAt(uu);
+      const nn = normalOf(pp.a);
+      const off = (h - 0.5) * 2.4;                        // 道の上下へばらす
+      const len = (0.30 + spd * 1.1 + Math.abs(h2) * 0.5) * STEP;
+      const a   = (0.10 + spd * 0.30) * (1 - back / 3.4);
+      ctx.strokeStyle = "rgba(210,225,255," + Math.max(0, a) + ")";
+      ctx.lineWidth = (1.2 + spd * 1.6) * px;
+      ctx.beginPath();
+      ctx.moveTo(pp.x + nn.x * off, pp.y + nn.y * off);
+      ctx.lineTo(pp.x + nn.x * off - Math.cos(pp.a) * len,
+                 pp.y + nn.y * off - Math.sin(pp.a) * len);
+      ctx.stroke();
+    }
+  }
+
+  // --- 拍の刻み ------------------------------------------------------
+  for (let i = from; i <= to; i++){
+    const p = PATH[i];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2.5 * px, 0, Math.PI * 2);
+    ctx.fillStyle = "#5a5a74"; ctx.fill();
+  }
+
+  // --- 敵の本体（アリアより奥）---------------------------------------
+  for (const n of S.notes){
+    if (n.countIn || n.state !== "wait") continue;
+    if (n.i < from || n.i > to) continue;
+    drawEnemy(PATH[n.i], n, now, px, "body");
+  }
+
+  // --- パリィ／被弾のエフェクト --------------------------------------
+  for (const f of S.fx){
+    const age = (now - f.t) / (f.kind === "parry" ? 340 : 520);
+    if (age > 1) continue;
+    const p = pathAt(f.u);
+    if (f.kind === "parry"){
+      const fade = 1 - age;
+      const k = f.big ? 1.45 : 1;
+
+      // ⚠️ 大きく広げないこと。面積が増えるほど「明滅」に近づいて目に来るし、
+      //    道と敵が隠れて逆に見づらくなる。小さく・鋭く・速く。
+      // ① 二重のリング。外は速く薄く、内は遅く濃く
+      ctx.lineWidth = 2.5 * px;
+      ctx.strokeStyle = "rgba(255,225,26," + fade * 0.8 + ")";
+      ctx.beginPath(); ctx.arc(p.x, p.y, (0.10 + age * 0.34) * k, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 1.5 * px;
+      ctx.strokeStyle = "rgba(255,255,255," + fade * 0.5 + ")";
+      ctx.beginPath(); ctx.arc(p.x, p.y, (0.06 + age * 0.18) * k, 0, Math.PI * 2); ctx.stroke();
+
+      // ② 十字の閃光。当たった瞬間だけ短く抜ける
+      const flashA = Math.max(0, 1 - age * 3.2);
+      if (flashA > 0.01){
+        ctx.save();
+        ctx.translate(p.x, p.y); ctx.rotate(Math.PI / 4);
+        ctx.globalAlpha = flashA * 0.85;
+        ctx.fillStyle = "#fffbe0";
+        crossPath((0.13 + age * 0.20) * k);
+        ctx.fill();
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
+
+      // ③ 飛沫。散るのは光の粒ではなく**ペンライト**（アリアのモチーフ）
+      ctx.lineCap = "round";
+      for (const b of f.bits){
+        const d  = b.sp * age * 0.85 * k;
+        const dx = Math.cos(b.a), dy = Math.sin(b.a);
+        const x0 = p.x + dx * d, y0 = p.y + dy * d;
+        const L  = b.len * fade;
+        // 柄
+        ctx.strokeStyle = "rgba(210,210,225," + fade * 0.5 + ")";
+        ctx.lineWidth = 1.6 * px;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx * L * 0.4, y0 + dy * L * 0.4); ctx.stroke();
+        // 光る筒
+        ctx.strokeStyle = b.col.replace("A", String(fade * 0.95));
+        ctx.lineWidth = 2.6 * px;
+        ctx.beginPath();
+        ctx.moveTo(x0 + dx * L * 0.38, y0 + dy * L * 0.38);
+        ctx.lineTo(x0 + dx * L * 1.25, y0 + dy * L * 1.25);
+        ctx.stroke();
+      }
+
+      // ④ 弾かれたエーテリアスの破片
+      for (let i = 0; i < 4; i++){
+        const a2 = p.a - 2.2 + i * 0.35;
+        ctx.save();
+        ctx.translate(p.x + Math.cos(a2) * age * 0.9, p.y + Math.sin(a2) * age * 0.9);
+        ctx.rotate(age * (5 + i));
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = i % 2 ? "#9bd93a" : "#2f3340";
+        ctx.fillRect(-0.04, -0.04, 0.08, 0.08);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.strokeStyle = "rgba(255,59,59," + (1 - age) + ")";
+      ctx.lineWidth = 4 * px;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 0.15 + age * 0.6, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  drawAria(now, px);
+
+  // --- パリィの十字はアリアより手前。重なる瞬間を絶対に隠さない -------
+  for (const n of S.notes){
+    if (n.countIn || n.state !== "wait" || !n.flashed) continue;
+    if (n.i < from || n.i > to) continue;
+    drawEnemy(PATH[n.i], n, now, px, "mark");
+  }
+
+  ctx.restore();
+}
+
+
+/* =========================================================================
+   ドット絵
+   全部ここで手打ちした原画。公式の絵は使っていないし、なぞってもいない。
+   文字1つ＝1ドット。色は下の PAL を見る。
+   ========================================================================= */
+/* --- アリア：横から見た、尻を一番下にした落下姿勢（右向き）64x64 -------
+   本家の目印を優先して置いた：
+     ・コーラルピンクのツインテール（落下中なので上へ流れる）
+     ・前髪のミントのメッシュ
+     ・頭の左右から後ろへ伸びる黒い角
+     ・胸のオレンジのV字＋中央の暗い縦帯  ← 一番の識別点
+     ・白が主のスカートに、ミントの角ばった板とフリル
+     ・背中の白い翼（先端だけミント）／白いブーツのオレンジのくちばし
+   64x64で描いて、画面には2倍で出している（実質128px）。
+   1ドットずつ手で置くのではなく、部品を座標で置いて組んでいる
+   （`開発/Vault保守` ではなく scratchpad の aria2.py が生成元。座標を直せば作り直せる）。
+--------------------------------------------------------------------- */
+const ARIA_PAL = {
+  ".": null,
+  "K": "#17121c",   // 輪郭
+  "P": "#ef6f86",   // 髪
+  "p": "#ff9aa8",   // 髪（明）
+  "q": "#c9485f",   // 髪（影）
+  "T": "#7fe3d0",   // ミント
+  "t": "#bff2e8",   // ミント（明）
+  "W": "#f5f7f8",   // 白
+  "w": "#cfd6dd",   // 白（影）
+  "S": "#ffe3d0",   // 肌
+  "s": "#e8b9a4",   // 肌（影）
+  "O": "#ff8c42",   // オレンジ
+  "D": "#4a3328",   // 胸の縦帯
+  "G": "#241d28",   // 黒い角
+  "B": "#56b8d8",   // 目
+};
+const ARIA_PIX = [
+  "...............K.KPPpppppPPKKGGGK........KPPpppppPPGGGPKKK......",
+  "............KKKPKKPPpppppPPKGGGGGK.......KPpppppppGGGGGpPPK.....",
+  "...........KPPpPPPPpppppppPKKGGGGK......KPPPpppppPGGGGppppPK....",
+  "..........KPpppppPPPpppppPPPKKGGGK.......KPPpppppGGGGppppppPK...",
+  ".........KPpppppppPPpppppPPK.KGGGGK.....KKPPPPpPGGGGpppppppPK...",
+  ".........KPpppppppPPPPpPPPPK..KGGGGKKKKKPKPPPPPGGGGpppppppppK...",
+  ".........KpppppppppPPPPPPPPK...KGGGPPPPPPPPPPPGGGGPPpppppppPPK..",
+  "........KPPpppppppPPPPPPPPK....KGGGGPPPPPPPPPPGGGPPPpppppppPK...",
+  ".........KPpppppppPPPKPKKK.....KPGGGPPPPPTPPPPGGGPPPPpppppPPKK..",
+  "........KPPPpppppPPPPKK.......KPPGGGPPTTTTPPPPPPPPPPPPPpPPPpPPK.",
+  ".......KPPPpPPpPPPPPPK.......KPPPPPPTTTTTTTPPPPPPPPPPPPPPpppppPK",
+  "......KPPpppppPPPPPPK.......KPPPPPPPTTTTTTTPPPPPPPPPPPPPpppppppP",
+  ".....KPPpppppppPPPPK........KPPPPPPPPTTTTTTPPPPPPPPPKPPPpppppppP",
+  ".....KPPpppppppPPPPK........KPPPPPPPPTTTTTTPPPPPPPPPKPPppppppppp",
+  ".....KPpppppppppPPPK.......KPPPPPPPPPTTTTTTTPPPPPPPPPPPPpppppppP",
+  "....KPPPpppppppPPPPPK......KPPPPPPPPPPTTTTTTPPPPPPPPPPPPpppppppP",
+  ".....KPPpppppppPPPPPPKK....KPPPPPPPPPPPPPPPPPPPPPPPPPPpPPpppppPP",
+  ".....KPPPpppppPPpPPPPPPK...KPPPPPPPPPPPPPPPPPPPPPPPPPPppppPpPPPP",
+  ".....KPPPPPpPpppppppPPPPK.KPPPPPPPPPPPPPKKKPPPPPPPPPPPPppppPPPPK",
+  "......KPPPPPpppppppppPPPK..KPPPPPPPPPPPPWBWPPPPPPPPPPPpppppPPPK.",
+  "...K...KPPPPpppppppppPPPPK.KPPPPPPPPPPPPWBWPPKKPPPPPPPpppppPPK..",
+  "..KTKKK.KPPPpppppppppPPPPK.KPPPPPPPPPPPWBBBWPPKPPPPPPPppppppPK..",
+  "...KTTTKKKPppppppppqppPPPK..KPPPPPSPPPPPWBWPPPSSPPPPPwpWpppPPPK.",
+  "....KTTTTPPPpppppqqqqqPPPPK..KKPSSSSSpSSWBWSSSSSSSPwwwWWpppPPK..",
+  "....KTTTTWPPppppqqqqqqqPPK....KSSSSpppppSWSSSqSSSSwwwwwWpppPPK..",
+  ".....KTTWWPPppppqqqqqqqPPK.....KSSSSSpSSSSSqqqqqSwwwwOWWppPPPK..",
+  "......KKWwPPPppqqqqqqqqqPK....KWSSSSSSSSSSSSSqSSSwwwwOOOOOOOK...",
+  "........KWwPPPPPqqqqqqqPK....KWwwSSSSSSSSSSSSSSSwwwwwOOOOOPPK...",
+  ".........KWPPPPPqqqqqqqPK....KWwwwSSSSSSSSSSSSSWWwWWWOOOPPPK....",
+  ".K........KKPPPPPqqqqqPKKK...KwwwwwwSSSSSSSSSWWWWWWWWWWPPKK.....",
+  "KTKKKKKKKKKKKKPPPPPqPwwWWWKKKWWwwwwwSSSSSSSKWWWWWWWWWWWKK.......",
+  ".KTTTWWWWWWWWWWWWPWWwwwwwWWWKKWwwwwwSSSSSSWWWWWKWWWWWWWK........",
+  "..KTTTTWWWWWWWWWWWWWWWwwwwwwKKWWwwwwSSSSSSWWWWWSWWWWWKK.........",
+  "..KTTTTWWwwwwwwwwwwwwwwwwwwwwKWWWWwWWSSSSWWWWWpWSWSSK...........",
+  "...KTTWWwwwwwwwwwwwwwwwwwwwwWKWWWWWWWWWSSSWWWpppSSSSK...........",
+  "....KKWWWwWWWWWWWWWWWWwwwwWWWKWwWWWWWWWOOKWWpppppSSK............",
+  "......KWWWWWWWWWWWWWwwwwWWWWWWWwwwOWDOOOKSSKWpppSSSK............",
+  ".......KKKWWWWWWWWwwwwWWWWWWWWwwwwOOOOOOSSSKKKpSSSK.............",
+  "....KKKWWWWWWWWWwwwwWWWWWWWKWWwwwwOOOOOWSSSKKKSSSSK.............",
+  "...KTWWWWWWWWWwwwwWWWWWWWWKKWwwwwwwwWWWSSSSSsSSSSSSK............",
+  "....KTTWWWWWwwwwWWWWWWWWWWWWWwwwwwwwWWWSSSsssssSSSK.............",
+  ".....KTTTTWwwwwWWWWWWWWWWWWWwwwwwwwWWWWSsssssssSSSK.............",
+  ".....KTTTTWWwWWWWWWWWWWWWWWWwOwwwwwWWWSsssssssssSSK.............",
+  "......KTTWWWWWWWWWWWWWWWWWWwwOOOOGOOOOOssssssssSSK..............",
+  ".......KKWWWWWWWWWWWWWWWWWWwwwOGGGGGOOsssssssssKK...............",
+  ".........KWWWWWWWWWWWWWWWWWWWWOOOGOOOOsssssssKK.................",
+  "..........KKKWWWWWWwwWWWWWWWWWWWWWWWWsssssssK...................",
+  "...........KWWWWWwwwWWWWWWSSWWWWWWWWWsssssKK....................",
+  "...........KWWWWwwwwwWWWWWWSSSSWWWWWsssssK......................",
+  "...........KWWWwwwwwwWWWWWWSSSsssssssssTTOK.....................",
+  "...........KWWwwwwwwwWWWWWWSSSSsssssssWOOK......................",
+  "..........KWWWwwwwwwwwWWWWWWSSSsssssWWWWOK......................",
+  "...........KWWwwwwwwwwwWWWWWWWWSWsWWWWWOOK......................",
+  "..........KtWwwwwwwwwwwwWWWWWWWWWwWWWWWOK.......................",
+  "...........KWWwwwwwwwwwwwwwwWwwwwWWWWWWK........................",
+  "...........KWWwwwwwwwwwwwwwwwwwwwWWWWWWK........................",
+  "............KWwwwwwwwwwwwwwwwwwwwWWWWWK.........................",
+  "............KWWwwwwwwwwwwwwwwwwwWWWWWWK.........................",
+  ".............KWWwwwwwwwwwwwwwwwWWWWWWK..........................",
+  "..............KWWwwwwwwwwwwwwwWWWWWWK...........................",
+  "...............KWWWwwwwwwwwwWWWWWWWK............................",
+  "................KKWWWWWwWWWWWWWWWKK.............................",
+  "..................KKWWWWWWWWWWWKK...............................",
+  "....................KKKKKWKKKKK.................................",
+];
+
+/* --- エーテリアス：エーテルの塊 16x16 -------------------------------- */
+const ETHER_PAL = {
+  ".": null,
+  "K": "#1a0a1f",
+  "D": "#4a1030",
+  "M": "#b81f4f",
+  "R": "#ff3b5c",
+  "E": "#ffe11a",
+  "e": "#fff6a0",
+};
+const ETHER_PIX = [
+  "......KKKK......",
+  "....KKDDDDKK....",
+  "...KDDMMMMDDK...",
+  "..KDDMMMMMMDDK..",
+  ".KDMMMMMMMMMMDK.",
+  ".KDMMRRMMRRMMDK.",
+  "KDMMMRRMMRRMMMDK",
+  "KDMMMMMMMMMMMMDK",
+  "KDMMMEEeeEEMMMDK",
+  "KDMMMEeeeeEMMMDK",
+  ".KDMMMEEEEMMMDK.",
+  ".KDDMMMMMMMMDDK.",
+  "..KDDMMMMMMDDK..",
+  "...KKDDMMDDKK...",
+  "..K..KKDDKK..K..",
+  ".K....K..K....K.",
+];
+
+/* 文字の絵を、1ドット=1pxのオフスクリーンcanvasへ焼く */
+function bake(pix, pal){
+  const c = document.createElement("canvas");
+  c.width = pix[0].length; c.height = pix.length;
+  const g = c.getContext("2d");
+  for (let y = 0; y < pix.length; y++){
+    for (let x = 0; x < pix[y].length; x++){
+      const col = pal[pix[y][x]];
+      if (!col) continue;
+      g.fillStyle = col; g.fillRect(x, y, 1, 1);
+    }
+  }
+  return c;
+}
+/* 同じ絵を1色に塗り潰した版（パリィで光らせるとき用） */
+function tint(src, color){
+  const c = document.createElement("canvas");
+  c.width = src.width; c.height = src.height;
+  const g = c.getContext("2d");
+  g.drawImage(src, 0, 0);
+  g.globalCompositeOperation = "source-in";
+  g.fillStyle = color; g.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
+let   IMG_ARIA  = bake(ARIA_PIX,  ARIA_PAL);
+
+/* --- 外注の絵が来たら、置くだけで差し替わる ---------------------------
+   このフォルダに `aria.png` を置くと、内蔵のドット絵より優先して使う。
+   ・向き：右向き（進行方向が右）
+   ・姿勢：横から見て、尻が一番下（真上から尻で落ちる）
+   ・絵の中心が回転の中心になる。余白も含めて正方形が扱いやすい
+   ・透過PNG。ドット絵なら等倍で書き出す（拡大は描画側でやる）
+   置かなければ内蔵のまま。読み込みに失敗しても何も起きない。
+------------------------------------------------------------------- */
+(function loadOverrides(){
+  const a = new Image();
+  a.onload = () => { if (a.naturalWidth){ a.__smooth = true; IMG_ARIA = a; } };
+  a.src = "aria.png";
+
+  const e = new Image();
+  e.onload = () => {
+    if (!e.naturalWidth) return;
+    e.__smooth = true;
+    IMG_ETHER = e;
+    IMG_ETHER_LIT = tint(e, "#ffe11a");    // パリィの合図で金色に寄せる版を作り直す
+    IMG_ETHER_LIT.__smooth = true;
+  };
+  e.src = "ether.png";
+})();
+let   IMG_ETHER = bake(ETHER_PIX, ETHER_PAL);
+let   IMG_ETHER_LIT = tint(IMG_ETHER, "#ffe11a");
+
+/* 絵を世界座標へ置く。中心が原点。
+   内蔵のドット絵は補間を切って升目を残す。外から読んだ絵（aria.png）は
+   もともと滑らかに描かれていて縮小して使うので、補間を入れたほうが綺麗に出る。 */
+function blit(img, worldH){
+  const u = worldH / img.height;
+  ctx.imageSmoothingEnabled = !!img.__smooth;
+  ctx.drawImage(img, -img.width * u / 2, -img.height * u / 2, img.width * u, img.height * u);
+}
+
+/* パリィの十字（4つ角がへこんだ四芒星）------------------------------- */
+function crossPath(R){
+  const r = R * 0.20;
+  ctx.beginPath();
+  ctx.moveTo(0, -R);
+  ctx.quadraticCurveTo( r, -r,  R,  0);
+  ctx.quadraticCurveTo( r,  r,  0,  R);
+  ctx.quadraticCurveTo(-r,  r, -R,  0);
+  ctx.quadraticCurveTo(-r, -r,  0, -R);
+  ctx.closePath();
+}
+
+/* --- アリアの動き：上がって、真上から直角に落ちる --------------------
+   放物線で飛ぶのではない。拍の前半で次の着地点の**真上まで移動して上がりきり**、
+   後半は**水平位置を固定したまま真下へ落ちる**。だから軌跡が直角になる。
+
+     ┌──────┐        ← 前半：次の敵の真上へ移動しながら上がる
+     │      │
+     ●      ▼        ← 後半：真下へ加速して落ちる。着地点に敵がいる
+------------------------------------------------------------------- */
+const HOP  = 1.05;
+const RISE = 0.45;                      // 拍のどこまでを「上がり」に使うか
+
+/* 道に対して垂直な「上」の向き（進行方向 a から見て左手側） */
+function normalOf(a){ return { x: Math.sin(a), y: -Math.cos(a) }; }
+
+function ariaPose(u){
+  const i = Math.floor(u), f = u - i;
+  let along, h, falling;
+  if (f < RISE){                        // 上がり：次の拍の真上へ寄せながら上げる
+    const k = f / RISE;
+    along = i + k;
+    h = HOP * Math.sin(k * Math.PI / 2);
+    falling = false;
+  } else {                              // 落ち：水平位置は着地点に固定。真下へ
+    const k = (f - RISE) / (1 - RISE);
+    along = i + 1;
+    h = HOP * (1 - k * k);
+    falling = true;
+  }
+  const p = pathAt(along);
+  const n = normalOf(p.a);
+  return { x: p.x + n.x * h, y: p.y + n.y * h, a: p.a, h, f, falling };
+}
+
+/* カメラが引いても画面上の大きさが変わらないようにする倍率 */
+function actorScale(){
+  return Math.max(1, Math.min(2.4, 120 / S.cam.zoom));
+}
+
+/* --- 敵：エーテリアス。armed になるとパリィの十字が出る -----------------
+   外側の十字が縮んできて、**本体の十字とぴったり重なった瞬間が押し時**。
+   合図（閃光）から重なるまでがちょうど1拍。
+--------------------------------------------------------------------- */
+function drawEnemy(p, n, now, px, layer){
+  const lead = (60000 / n.bpm) * S.leadBeats;
+  const prog = Math.max(0, Math.min(1, 1 - (n.t - now) / lead));   // 0=合図 1=到達
+  const k    = actorScale();
+  const lw   = px / k;                                             // 太さは画面基準で
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.scale(k, k);
+
+  if (layer === "mark"){ drawParryMark(prog, lw); ctx.restore(); return; }
+
+  // エーテリアス本体。道の上に立たせる（回さない。回すとキャラに見えなくなる）
+  const EH = 0.62;      // 本人指示で少し大きく（0.44 → 0.62）
+  ctx.save();
+  ctx.rotate(p.a);
+  ctx.translate(0, -EH / 2 + Math.sin(now * 0.004 + n.i) * 0.02);   // 底辺を接地線に＋わずかに揺らす
+  if (n.flashed){
+    ctx.globalAlpha = 0.60 + 0.40 * prog;
+    blit(IMG_ETHER, EH);
+    ctx.globalAlpha = 0.15 + 0.35 * prog;
+    blit(IMG_ETHER_LIT, EH);                   // 合図が出たら金色に寄っていく
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.globalAlpha = 0.85;
+    blit(IMG_ETHER, EH);
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+
+  ctx.restore();
+}
+
+/* パリィの十字。外側の十字が縮んできて、重なった瞬間が押し時 */
+function drawParryMark(prog, lw){
+  const CORE = 0.30;
+  ctx.rotate(Math.PI / 4);                     // ×ではなく＋の向きに立てる
+
+  // ★寄ってくる十字。到達の瞬間に CORE と重なる
+  const outer = CORE * (1 + (1 - prog) * 3.2);
+  ctx.strokeStyle = "rgba(255,225,26," + (0.25 + prog * 0.6) + ")";
+  ctx.lineWidth = (1.6 + prog * 2.4) * lw;
+  ctx.lineJoin = "round";
+  crossPath(outer);
+  ctx.stroke();
+
+  // 重なる直前だけ、内側の十字が白く立ち上がる
+  const near = Math.max(0, (prog - 0.72) / 0.28);
+  ctx.shadowColor = "rgba(255,225,26,.95)";
+  ctx.shadowBlur  = 12 + near * 34;
+  crossPath(CORE);
+  ctx.fillStyle = near > 0.55 ? "#fffbe0" : "#ffe11a";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(60,40,0,.85)"; ctx.lineWidth = 1.2 * lw; ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+/* --- アリア：真上から尻で落ちて、着地点の敵を潰す ----------------------
+   位置は ariaPose() が決める。ここは向きと潰れ方だけ。
+--------------------------------------------------------------------- */
+function drawAria(now, px){
+  const hit = S.hitGlow;
+  const k   = actorScale() * 1.15;
+  const q   = ariaPose(S.u);
+
+  ctx.save();
+  ctx.translate(q.x, q.y);
+  ctx.rotate(q.a);                     // 進行方向が右、道が足元
+  ctx.scale(k, k);
+
+  // 着地の瞬間だけ縦につぶれる
+  const land = Math.max(0, 1 - q.f * 9) + Math.max(0, 1 - (1 - q.f) * 14);
+  ctx.scale(1 + land * 0.16, 1 - land * 0.18);
+
+  if (hit > 0.02){                     // 尻から真下への衝撃波
+    ctx.save();
+    ctx.translate(0, 0.10);
+    ctx.globalAlpha = hit;
+    ctx.fillStyle = "#ffe11a";
+    ctx.beginPath();
+    ctx.moveTo(-0.40, 0);
+    ctx.quadraticCurveTo(0, 0.44, 0.40, 0);
+    ctx.quadraticCurveTo(0, 0.17, -0.40, 0);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,225,26," + hit + ")";
+    ctx.lineWidth = 3 * px / k;
+    for (const d of [-1, 1]){
+      ctx.beginPath();
+      ctx.moveTo(d * 0.26, 0.05);
+      ctx.lineTo(d * (0.50 + hit * 0.42), -0.15 - hit * 0.10);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 絵の底辺が道に接するように持ち上げてから、そこを軸に回す
+  const AH = 0.58;      // 本人指示で縮小（1.30 → 0.82 → 0.58）
+  ctx.translate(0, -AH / 2);
+
+  // 落下中の残像は入れない（2026-08-29 本人指示・「ノイズに見える」）。
+  // 絵が細かいので、半透明の複製を重ねると輪郭が潰れて汚れになる。
+
+  // ★上がるあいだに体を1回転。落ちに入る瞬間には きっちり 0 に戻る
+  if (!q.falling) ctx.rotate((q.f / RISE) * Math.PI * 2);
+
+  ctx.shadowColor = "rgba(255,150,190,.5)";
+  ctx.shadowBlur  = 8 + hit * 34;
+  blit(IMG_ARIA, AH);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // --- 連続しているあいだ、ペンライトがアリアの周りを回る -------------
+  //     ⚠️ アリアと**同じ座標系**で置くこと。
+  //        世界座標のまま y をずらすと、道が傾いたぶんだけ本人から離れていく
+  //        （最初これで、アリアと関係ない場所に輪が浮いていた）。
+  //     連続が育ってから出す（glow>0.25 ≒ 8連あたり）。最初から付いていると
+  //     「ご褒美」に見えない。
+  if (S.glow > 0.25){
+    const w = (S.glow - 0.25) / 0.75;              // 0→1
+    const num = Math.round(3 + w * 5);
+    ctx.save();
+    ctx.translate(q.x, q.y);
+    ctx.rotate(q.a);                               // 道の向き＝アリアの足元
+    ctx.scale(k, k);
+    ctx.translate(0, -AH * 0.55);                  // 体の中ほど
+    for (let i = 0; i < num; i++){
+      const th = now * 0.0035 + (i / num) * Math.PI * 2;
+      const rx = 0.42 + w * 0.14, ry = 0.15 + w * 0.06;
+      const near = (Math.sin(th) + 1) / 2;          // 手前ほど濃く
+      ctx.save();
+      ctx.translate(Math.cos(th) * rx, Math.sin(th) * ry);
+      ctx.rotate(Math.sin(now * 0.004 + i) * 0.45);
+      ctx.globalAlpha = (0.25 + near * 0.55) * w;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = PEN_COLORS[i % PEN_COLORS.length];
+      ctx.lineWidth = 3.2 * px / k;
+      ctx.beginPath(); ctx.moveTo(0, 0.06); ctx.lineTo(0, -0.13); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // 落ちる軌跡を薄く引く（直角なのが見えるように）
+  if (q.falling && q.h > 0.02){
+    const p = pathAt(Math.floor(S.u) + 1), n = normalOf(p.a);
+    ctx.strokeStyle = "rgba(255,225,26,.22)";
+    ctx.lineWidth = 2 * px;
+    ctx.beginPath();
+    ctx.moveTo(p.x + n.x * (q.h + 0.35), p.y + n.y * (q.h + 0.35));
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+}
+
+/* =========================================================================
+   タップテンポ
+   ========================================================================= */
+(function tapTempo(){
+  const btn = document.getElementById("tapBtn");
+  const inp = document.getElementById("startBpm");
+  let taps = [];
+  btn.addEventListener("click", () => {
+    const now = performance.now();
+    if (taps.length && now - taps[taps.length - 1] > 2500) taps = [];
+    taps.push(now);
+    if (taps.length > 8) taps = taps.slice(-8);
+    if (taps.length >= 2){
+      const span = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+      inp.value = Math.round(60000 / span);
+      btn.textContent = inp.value + " BPM（続けて叩く）";
+    } else {
+      btn.textContent = "もう一回…";
+    }
+  });
+})();
+
+/* イントロ→繰り返す音、を実際の間隔で鳴らして耳で確かめる */
+const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+function refreshPitchName(){
+  const n = Math.max(2, Math.min(MELODY.length, Number(document.getElementById("repeatAt").value) || 9));
+  const m = MELODY[n - 1];
+  document.getElementById("pitchName").textContent =
+    "= " + NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1) + "（MIDI " + m + "）";
+}
+document.getElementById("repeatAt").oninput = refreshPitchName;
+refreshPitchName();
+
+document.getElementById("pitchBtn").onclick = () => {
+  initAudio();
+  if (actx.state === "suspended") actx.resume();
+  const n   = Math.max(2, Math.min(MELODY.length, Number(document.getElementById("repeatAt").value) || 9));
+  const bpm = Math.max(40, Math.min(400, Number(document.getElementById("startBpm").value) || 156));
+  const step = 60000 / bpm;
+  const t0 = performance.now() + 80;
+  // イントロは原曲の拍位置で
+  MELODY.slice(0, n - 1).forEach((m, i) => playNote(m, t0 + MELODY_BEAT[i] * step, bpm, true));
+  // そこから先は等間隔で繰り返す
+  const base = MELODY_BEAT[n - 1];
+  for (let i = 0; i < 6; i++) playNote(MELODY[n - 1], t0 + (base + i) * step, bpm, false);
+};
+
+document.getElementById("cfgBtn").onclick = () => {
+  document.getElementById("cfg").classList.toggle("hidden");
+};
+/* 「はじめる」→ アリアが落ちてエーテリアスを潰す → ゲーム開始。
+   音の許可はクリックのその場で取っておく（演出の後だと間に合わないことがある）。 */
+document.getElementById("startBtn").onclick = () => {
+  initAudio();
+  if (actx.state === "suspended") actx.resume();
+
+  const hero = document.getElementById("hero");
+  if (!hero || hero.classList.contains("go")) return;
+  hero.classList.add("go");
+  setTimeout(() => playParry(156, 1), 450);      // 着地の瞬間に鳴らす
+  setTimeout(() => veil.classList.add("leaving"), 620);
+  setTimeout(() => { veil.classList.remove("leaving"); start(); }, 900);
+};
+resize(); drawLife(); drawHud(); frame();
+</script>
+</body>
+</html>

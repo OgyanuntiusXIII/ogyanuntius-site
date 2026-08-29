@@ -45,7 +45,26 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
     <div><dt>状態</dt><dd>{STATUS[data.status]}</dd></div>
     <div><dt>価格</dt><dd>{PRICE[data.priceType]}</dd></div>
     {data.tags.length > 0 && <div><dt>タグ</dt><dd>{data.tags.join(' / ')}</dd></div>}
+    <div class="plays" hidden><dt>プレイ</dt><dd><span id="playCount"></span> play</dd></div>
   </dl>
+
+  <!-- プレイ回数。KVが繋がるまでは数が返らないので、この枠は出ない -->
+  <script is:inline>
+    (() => {
+      const box = document.querySelector('.meta .plays');
+      const out = document.getElementById('playCount');
+      if (!box || !out) return;
+      const slug = location.pathname.replace(/\/$/, '').split('/').pop();
+      fetch('/api/plays?g=' + encodeURIComponent(slug))
+        .then((r) => (r.ok && r.status !== 204 ? r.json() : null))
+        .then((d) => {
+          if (!d || typeof d.count !== 'number') return;
+          out.textContent = d.count.toLocaleString('ja-JP');
+          box.hidden = false;
+        })
+        .catch(() => {});
+    })();
+  </script>
 
   {data.links.length > 0 && (
     <p class="links">
