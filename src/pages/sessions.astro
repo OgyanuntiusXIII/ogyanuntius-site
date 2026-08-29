@@ -65,13 +65,22 @@ const jp = (d: string | null) =>
         {s.data.style && <li><span>形式</span>{s.data.style}</li>}
       </ul>
 
-      {s.data.comment && (
+      {/*
+        感想だけでなく **スクショもこの中** に入れる。
+        本人のファイルに「けだものむろのおもろかったスクショ（ネタバレあり）.png」があり、
+        画像も普通に結末を写す。文だけ隠して絵を出すのは筋が通らない。
+      */}
+      {(s.data.comment || s.data.images.length > 0) && (
         <details class="spoil">
           <summary class="spoil__btn">⚠ ネタバレを含みます — 押すと表示</summary>
-          <p class="pop__note">{s.data.comment}</p>
+          {s.data.comment && <p class="pop__note">{s.data.comment}</p>}
+          {s.data.images.map((src) => (
+            <img class="pop__img" src={src} alt={`${s.data.title} のスクリーンショット`} loading="lazy" />
+          ))}
         </details>
       )}
 
+      {/* クレジットは規約で明記が要るので、ボタンの外に出したまま */}
       {(s.data.author || s.data.sourceUrl) && (
         <p class="pop__credit">
           {s.data.author && <>シナリオ：{s.data.author}　</>}
@@ -80,10 +89,6 @@ const jp = (d: string | null) =>
           )}
         </p>
       )}
-
-      {s.data.images.map((src) => (
-        <img class="pop__img" src={src} alt={`${s.data.title} のスクリーンショット`} loading="lazy" />
-      ))}
     </dialog>
   ))}
 </Base>
