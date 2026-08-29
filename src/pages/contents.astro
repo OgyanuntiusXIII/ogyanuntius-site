@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import { buildNewsLinker } from '../lib/newsLink';
 import { LINKS, SITE, CONTACT, CREDITS } from '../data/site';
 
 const issues = await getCollection('issues');
@@ -10,6 +11,8 @@ const works = await getCollection('works');
 const scenarios = await getCollection('scenarios');
 const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order);
 const news = (await getCollection('news')).sort((a, b) => +b.data.date - +a.data.date);
+/* url が無い行は素の文字のままで、押せなかった。ref から作品ページへ繋ぐ */
+const newsLink = await buildNewsLinker();
 
 const features = [
   ...works.map((w) => ({ ...w.data, href: `/works/${w.id}` })),
@@ -52,14 +55,17 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
 
     <h2 class="h2">NEWS ／ 今月の制作物</h2>
     <ul class="plain">
-      {news.map((n) => (
-        <li>
-          <span class="dim">{md(n.data.date)}</span>{' '}
-          {n.data.url
-            ? <a class="link" href={n.data.url} rel="noopener">{n.data.title} <span aria-hidden="true">↗</span></a>
-            : n.data.title}
-        </li>
-      ))}
+      {news.map((n) => {
+        const link = newsLink(n);
+        return (
+          <li>
+            <span class="dim">{md(n.data.date)}</span>{' '}
+            <a class="link" href={link.href} rel={link.external ? 'noopener' : undefined}>
+              {n.data.title}{link.external && <> <span aria-hidden="true">↗</span></>}
+            </a>
+          </li>
+        );
+      })}
     </ul>
 
     <h2 class="h2">LINKS</h2>

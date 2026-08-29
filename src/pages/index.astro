@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import { buildNewsLinker } from '../lib/newsLink';
 
 const issues = await getCollection('issues');
 const issue = issues.find((i) => i.data.current) ?? issues[0];
@@ -11,6 +12,8 @@ const scenarios = await getCollection('scenarios');
 /* コロコロ側の情報量はここから来る。装飾ではなく実データを載せる（仕様書4章・8章） */
 const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order).slice(0, 3);
 const news = (await getCollection('news')).sort((a, b) => +b.data.date - +a.data.date).slice(0, 3);
+/* NEWS を押したら、その作品のページへ直接行く（以前は全部 /contents へ逃がしていた） */
+const newsLink = await buildNewsLinker();
 
 type Resolved = { catch: string; href: string; badge?: string; no?: number };
 
@@ -166,7 +169,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           <ul class="block__list">
             {news.map((n) => (
               <li>
-                <a class="block__row block__row--news" href={n.data.url ?? '/contents'}>
+                <a class="block__row block__row--news" href={newsLink(n).href}>
                   <time class="block__date">{md(n.data.date)}</time>
                   <span class="block__body">{n.data.title}</span>
                   <span class="block__arrow" aria-hidden="true">→</span>
