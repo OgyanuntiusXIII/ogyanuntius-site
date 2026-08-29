@@ -32,7 +32,11 @@ const jp = (d: string | null) =>
       {sessions.map((s, i) => (
         <li class="log__item">
           <button class="log__row" type="button" data-open={`s-${s.id}`}>
-            <span class="log__no">{String(i + 1).padStart(2, '0')}</span>
+            {/*
+              通し番号は **一番古い卓が 01**。並びは新しい順のままなので、
+              上から 25 → 01 と下がっていく。初めて回した卓に 01 が付く。
+            */}
+            <span class="log__no">{String(sessions.length - i).padStart(2, '0')}</span>
             <span class="log__body">
               <span class="log__ttl">{s.data.title}</span>
               <span class="log__meta">

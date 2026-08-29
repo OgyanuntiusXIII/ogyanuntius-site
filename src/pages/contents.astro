@@ -11,7 +11,6 @@ const works = await getCollection('works');
 const scenarios = await getCollection('scenarios');
 const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order);
 const news = (await getCollection('news')).sort((a, b) => +b.data.date - +a.data.date);
-const sessions = await getCollection('sessions');
 /* url が無い行は素の文字のままで、押せなかった。ref から作品ページへ繋ぐ */
 const newsLink = await buildNewsLinker();
 
@@ -80,10 +79,7 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
       <p class="dim">準備中。</p>
     )}
 
-    <h2 class="h2">SESSION LOG ／ 卓の記録</h2>
-    <ul class="plain">
-      <li><a class="link" href="/sessions">回した卓と、座った卓（{sessions.length}卓）</a></li>
-    </ul>
+    <h2 class="h2"><a class="h2__link" href="/sessions">SESSION LOG ／ 卓の記録</a></h2>
 
     <h2 class="h2">制作の裏側</h2>
     <ul class="plain">
@@ -105,6 +101,10 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
   .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
   .h1 { font-family: var(--font-en); font-size: clamp(2.4rem, 8vw, 5rem); letter-spacing: -.02em; margin: 0 0 2rem; }
   .h2 { font-family: var(--font-en); font-size: 1rem; letter-spacing: .2em; margin: 3.2rem 0 1rem; padding-bottom: .4em; border-bottom: 2px solid var(--rule); }
+  /* 見出しそのものがリンクになる節。下線を出さず、見出しの見た目を保つ */
+  .h2__link { color: inherit; text-decoration: none; }
+  .h2__link:hover, .h2__link:focus-visible { color: var(--accent); }
+  .h2__link::after { content: " →"; font-size: .85em; color: var(--accent); }
   .toc { list-style: none; margin: 0; padding: 0; }
   .toc__item { border-top: 1px solid var(--rule); }
   .toc__item:last-child { border-bottom: 1px solid var(--rule); }
