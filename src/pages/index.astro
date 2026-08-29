@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import Shelf from '../components/Shelf.astro';
 import { buildNewsLinker } from '../lib/newsLink';
 
 const issues = await getCollection('issues');
@@ -44,57 +45,6 @@ const upper = slot('upper');
 const side = slot('side');
 const lower = slot('lower');
 const strip = slot('strip');
-
-/**
- * 本棚（`.shelf`）。本人の構想（2026-08-29）:
- * 「コンテンツが増えたら背表紙だけ見えるようにして、マウス置いたらどういう本か見える。
- *   更新のあった本が3冊くらいディスプレイされて、それ以外は本棚として並ぶ」
- *
- * **作品も号も同じ棚に並べる**（本人の指定）。更新が新しい3冊だけ面出し、残りは背表紙。
- * 1画面に収める制約があるので、棚の高さは vh で伸縮させている（下の --shelf-h）。
- */
-const sessions = await getCollection('sessions');
-const lastPlayed = sessions
-  .map((s) => s.data.date)
-  .filter((d): d is string => !!d)
-  .sort()
-  .at(-1);
-
-type Book = {
-  title: string; href: string; kind: string;
-  updated: Date; note: string; thumb?: string;
-};
-
-const books: Book[] = [
-  ...works.map((w) => ({
-    title: w.data.title, href: `/works/${w.id}`, kind: '作品',
-    updated: w.data.date, note: w.data.catch, thumb: w.data.thumbnail,
-  })),
-  ...scenarios.map((s) => ({
-    title: s.data.title, href: `/scenario/${s.id}`, kind: 'シナリオ',
-    updated: s.data.date, note: s.data.catch, thumb: s.data.thumbnail,
-  })),
-  ...(sessions.length
-    ? [{
-        title: '卓の記録', href: '/sessions', kind: '記録',
-        updated: lastPlayed ? new Date(lastPlayed) : new Date(0),
-        note: `回した卓と、座った卓 ${sessions.length}卓`,
-        /* 本人が「卓報告ブックの表紙が要るときはこれ」と指定した立ち絵
-           （『ニャルラトテップの仮面』の料理人）。棚で面出しになるのがその場面 */
-        thumb: '/images/shelf/sessions.webp',
-      }]
-    : []),
-  ...issues.map((i) => ({
-    title: `${i.data.vol} ${i.data.label}`, href: '/contents', kind: '号',
-    updated: i.data.published,
-    /** theme は |- で改行が入る。帯は1行なので潰す */
-    note: i.data.theme.replace(/\s*\n\s*/g, ' '),
-    thumb: i.data.mainVisual,
-  })),
-].sort((a, b) => +b.updated - +a.updated);
-
-/** 面出しにするのは更新の新しい3冊まで。表紙画像が無いものは背表紙のまま */
-const FACE = 3;
 
 const issued = issue.data.published;
 const md = (d: Date) =>
@@ -249,21 +199,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     </div>
 
     {/* 本棚。下の cover__foot の border-top が、そのまま棚板になる */}
-    <div class="shelf" aria-label="本棚">
-      {books.map((b, i) => {
-        const face = i < FACE && !!b.thumb;
-        return (
-          <a class:list={['book', face && 'book--face']} href={b.href}>
-            {face && <img class="book__cover" src={b.thumb} alt="" loading="lazy" />}
-            {!face && <span class="book__ttl">{b.title}</span>}
-            <span class="book__band">
-              <b>{b.title}</b><i>{b.kind}</i>
-              <em>{b.note}</em>
-            </span>
-          </a>
-        );
-      })}
-    </div>
+    <Shelf variant="cover" />
 
     <div class="cover__foot">
       <a href="/contents" class="cover__contents">
@@ -734,87 +670,6 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     image-rendering: pixelated;   /* 補間させない。ドットをそのまま出す */
   }
   .cover__tako:hover { transform: translateY(-4px) rotate(-2deg); }
-
-  /* ══ 本棚 ═══════════════════════════════════════════
-     本は cover__foot の罫線の上に立つ。負マージンを使わず、
-     グリッドの 1fr（誌面）が高さを吸収するので一画面を割らない。 */
-  .shelf {
-    --shelf-h: clamp(38px, 5.4vh, 56px);
-    display: flex;
-    align-items: flex-end;
-    gap: 3px;
-    height: var(--shelf-h);
-    margin-bottom: -2px;          /* 本の底を罫線に接地させる */
-    overflow: visible;
-    /* 帯が誌面の上へ出るので、棚ごと前面に置く（.cover は overflow:hidden） */
-    position: relative;
-    z-index: 4;
-  }
-  .book {
-    position: relative;
-    display: block;
-    width: 13px;
-    height: 82%;
-    background: var(--paper-2);
-    border: 1px solid var(--ink-mid);
-    border-bottom: 0;
-    text-decoration: none;
-    transition: height 150ms ease, background 150ms ease;
-  }
-  .book:nth-child(3n) { height: 90%; }
-  .book:nth-child(4n) { height: 76%; }
-  .book--face {
-    width: calc(var(--shelf-h) * 0.62);
-    height: 100%;
-    border-color: var(--ink);
-    background: var(--paper);
-  }
-  .book__cover { width: 100%; height: 100%; object-fit: cover; display: block; }
-  /* 背表紙の題字。縦組みで、入らないぶんは自然に切れる */
-  .book__ttl {
-    display: block;
-    writing-mode: vertical-rl;
-    font-size: 9px;
-    line-height: 13px;
-    letter-spacing: .04em;
-    color: var(--ink-mid);
-    padding: 3px 0 0;
-    height: 100%;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-  .book:hover, .book:focus-visible { height: 100%; background: var(--accent); }
-  .book:hover .book__ttl { color: var(--paper); }
-  .book--face:hover { background: var(--paper); }
-
-  /* ホバーで出る帯。棚の上へ出す */
-  .book__band {
-    position: absolute;
-    left: 0;
-    bottom: calc(100% + 6px);
-    display: none;
-    width: max-content;
-    max-width: min(46vw, 420px);
-    padding: .45em .7em;
-    background: var(--ink);
-    color: var(--paper);
-    font-size: .74rem;
-    line-height: 1.5;
-    z-index: 5;
-  }
-  .book:hover .book__band, .book:focus-visible .book__band { display: block; }
-  .book__band b { font-weight: 700; }
-  .book__band i {
-    font-style: normal;
-    margin-left: .6em;
-    padding: .05em .45em;
-    border: 1px solid currentColor;
-    font-size: .82em;
-    opacity: .75;
-  }
-  .book__band em { display: block; font-style: normal; opacity: .72; }
-  /* 棚の右端に近い本は帯が画面外へ出るので、右寄せに切り替える */
-  .book:nth-last-child(-n + 3) .book__band { left: auto; right: 0; }
 
   .cover__foot {
     display: flex;
