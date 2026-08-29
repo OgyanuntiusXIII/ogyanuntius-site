@@ -184,13 +184,15 @@ const structuredDataJson = structuredData
           if (now - last < 800) return;          // 二重発火よけ
           last = now;
           const box = document.getElementById('viewBox');
-          const out = document.getElementById('viewCount');
-          if (!box || !out) return;
+          const t = document.getElementById('viewToday');
+          const a = document.getElementById('viewTotal');
+          if (!box || !t || !a) return;
           fetch('/api/views', { method: 'POST' })
             .then((r) => (r.ok && r.status !== 204 ? r.json() : null))
             .then((d) => {
-              if (!d || typeof d.count !== 'number') return;
-              out.textContent = d.count.toLocaleString('ja-JP');
+              if (!d || typeof d.total !== 'number') return;
+              t.textContent = d.today.toLocaleString('ja-JP');
+              a.textContent = d.total.toLocaleString('ja-JP');
               box.hidden = false;
             })
             .catch(() => {});

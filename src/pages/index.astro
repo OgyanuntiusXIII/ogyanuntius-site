@@ -58,7 +58,15 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   <div class="cover">
     <div class="cover__rail">
       <span>{issue.data.vol}　{issue.data.label}　{ym}</span>
-      <span class="cover__price">定価 ¥0</span>
+      {/* ⚠️ 定価とカウンタは**1つの塊**にする。
+             rail は中身を左右へ散らすので、別々に置くと定価が真ん中へ押し出される。 */}
+      <span class="cover__railright">
+        <span class="cover__price">定価 ¥0</span>
+        {/* 表紙に来た人の数。D1が繋がっていないときは出ない */}
+        <span class="cover__views" id="viewBox" hidden>
+          本日 <b id="viewToday"></b>　累計 <b id="viewTotal"></b>
+        </span>
+      </span>
     </div>
 
     <h1 class="cover__title">
@@ -212,8 +220,6 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
       ))}
       <span class="cover__stamp">特集{featureCount}本</span>
       <span class="cover__stamp">全部無料</span>
-      {/* 表紙に来た人の数。D1が繋がっていないときは出ない（Base.astro が出し入れする） */}
-      <span class="cover__stamp" id="viewBox" hidden><span id="viewCount"></span> view</span>
       <span class="cover__stamp cover__stamp--next">次号 VOL.02 準備中</span>
     </div>
   </div>
@@ -242,6 +248,10 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     border-bottom: 2px solid var(--rule);
   }
   .cover__price { color: var(--accent); font-weight: 700; }
+  .cover__railright { display: inline-flex; align-items: baseline; gap: 1.1em; }
+  /* 定価の右。誌面の情報なので、主張させず罫の一部として置く */
+  .cover__views { color: var(--ink-mid, #7a7a86); letter-spacing: .04em; white-space: nowrap; }
+  .cover__views b { font-family: var(--font-en); font-weight: 700; color: var(--ink); }
 
   .cover__title { margin: 0; }
   .cover__title-jp {
