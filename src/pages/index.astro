@@ -198,13 +198,12 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
       </div>
     </div>
 
-    {/* 本棚。下の cover__foot の border-top が、そのまま棚板になる */}
-    <Shelf variant="cover" />
-
     <div class="cover__foot">
       <a href="/contents" class="cover__contents">
         CONTENTS <span aria-hidden="true">→</span>
       </a>
+      {/* 本棚は罫線の下、CONTENTS の横（本人・2026-08-29「これ、線の下のほうがいいわ」） */}
+      <Shelf variant="cover" />
       {strip.map((h) => (
         <a class="cover__small" href={h.href}>
           <span aria-hidden="true">▶</span> {h.catch}
@@ -222,9 +221,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   .cover {
     min-height: 100svh;
     display: grid;
-    /* rail / 誌名 / 誌面 / 本棚 / フット。**誌面の 1fr が本棚の高さを吸収する**
-       ので、棚を足しても一画面（100svh）を割らない（仕様書7章） */
-    grid-template-rows: auto auto 1fr auto auto;
+    /* rail / 誌名 / 誌面 / フット。本棚はフットの中に入っているので行は増やさない */
+    grid-template-rows: auto auto 1fr auto;
     padding: 0 var(--gut) calc(var(--gut) * 0.6);
     --cover-gap: clamp(10px, 1.6vw, 22px);
     gap: var(--cover-gap);
@@ -685,7 +683,6 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     font-weight: 700;
     letter-spacing: 0.2em;
     text-decoration: none;
-    margin-right: auto;
   }
   .cover__contents span { transition: transform 140ms ease; }
   .cover__contents:hover { color: var(--accent); }

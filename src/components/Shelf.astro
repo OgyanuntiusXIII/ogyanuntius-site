@@ -2,7 +2,7 @@
 import { getBooks } from '../lib/books';
 
 interface Props {
-  /** 表紙では罫線の上に立てる。下層では独立した棚として置く */
+  /** 表紙は cover__foot の中（罫線の下）。下層は自前の罫線の下にぶら下げる */
   variant?: 'cover' | 'page';
 }
 const { variant = 'page' } = Astro.props;
@@ -52,49 +52,49 @@ const FACE = 3;
 <style>
   /* ══ 本棚 ═══════════════════════════════════════════
      ジャンルのメニューを持たない代わりに、これが移動手段になる。
-     表紙では cover__foot の罫線が棚板。下層では自前の罫線を敷く。 */
+     **本は罫線の下にぶら下げる**（本人・2026-08-29「これ、線の下のほうがいいわ。
+     小さい本として並べとこう」）。棚板の上に立てる形はやめた。 */
   .shelf {
-    --shelf-h: clamp(38px, 5.4vh, 56px);
+    --shelf-h: clamp(22px, 2.9vh, 30px);
     display: flex;
-    align-items: flex-end;
-    gap: 3px;
+    align-items: flex-start;
+    gap: 2px;
     height: var(--shelf-h);
     overflow: visible;
     position: relative;
     z-index: 4;
   }
-  .shelf--cover { margin-bottom: -2px; }   /* 本の底を罫線に接地させる */
+  /* 表紙では cover__foot の中（＝罫線の下）に、CONTENTS の横で並ぶ */
+  .shelf--cover { align-self: center; margin-right: auto; }
   .shelf--page {
-    --shelf-h: clamp(44px, 6vh, 62px);
     height: auto;
-    align-items: flex-end;
-    padding: 0;
     margin: 3rem 0 0;
-    border-bottom: 2px solid var(--rule);
+    padding-top: 10px;
+    border-top: 2px solid var(--rule);
   }
   .shelf--page .book { height: var(--shelf-h); }
 
   .book {
     position: relative;
     display: block;
-    width: 13px;
-    height: 82%;
+    width: 9px;
+    height: 88%;
     background: var(--paper-2);
     border: 1px solid var(--ink-mid);
-    border-bottom: 0;
+    border-top: 0;
     text-decoration: none;
     transition: height 150ms ease, background 150ms ease, transform 150ms ease;
   }
-  .shelf--cover .book:nth-child(3n) { height: 90%; }
-  .shelf--cover .book:nth-child(4n) { height: 76%; }
+  .shelf--cover .book:nth-child(3n) { height: 94%; }
+  .shelf--cover .book:nth-child(4n) { height: 80%; }
 
   .book--face {
-    width: calc(var(--shelf-h) * 0.62);
+    width: calc(var(--shelf-h) * 0.68);
     height: 100%;
     border-color: var(--ink);
     background: var(--paper);
   }
-  .shelf--page .book--face { width: calc(var(--shelf-h) * 0.66); }
+  .shelf--page .book--face { width: calc(var(--shelf-h) * 0.68); }
 
   .book__cover { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -102,11 +102,11 @@ const FACE = 3;
   .book__ttl {
     display: block;
     writing-mode: vertical-rl;
-    font-size: 9px;
-    line-height: 13px;
+    font-size: 8px;
+    line-height: 9px;
     letter-spacing: .04em;
     color: var(--ink-mid);
-    padding: 3px 0 0;
+    padding: 2px 0 0;
     height: 100%;
     overflow: hidden;
     white-space: nowrap;
@@ -118,9 +118,9 @@ const FACE = 3;
 
   /* いま開いている本は、棚から少し抜いてある */
   .book--here {
-    transform: translateY(-7px);
+    transform: translateY(6px);
     border-color: var(--accent);
-    border-bottom: 2px solid var(--accent);
+    border-top: 2px solid var(--accent);
   }
   .book--here:not(.book--face) { background: var(--accent); }
   .book--here:not(.book--face) .book__ttl { color: var(--paper); }
@@ -129,7 +129,8 @@ const FACE = 3;
   .book__band {
     position: absolute;
     left: 0;
-    bottom: calc(100% + 6px);
+    /* 本は罫線の下にぶら下がる＝画面の最下部。**帯を下へ出すと切れる**ので必ず上へ */
+    bottom: calc(100% + 8px);
     display: none;
     width: max-content;
     max-width: min(46vw, 420px);
