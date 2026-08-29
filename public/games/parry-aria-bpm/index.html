@@ -1249,13 +1249,13 @@ function gameOver(cleared){
   // 改行は文字コードで作る（ソースにバックスラッシュを残さない）
   const LF = String.fromCharCode(10);
   const rk = rankOf(reached);
-  // ⚠️ Xへ流す文だけ「おけつ」にしてある（本人指示・2026-08-30）。
-  //    「ケツ」だと投稿が規制に触れる可能性があるため。ゲームの題名はそのまま。
+  // 一度「おけつ」へ和らげたが、本人判断で「ケツ」へ戻した（2026-08-30）。
+  // 「アリアのケツで◯体倒した！」のほうがインパクトが出るため。
   const text = [
-    (S.cleared ? "クリアした！！ アリアのおけつで" : "アリアのおけつで") +
+    (S.cleared ? "クリアした！！ アリアのケツで" : "アリアのケツで") +
       S.killed + "体エーテリアスを倒した！",
     "称号：" + rk.now.name + "（" + reached + " BPM ／ 最大 " + S.bestCombo + " 連続）",
-    "#アリアのおけつで刻め"
+    "#アリアのケツで刻め"
   ].join(LF);
   const share = "https://x.com/intent/post?text=" + encodeURIComponent(text) +
                 "&url=" + encodeURIComponent(SHARE_URL);
@@ -1383,8 +1383,12 @@ function frame(){
   if (S.running && gap > 200){
     for (const n of S.notes){
       n.t += gap;
-      if (!n.scheduled) continue;
-      n.scheduled = false;                 // 鳴らし直す（古い予約は捨てる）
+      // ⚠️ ここで n.scheduled を false に戻してはいけない。
+      //    Web Audio に入れた予約は**取り消せない**ので、鳴らし直すと
+      //    古い予約と新しい予約の両方が鳴って**同じ音が2回聞こえる**。
+      //    フレームが200ms飛ぶのは開始直後の演出中でも起きるので、
+      //    「出始めから全部の音が二重になる」という形で出ていた。
+      //    予約済みの音は元の時刻のまま鳴らせておく（止まっていた間に鳴って終わる）。
     }
     S.nextBeatMs += gap;
     S.judgeAt    += gap;
