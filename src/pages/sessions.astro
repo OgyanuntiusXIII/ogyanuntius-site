@@ -55,7 +55,7 @@ const jp = (d: string | null) =>
   </div>
 
   {sessions.map((s) => (
-    <dialog class="pop" id={`s-${s.id}`}>
+    <dialog class="pop" data-pop id={`s-${s.id}`}>
       <form method="dialog"><button class="pop__x" aria-label="閉じる">×</button></form>
       <p class="pop__date">{jp(s.data.date)}</p>
       <h2 class="pop__ttl">{s.data.title}</h2>
@@ -96,19 +96,6 @@ const jp = (d: string | null) =>
     </dialog>
   ))}
 </Base>
-
-<script>
-  for (const b of document.querySelectorAll<HTMLElement>('[data-open]')) {
-    b.addEventListener('click', () => {
-      const d = document.getElementById(b.dataset.open!) as HTMLDialogElement | null;
-      d?.showModal();
-    });
-  }
-  /* 外側を押しても閉じる。dialog の当たり判定は箱の外まで及ぶので target で見る */
-  for (const d of document.querySelectorAll<HTMLDialogElement>('dialog.pop')) {
-    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
-  }
-</script>
 
 <style>
   .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
