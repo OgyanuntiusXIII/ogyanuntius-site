@@ -82,8 +82,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
         {lead.map((h) => (
           <a class="cover__lead" href={h.href}>
             {h.no && <i class="no">{String(h.no).padStart(2, '0')}</i>}
-            {h.badge && <span class="label">{h.badge}</span>}
             <span class="cover__lead-text">{h.catch}</span>
+            {h.badge && <span class="label">{h.badge}</span>}
           </a>
         ))}
 
@@ -159,8 +159,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
         {[...upper, ...side].map((h) => (
           <a class="cover__mid" href={h.href}>
             {h.no && <i class="no">{String(h.no).padStart(2, '0')}</i>}
-            {h.badge && <span class="label">{h.badge}</span>}
             <span>{h.catch}</span>
+            {h.badge && <span class="label">{h.badge}</span>}
           </a>
         ))}
 
@@ -282,8 +282,16 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     margin-bottom: 0.9em;
   }
   .cover__lead-text { display: inline; }
+  /* ⚠️ ここを span:last-child で狙わないこと。
+     バッジを見出しのうしろへ移した時点で、last-child が NEW バッジになり、
+     **タイトルではなくバッジに下線が付く。** 実際にこれを踏みかけた（2026-08-29）。 */
   .cover__lead:hover .cover__lead-text,
-  .cover__mid:hover span:last-child { text-decoration: underline; }
+  .cover__mid:hover span:not(.label) { text-decoration: underline; }
+
+  /* バッジは見出しの**うしろ**に置く（本人・2026-08-29）。
+     文字と接するので、間隔はここで足す。.label 自体は他所でも使うので触らない */
+  .cover__lead .label,
+  .cover__mid .label { margin-left: .5em; }
 
   .cover__mid {
     display: block;

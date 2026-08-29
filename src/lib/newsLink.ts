@@ -1,4 +1,5 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
+import { SITE } from '../data/site';
 
 /**
  * NEWS の1件から「押したときの飛び先」を決める。
@@ -7,9 +8,13 @@ import { getCollection, type CollectionEntry } from 'astro:content';
  * ここを1つにしておかないと、片方だけ飛べる／片方だけ別の場所へ行く、が起きる。
  *
  * 優先順位:
- *   1. `url` が書いてあればそれ（外部リンク。BOOTHの商品ページなど）
+ *   1. `url` が書いてあればそれ（BOOTHの商品ページなど）
  *   2. `ref` があれば、その作品ページ（/works/<slug> か /scenario/<slug>）
  *   3. どちらも無ければ目次へ
+ *
+ * ⚠️ `url` が**自分のサイトを指している**ときは外部扱いしない。
+ *    キキ？キサキ？の url は自分のゲームページなのに ↗（外部リンクの印）が付いていた。
+ *    押す前に「サイトの外へ出る」と誤って伝わる。同一オリジンならパスへ落として内部リンクにする。
  *
  * ⚠️ `ref` が works にも scenarios にも無いときは**ビルドを落とす。**
  *    黙って「ただの文字」に落とすと、押せないことに誰も気づかないまま公開される。
@@ -28,7 +33,12 @@ export async function buildNewsLinker(): Promise<
   for (const s of scenarios) index.set(s.id, `/scenario/${s.id}`);
 
   return (entry) => {
-    if (entry.data.url) return { href: entry.data.url, external: true };
+    if (entry.data.url) {
+      const inSite = entry.data.url.startsWith(SITE.origin + '/');
+      return inSite
+        ? { href: entry.data.url.slice(SITE.origin.length), external: false }
+        : { href: entry.data.url, external: true };
+    }
 
     const ref = entry.data.ref;
     if (!ref) return { href: '/contents', external: false };
