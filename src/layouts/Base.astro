@@ -167,5 +167,37 @@ const structuredDataJson = structuredData
         if (t instanceof HTMLDialogElement && t.hasAttribute('data-pop')) t.close();
       });
     </script>
+    <script is:inline>
+      /* 公式サイトTOP（表紙）の閲覧数。
+         ⚠️ このサイトは ClientRouter を使っているので、
+            インラインscriptは**最初の1回しか走らない**。
+            astro:page-load を併用しないと、リンク移動が数に入らないし表示も出ない
+            （プレイ回数のほうで実際にそれを踏んだ）。
+         D1が繋がっていないときは204が返るので、その場合は何も出さない。 */
+      (() => {
+        let last = 0;
+        function countView(){
+          // **表紙（/）に来た人だけを数える。** 作品ページや卓報告では数えないし出さない
+          const isTop = location.pathname === '/' || location.pathname === '/index.html';
+          if (!isTop) return;
+          const now = Date.now();
+          if (now - last < 800) return;          // 二重発火よけ
+          last = now;
+          const box = document.getElementById('viewBox');
+          const out = document.getElementById('viewCount');
+          if (!box || !out) return;
+          fetch('/api/views', { method: 'POST' })
+            .then((r) => (r.ok && r.status !== 204 ? r.json() : null))
+            .then((d) => {
+              if (!d || typeof d.count !== 'number') return;
+              out.textContent = d.count.toLocaleString('ja-JP');
+              box.hidden = false;
+            })
+            .catch(() => {});
+        }
+        countView();
+        document.addEventListener('astro:page-load', countView);
+      })();
+    </script>
   </body>
 </html>

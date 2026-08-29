@@ -212,6 +212,8 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
       ))}
       <span class="cover__stamp">特集{featureCount}本</span>
       <span class="cover__stamp">全部無料</span>
+      {/* 表紙に来た人の数。D1が繋がっていないときは出ない（Base.astro が出し入れする） */}
+      <span class="cover__stamp" id="viewBox" hidden><span id="viewCount"></span> view</span>
       <span class="cover__stamp cover__stamp--next">次号 VOL.02 準備中</span>
     </div>
   </div>
