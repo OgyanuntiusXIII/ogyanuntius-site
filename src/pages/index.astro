@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import { buildNewsLinker } from '../lib/newsLink';
+import ThemeToggle from '../components/ThemeToggle.astro';
 
 const issues = await getCollection('issues');
 const issue = issues.find((i) => i.data.current) ?? issues[0];
@@ -66,6 +67,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
         <span class="cover__views" id="viewBox" hidden>
           本日 <b id="viewToday"></b>　累計 <b id="viewTotal"></b> <span class="cover__viewsUnit">view</span>
         </span>
+        <ThemeToggle />
       </span>
     </div>
 
@@ -248,7 +250,11 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     border-bottom: 2px solid var(--rule);
   }
   .cover__price { color: var(--accent); font-weight: 700; }
-  .cover__railright { display: inline-flex; align-items: baseline; gap: 1.1em; }
+  .cover__railright {
+    display: inline-flex; align-items: baseline; gap: .4em 1.1em;
+    /* 定価・カウンタ・昼夜ボタンの3つが並ぶ。狭い端末では折り返させる */
+    flex-wrap: wrap; justify-content: flex-end;
+  }
   /* 定価の右。誌面の情報なので、主張させず罫の一部として置く */
   .cover__views { color: var(--ink-mid, #7a7a86); letter-spacing: .04em; white-space: nowrap; }
   .cover__views b { font-family: var(--font-en); font-weight: 700; color: var(--ink); }
@@ -356,6 +362,14 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   .mag-link:focus-visible { outline-offset: 6px; }
 
   .mag {
+    /* ⚠️ **ここは印刷された物体。サイトの明暗（昼／夜）に連動させない。**
+       トークンをこの中だけ刷り色へ固定しているので、子要素すべてが昼の値を使う。
+       .mag--dark / .mag--light は**画像の明るさに対する刷り色**の話で、
+       サイトのダークモードとは無関係。名前が似ているだけ（4.4節）。 */
+    --accent: #e0301e;
+    --accent-ink: #ffffff;
+    --paper-2: #f4f2ed;
+
     container-type: inline-size;
     transition: transform 160ms ease, box-shadow 160ms ease;
     position: relative;
@@ -365,9 +379,9 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     background: var(--paper-2);
     /* 右下へ落とす。左は背表紙なので影を出さない＝綴じられて見える */
     box-shadow:
-      0 0 0 1px rgba(0, 0, 0, .5),
+      0 0 0 1px var(--mag-ring),
       2px 3px 0 rgba(0, 0, 0, .06),
-      14px 20px 40px -14px rgba(0, 0, 0, .5);
+      14px 20px 40px -14px var(--mag-drop);
   }
 
   .mag > img {
@@ -552,9 +566,9 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   .mag-link:focus-visible .mag {
     transform: translateY(-5px);
     box-shadow:
-      0 0 0 1px rgba(0, 0, 0, .5),
+      0 0 0 1px var(--mag-ring),
       2px 3px 0 rgba(0, 0, 0, .06),
-      18px 28px 50px -14px rgba(0, 0, 0, .55);
+      18px 28px 50px -14px var(--mag-drop);
   }
   .mag-link:hover .mag__obi,
   .mag-link:focus-visible .mag__obi { transform: translateY(0); }
@@ -603,7 +617,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
   }
 
   .block__list { list-style: none; margin: 0; padding: 0; }
-  .block__list li + li { border-top: 1px solid #e2e2e2; }
+  .block__list li + li { border-top: 1px solid var(--hair-rule); }
 
   .block__row {
     display: flex;

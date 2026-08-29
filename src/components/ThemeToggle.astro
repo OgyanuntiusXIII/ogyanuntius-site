@@ -1,0 +1,16 @@
+---
+/**
+ * 昼／夜の切り替えボタン。誌面の柱（rail）に置く。
+ *
+ * - 色を入れ替えているのは `src/styles/global.css` のトークン
+ * - <html data-theme="…"> を付け外ししているのは `Base.astro` の head 内スクリプト
+ * - **今どちらかの出し分けはCSS（`.tt__night` / `.tt__day`）。ここにJSは無い**
+ *
+ * ボタンの文字は「今の状態」ではなく「押すとどうなるか」。
+ * 昼のときに『☾ 夜にする』が出る。
+ */
+---
+<button class="tt" type="button" data-theme-toggle>
+  <span class="tt__night"><span aria-hidden="true">☾</span> 夜にする</span>
+  <span class="tt__day"><span aria-hidden="true">☀</span> 昼にする</span>
+</button>

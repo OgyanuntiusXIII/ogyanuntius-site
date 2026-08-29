@@ -1,6 +1,7 @@
 ---
 import { ClientRouter } from 'astro:transitions';
 import { SITE } from '../data/site';
+import ThemeToggle from '../components/ThemeToggle.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -83,6 +84,51 @@ const structuredDataJson = structuredData
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {/* スマホのブラウザの枠の色。中身は下のスクリプトが今の明暗に合わせて書き換える */}
+    <meta name="theme-color" content="#ffffff" />
+
+    <script is:inline>
+      /* 昼夜の切り替え。**必ず head に、描画より前に置く。**
+         body の後ろへ置くと、夜を選んでいる人に**一瞬だけ白い誌面が見える**（フラッシュ）。
+
+         ⚠️ ClientRouter は遷移のたびに <html> の属性を「移動先のページのもの」で
+            上書きする。ビルド時のHTMLに data-theme は入っていないので、塗り直さないと
+            **目次へ移った瞬間に昼へ戻る。** astro:after-swap は差し替え直後・
+            描画前に走るので、そこで塗り直している。
+
+         何も押していない人には data-theme を付けない。そのときはCSS側の
+         @media (prefers-color-scheme) が効いて、OSの設定にそのまま従う。 */
+      (() => {
+        const KEY = 'ogyanun.theme';
+        const root = document.documentElement;
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const read = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
+
+        function paint() {
+          const saved = read();
+          if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+          else root.removeAttribute('data-theme');
+          const dark = saved ? saved === 'dark' : mq.matches;
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#121211' : '#ffffff');
+        }
+
+        paint();
+        document.addEventListener('astro:after-swap', paint);
+        /* 何も押していない人が、OS側で夜に切り替えたとき */
+        mq.addEventListener('change', paint);
+
+        /* ボタンは遷移のたびに作り直される。だから document で受ける
+           （本文側の委譲と同じ理由。個別の要素へ addEventListener しない） */
+        document.addEventListener('click', (e) => {
+          const t = e.target;
+          if (!(t instanceof Element) || !t.closest('[data-theme-toggle]')) return;
+          const now = root.getAttribute('data-theme') || (mq.matches ? 'dark' : 'light');
+          try { localStorage.setItem(KEY, now === 'dark' ? 'light' : 'dark'); } catch (err) {}
+          paint();
+        });
+      })();
+    </script>
 
     {/* 誌名にだけ使うディドー系。**ラテン部分集合のみで数十KB。**
         日本語ウェブフォント（数MB級）は入れない、という判断は変えていない */}
@@ -112,11 +158,14 @@ const structuredDataJson = structuredData
     {!cover && (
       <header class="rail">
         <a href="/" style="text-decoration:none">{SITE.titleEn}</a>
-        <nav aria-label="誌面">
-          <a href="/contents" class="link">CONTENTS</a>
-          <span aria-hidden="true"> / </span>
-          <a href="/about" class="link">ABOUT</a>
-        </nav>
+        <span class="rail__right">
+          <nav aria-label="誌面">
+            <a href="/contents" class="link">CONTENTS</a>
+            <span aria-hidden="true"> / </span>
+            <a href="/about" class="link">ABOUT</a>
+          </nav>
+          <ThemeToggle />
+        </span>
       </header>
     )}
 

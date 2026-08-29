@@ -14,12 +14,23 @@
   /* 誌名専用。届かない環境でも Didot / Bodoni MT / Times で品は保てる */
   --font-display: "Bodoni Moda", "Didot", "Bodoni MT", "Times New Roman", serif;
 
+  /* --- 刷り色 ----------------------------------------------
+     ここは**昼の号**。夜の号（ダークモード）が下のブロックで同じ名前を上書きする。
+     **色を足すときは必ずここへトークンとして足すこと。**
+     ページ側へベタ書きすると、夜にしたとき1か所だけ昼のまま取り残される
+     （実際、細い罫が #ddd / #e2e2e2 / #e6e6e6 と3か所に散っていた）。 */
+  color-scheme: light;
+
   --ink: #101010;
   --ink-mid: #4a4a4a;
   --paper: #ffffff;
   --paper-2: #f4f2ed;   /* 少しだけ紙寄りの白 */
   --rule: #101010;
+  --hair-rule: #e2e2e2; /* 主張しない細い罫。表の行・一覧の区切り */
   --accent: #e0301e;    /* コロコロ側の担当。使うのはラベル・番号・矢印だけ */
+  --accent-ink: #ffffff;/* accent を敷いた上に乗る文字（.label） */
+  --mag-ring: rgba(0, 0, 0, .5);  /* 中央の一冊のフチ。ここが紙の厚みに見える */
+  --mag-drop: rgba(0, 0, 0, .5);  /* その影 */
 
   --gut: clamp(16px, 4vw, 56px);   /* 版面の外余白 */
   --hair: 1px;
@@ -27,6 +38,50 @@
 
   /* 表紙の中央に置く「一冊」の判型。A4は 1/1.414 */
   --mag-ratio: 1 / 1.32;
+}
+
+/* --- 夜の号（ダークモード） --------------------------------
+   **同じ値を2か所に書いている。片方だけ直さないこと。**
+     A) :root[data-theme="dark"]
+        … ボタンで夜を選んだ人。選択は localStorage に残る
+     B) @media (prefers-color-scheme: dark) の :root:not([data-theme="light"])
+        … OSが夜で、まだ一度も押していない人。押して昼にしたらこの規則から降りる
+
+   `light-dark()` を使えば1か所で済むが、**対応していないブラウザでは
+   色が全部「無効な値」になって、文字と背景が同化して読めなくなる。**
+   二重に書いておけば、古い環境には昼の号がそのまま出るだけで済む。
+
+   ⚠️ **入れ替えるのは紙とインクだけ。**
+      写真と「中央の一冊」の刷り色は変えない（CLAUDE.md 4.4節）。
+      本は印刷された物体なので、サイトの明暗で刷り色が動くとむしろ嘘になる。 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f0ede6;
+  --ink-mid: #a29d94;
+  --paper: #121211;
+  --paper-2: #1d1c1a;
+  --rule: #f0ede6;
+  --hair-rule: #33312d;
+  --accent: #ff6a52;
+  --accent-ink: #1a1310;
+  --mag-ring: rgba(240, 237, 230, .3);
+  --mag-drop: rgba(0, 0, 0, .8);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ink: #f0ede6;
+    --ink-mid: #a29d94;
+    --paper: #121211;
+    --paper-2: #1d1c1a;
+    --rule: #f0ede6;
+    --hair-rule: #33312d;
+    --accent: #ff6a52;
+    --accent-ink: #1a1310;
+    --mag-ring: rgba(240, 237, 230, .3);
+    --mag-drop: rgba(0, 0, 0, .8);
+  }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -75,11 +130,14 @@ a.link { text-decoration: underline; text-decoration-thickness: 1px; }
   border-bottom: var(--hair) solid var(--rule);
 }
 
+/* 柱の右。ナビと昼夜ボタンを1つの塊にして、rail の space-between に2つだけ渡す */
+.rail__right { display: inline-flex; align-items: baseline; gap: 1.1em; }
+
 .label {
   display: inline-block;
   font-family: var(--font-en);
   font-size: 10px; font-weight: 700; letter-spacing: .16em;
-  background: var(--accent); color: #fff;
+  background: var(--accent); color: var(--accent-ink);
   padding: .25em .6em; border-radius: 2px;
   vertical-align: .18em;
 }
@@ -104,7 +162,7 @@ a.link { text-decoration: underline; text-decoration-thickness: 1px; }
 .prose table { width: 100%; border-collapse: collapse; margin: 0 0 1.6em; }
 .prose th, .prose td {
   text-align: left; padding: .6em .8em;
-  border-bottom: var(--hair) solid #ddd;
+  border-bottom: var(--hair) solid var(--hair-rule);
 }
 .prose th { background: var(--paper-2); white-space: nowrap; }
 .prose blockquote {
@@ -137,4 +195,30 @@ a.link { text-decoration: underline; text-decoration-thickness: 1px; }
     animation-duration: .01ms !important;
     transition-duration: .01ms !important;
   }
+}
+
+/* --- 昼夜の切り替えボタン ---------------------------------
+   状態は**CSSだけで出し分ける**。JSで文字を書き換えないので、
+   スクリプトが走る前でも正しい面が出るし（＝一瞬だけ逆が見える事故が無い）、
+   読み上げも表示と食い違わない。**ここへJSを足さないこと。**
+   夜の判定は上の刷り色と同じ2本立て。片方だけ直すとボタンの表示だけ裏返る。 */
+.tt {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: var(--hair) solid var(--rule);
+  padding: .18em .6em;
+  line-height: 1.4;
+  letter-spacing: .08em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tt:hover { color: var(--accent); border-color: var(--accent); }
+
+.tt__day { display: none; }
+:root[data-theme="dark"] .tt__night { display: none; }
+:root[data-theme="dark"] .tt__day { display: inline; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tt__night { display: none; }
+  :root:not([data-theme="light"]) .tt__day { display: inline; }
 }
