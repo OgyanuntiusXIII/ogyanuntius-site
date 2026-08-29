@@ -1,7 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import Shelf from '../components/Shelf.astro';
 import { buildNewsLinker } from '../lib/newsLink';
 
 const issues = await getCollection('issues');
@@ -202,8 +201,10 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
       <a href="/contents" class="cover__contents">
         CONTENTS <span aria-hidden="true">→</span>
       </a>
-      {/* 本棚は罫線の下、CONTENTS の横（本人・2026-08-29「これ、線の下のほうがいいわ」） */}
-      <Shelf variant="cover" />
+      {/* 誌面の外にある行き先。**本棚をやめて素のリンクに戻した**
+          （本人・2026-08-29「普通に、創刊号→ 卓報告→ みたいな感じで実装しよう」） */}
+      <a href="/contents" class="cover__jump">創刊号 <span aria-hidden="true">→</span></a>
+      <a href="/sessions" class="cover__jump cover__jump--last">卓報告 <span aria-hidden="true">→</span></a>
       {strip.map((h) => (
         <a class="cover__small" href={h.href}>
           <span aria-hidden="true">▶</span> {h.catch}
@@ -684,6 +685,18 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     letter-spacing: 0.2em;
     text-decoration: none;
   }
+  .cover__jump {
+    font-family: var(--font-en);
+    font-size: clamp(0.76rem, 1vw, 0.92rem);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-decoration: none;
+  }
+  .cover__jump--last { margin-right: auto; }
+  .cover__jump span { display: inline-block; transition: transform 140ms ease; }
+  .cover__jump:hover { color: var(--accent); }
+  .cover__jump:hover span { transform: translateX(4px); }
+
   .cover__contents span { transition: transform 140ms ease; }
   .cover__contents:hover { color: var(--accent); }
   .cover__contents:hover span { transform: translateX(4px); }

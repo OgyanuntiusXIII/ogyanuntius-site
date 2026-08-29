@@ -1,6 +1,5 @@
 ---
 import { ClientRouter } from 'astro:transitions';
-import Shelf from '../components/Shelf.astro';
 import { SITE } from '../data/site';
 import '../styles/global.css';
 
@@ -126,21 +125,15 @@ const structuredDataJson = structuredData
     </main>
 
     {!cover && (
-      <div class="wrap measure">
-        {/*
-          下層ページの移動手段。**ジャンルのメニューは持たない。**
-          本人の指定（2026-08-29）:「本来だったらただジャンルを選ぶ工程を、
-          本を選ぶ工程にしたらいい」。いま開いている本は棚から抜いて表示される。
-        */}
-        <p class="shelf-note">棚から1冊。</p>
-        <Shelf />
-      </div>
-    )}
-
-    {!cover && (
       <footer class="rail" style="border-bottom:none;border-top:1px solid var(--rule)">
         <span>{SITE.title} — VOL.01</span>
-        <a href="/" class="link">表紙へ戻る</a>
+        <span>
+          <a href="/contents" class="link">創刊号 →</a>
+          <span aria-hidden="true"> / </span>
+          <a href="/sessions" class="link">卓報告 →</a>
+          <span aria-hidden="true"> / </span>
+          <a href="/" class="link">表紙へ戻る</a>
+        </span>
       </footer>
     )}
 
@@ -176,13 +169,3 @@ const structuredDataJson = structuredData
     </script>
   </body>
 </html>
-<style is:global>
-  /* 本棚の上に置く一行。見出しほど強くせず、棚の存在だけ伝える */
-  .shelf-note {
-    margin: 3rem 0 .5rem;
-    font-family: var(--font-en);
-    font-size: 10px;
-    letter-spacing: .22em;
-    color: var(--ink-mid);
-  }
-</style>
