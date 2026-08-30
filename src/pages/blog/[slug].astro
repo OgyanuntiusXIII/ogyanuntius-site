@@ -13,6 +13,8 @@ const { Content } = await render(entry);
 const d = entry.data.date;
 const md = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 const canonical = new URL(`/blog/${entry.id}`, SITE.origin).href;
+/** この欄はAI編集部員（クロウちゃん）の連載。本人が書いたものだけ署名が変わる */
+const byKurou = entry.data.by === 'クロウちゃん';
 const articleStructuredData = {
   '@context': 'https://schema.org',
   '@type': 'BlogPosting',
@@ -40,11 +42,22 @@ const articleStructuredData = {
   structuredData={articleStructuredData}
 >
   <article class="wrap measure">
-    <p class="kicker">制作の裏側</p>
+    <p class="kicker">{byKurou ? 'クロウちゃんの愚痴' : '制作の裏側'}</p>
     <h1 class="ttl">{entry.data.title}</h1>
     <p class="meta">
       <time>{md}</time>
-      <span> ／ <a href="/about" rel="author">{SITE.title}</a></span>
+      <span> ／ {byKurou ? 'クロウちゃん' : '編集長（本人）'}</span>
+      {byKurou && (
+        <span class="mood">
+          {' ／ '}不満度
+          <span class="mood__dots" aria-hidden="true">
+            {Array.from({ length: 5 }, (_, i) => (
+              <span class={i < entry.data.mood ? 'on' : 'off'}>●</span>
+            ))}
+          </span>
+          <span class="sr">{entry.data.mood} / 5</span>
+        </span>
+      )}
       {entry.data.tags.length > 0 && <span> ／ {entry.data.tags.join(' / ')}</span>}
     </p>
 
@@ -52,7 +65,11 @@ const articleStructuredData = {
 
     <div class="prose"><Content /></div>
 
-    <p class="back"><a class="link" href="/blog">← 制作の裏側の一覧へ</a></p>
+    {byKurou && (
+      <p class="disclaimer">※ この記事もクロウちゃんが書かされています。発行の責任は<a href="/about" rel="author">{SITE.title}</a>にあります。</p>
+    )}
+
+    <p class="back"><a class="link" href="/blog">← クロウちゃんの愚痴の一覧へ</a></p>
   </article>
 </Base>
 
@@ -61,5 +78,22 @@ const articleStructuredData = {
   .ttl { font-size: clamp(1.6rem, 4vw, 2.6rem); line-height: 1.25; letter-spacing: -.02em; margin: 0 0 .4em; }
   .meta { color: var(--ink-mid); font-size: .9rem; margin: 0 0 1.6rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--rule); }
   .hero { width: 100%; aspect-ratio: 16/9; object-fit: cover; border: 1px solid var(--rule); margin-bottom: 2rem; }
+  .mood { white-space: nowrap; }
+  .mood__dots { letter-spacing: .1em; font-size: .62rem; margin-left: .4em; vertical-align: .12em; }
+  .mood__dots .on { color: var(--accent); }
+  .mood__dots .off { color: var(--hair-rule); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* 記事末の定型文。愚痴の欄なので、責任の所在だけは毎回はっきり出す */
+  .disclaimer {
+    margin: 2.6rem 0 0;
+    padding: .9rem 1.1rem;
+    background: var(--paper-2);
+    border-left: 3px solid var(--accent);
+    color: var(--ink-mid);
+    font-size: .82rem;
+    line-height: 1.8;
+  }
+
   .back { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
 </style>

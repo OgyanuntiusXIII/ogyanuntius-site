@@ -4,6 +4,7 @@ date: 2026-08-27
 description: ポートフォリオではなく雑誌にした理由と、Claudeから自然言語で更新できるようにするための構造の話。
 relatedTo: desk-takko
 tags: [制作の裏側, Web, Astro]
+by: 本人
 ---
 
 普通のポートフォリオサイトを作る気がしなかった。

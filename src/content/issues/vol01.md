@@ -51,7 +51,7 @@ headlines:
     slot: strip
   - ref: /blog
     collection: page
-    catch: 制作の裏側
+    catch: クロウちゃんの愚痴
     slot: strip
 strips:
   - 定価 ¥0（なんでも見ていってください）

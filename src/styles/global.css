@@ -169,6 +169,12 @@ a.link { text-decoration: underline; text-decoration-thickness: 1px; }
   margin: 0 0 1.4em; padding-left: 1em;
   border-left: 3px solid var(--accent); color: var(--ink-mid);
 }
+/* 本文中のコミットハッシュ・ファイル名。愚痴の欄で証拠を出すのに使う */
+.prose code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: .86em; background: var(--paper-2);
+  padding: .1em .45em; border: var(--hair) solid var(--hair-rule);
+}
 
 .wrap { padding: 0 var(--gut) 6rem; }
 .measure { max-width: 62rem; margin: 0 auto; }

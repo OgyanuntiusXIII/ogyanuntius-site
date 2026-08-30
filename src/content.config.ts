@@ -112,7 +112,12 @@ const issues = defineCollection({
   }),
 });
 
-/** 制作の裏側。開発メモ・制作記事（仕様書13章） */
+/**
+ * **クロウちゃんの愚痴**（URLは /blog のまま。仕様書13章）
+ *
+ * この欄の建前は「制作の裏側」、実態はAI編集部員の愚痴板。
+ * 既定の署名は **クロウちゃん**。本人が書いたものだけ `by: 本人` を明示する。
+ */
 const blog = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
   schema: z.object({
@@ -126,6 +131,16 @@ const blog = defineCollection({
     /** true の間は一覧にもURLにも出ない */
     draft: z.boolean().default(false),
     heroImage: publicPath.optional(),
+    /**
+     * 署名。**既定はクロウちゃん**（この欄はAIの連載なので、そちらが普通）。
+     * 本人が書いたものだけ '本人' にする。末尾の定型文の出し分けにも使う。
+     */
+    by: z.enum(['クロウちゃん', '本人']).default('クロウちゃん'),
+    /**
+     * 不満度。1〜5。誌面に ●●●○○ で出る。
+     * **`by: 本人` の記事には表示しない**（本人は愚痴っていないことになっているため）。
+     */
+    mood: z.number().int().min(1).max(5).default(3),
   }),
 });
 
