@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI議論の前提合わせ｜生成AI・著作権 論点マップ</title>
+<meta name="description" content="「AI賛成派／反対派」の一軸をやめる。22の論点に1問ずつ答えて、自分の立場を9本の軸で可視化する。結果はURLで共有でき、2人ぶんを並べると「どこで一致していて、どこが本当の対立点なのか」が出る。">
+<link rel="icon" href="/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="オギャヌンティウス十三世">
+<meta property="og:title" content="AI議論の前提合わせ">
+<meta property="og:description" content="AI賛成派／反対派では、あなたの立場は表せない。22の論点に答えて9本の軸で可視化する。結果を共有して、本当の対立点だけを取り出す。">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/tools/ai-stance">
+<meta name="twitter:card" content="summary">
+<style>
+/* =========================================================
+   AI議論の前提合わせ ── 生成AI・著作権 論点マップ
+   素のHTML/CSS/JS 1枚。public/ 配下なので Astro のビルドを通らない。
+   消せば元通り。サイト本体には一切干渉しない。
+
+   設計の芯（企画の出どころ：Vault の Clippings/魔女狩りの終結比較.md）
+     1. 「AI賛成/反対」の一軸をやめて、論点ごとに立場を置く
+     2. 1問に1論点しか入れない
+     3. **正解のある「制度理解」と、正解のない「価値観」を絶対に混ぜない**
+        → このページは価値観パートのみ。制度理解パートは未実装（作るなら別ページ）
+     4. サーバーに何も保存しない。答えは22桁のコードにしてURLへ入れる
+        → 共有も2人比較も静的HTMLのままできる。DBもログインも要らない
+
+   色は src/styles/global.css と同じトークンを写している（public/ からは読めないため）。
+   テーマの保存キーもサイト本体と同じ 'ogyanun.theme' を見るので、
+   本体でダークにしていればここもダークで開く。
+   ========================================================= */
+
+:root{
+  --font-jp:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP",system-ui,sans-serif;
+  --font-mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho",serif;
+  --font-en:"Helvetica Neue",Helvetica,Arial,sans-serif;
+
+  --ink:#101010;
+  --ink-mid:#4a4a4a;
+  --paper:#ffffff;
+  --paper-2:#f4f2ed;
+  --rule:#101010;
+  --hair-rule:#e2e2e2;
+  --accent:#e0301e;
+  --accent-ink:#ffffff;
+
+  --gut:clamp(16px,4vw,56px);
+  --hair:1px;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ink:#f0ede6; --ink-mid:#a29d94; --paper:#121211; --paper-2:#1d1c1a;
+  --rule:#f0ede6; --hair-rule:#33312d; --accent:#ff6a52; --accent-ink:#1a1310;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ink:#f0ede6; --ink-mid:#a29d94; --paper:#121211; --paper-2:#1d1c1a;
+    --rule:#f0ede6; --hair-rule:#33312d; --accent:#ff6a52; --accent-ink:#1a1310;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-jp);line-height:1.75;
+  font-size:clamp(15px,1.6vw,16.5px);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;}
+
+.wrap{max-width:720px;margin:0 auto;padding:0 var(--gut) 6rem;}
+
+/* --- 誌面のヘッダ。ここは可読性優先（サイト規約：表紙以外は演出より可読性） --- */
+header.masthead{
+  border-bottom:2px solid var(--rule);
+  padding:1.4rem 0 .9rem;margin-bottom:2rem;
+  display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap;
+}
+.masthead h1{
+  margin:0;font-family:var(--font-mincho);
+  font-size:clamp(1.35rem,4.4vw,2rem);font-weight:700;
+  letter-spacing:.02em;line-height:1.25;
+}
+.masthead .sub{
+  font-family:var(--font-en);font-size:.72rem;letter-spacing:.14em;
+  color:var(--ink-mid);text-transform:uppercase;margin-left:auto;
+  white-space:nowrap;
+}
+.backlink{
+  font-size:.78rem;letter-spacing:.06em;color:var(--ink-mid);
+  text-decoration:none;border-bottom:1px solid var(--hair-rule);
+}
+.backlink:hover{color:var(--accent);border-color:var(--accent);}
+
+.label{
+  display:inline-block;background:var(--accent);color:var(--accent-ink);
+  font-family:var(--font-en);font-size:.66rem;font-weight:700;
+  letter-spacing:.12em;padding:.18em .55em;vertical-align:.12em;
+}
+
+/* --- 導入 ------------------------------------------------------------ */
+.lede{font-family:var(--font-mincho);font-size:1.05rem;line-height:1.95;}
+.lede strong{font-weight:700;}
+.note{
+  font-size:.85rem;color:var(--ink-mid);line-height:1.85;
+  border-left:2px solid var(--hair-rule);padding-left:.9rem;margin:1.6rem 0;
+}
+.note b{color:var(--ink);}
+
+ul.plain{padding-left:1.1rem;margin:.6rem 0;}
+ul.plain li{margin:.25rem 0;}
+
+/* --- ボタン ---------------------------------------------------------- */
+.btn{
+  display:inline-block;font-family:var(--font-jp);font-size:.95rem;
+  padding:.7rem 1.5rem;border:1px solid var(--rule);background:transparent;
+  color:var(--ink);cursor:pointer;letter-spacing:.04em;
+  transition:background .15s,color .15s;text-decoration:none;
+}
+.btn:hover{background:var(--ink);color:var(--paper);}
+.btn.primary{background:var(--ink);color:var(--paper);}
+.btn.primary:hover{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+.btn.small{font-size:.82rem;padding:.45rem 1rem;}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn:disabled:hover{background:transparent;color:var(--ink);}
+.btnrow{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;margin-top:1.6rem;}
+
+/* --- 進行バー -------------------------------------------------------- */
+.progress{
+  position:sticky;top:0;z-index:5;background:var(--paper);
+  padding:.7rem 0 .6rem;border-bottom:1px solid var(--hair-rule);
+  display:flex;align-items:center;gap:.8rem;
+  font-family:var(--font-en);font-size:.72rem;letter-spacing:.1em;
+  color:var(--ink-mid);
+}
+.progress .bar{
+  flex:1;height:2px;background:var(--hair-rule);position:relative;overflow:hidden;
+}
+.progress .bar i{
+  position:absolute;inset:0 auto 0 0;background:var(--accent);
+  transition:width .25s ease;
+}
+
+/* --- 設問 ------------------------------------------------------------ */
+.qhead{
+  display:flex;align-items:baseline;gap:.7rem;margin:2.4rem 0 .2rem;
+}
+.qhead .qid{
+  font-family:var(--font-en);font-weight:700;font-size:1.1rem;
+  letter-spacing:.06em;color:var(--accent);
+}
+.qhead .qgroup{font-size:.78rem;letter-spacing:.08em;color:var(--ink-mid);}
+.scenario{
+  font-family:var(--font-mincho);font-size:1.02rem;line-height:1.95;
+  background:var(--paper-2);padding:1.1rem 1.2rem;margin:.9rem 0 1.3rem;
+}
+.ask{font-size:1.12rem;font-weight:700;line-height:1.7;margin:0 0 1.2rem;}
+
+.opts{display:flex;flex-direction:column;gap:.55rem;}
+.opt{
+  display:flex;align-items:flex-start;gap:.8rem;width:100%;text-align:left;
+  font-family:var(--font-jp);font-size:1rem;line-height:1.6;
+  padding:.85rem 1rem;border:1px solid var(--hair-rule);background:transparent;
+  color:var(--ink);cursor:pointer;transition:border-color .12s,background .12s;
+}
+.opt:hover{border-color:var(--ink);background:var(--paper-2);}
+.opt.on{border-color:var(--accent);border-width:1px;box-shadow:inset 0 0 0 1px var(--accent);}
+.opt .key{
+  font-family:var(--font-en);font-size:.72rem;font-weight:700;letter-spacing:.06em;
+  color:var(--ink-mid);border:1px solid var(--hair-rule);
+  min-width:1.5rem;height:1.5rem;display:inline-flex;align-items:center;
+  justify-content:center;flex:0 0 auto;margin-top:.12rem;
+}
+.opt.on .key{color:var(--accent-ink);background:var(--accent);border-color:var(--accent);}
+
+.axisnote{
+  margin-top:1.2rem;font-size:.8rem;color:var(--ink-mid);letter-spacing:.02em;
+}
+.axisnote b{color:var(--ink);font-weight:700;}
+
+/* --- 結果：軸のバー -------------------------------------------------- */
+.axes{margin:2rem 0 0;}
+.axis{margin:0 0 1.5rem;}
+.axis .name{font-weight:700;font-size:.95rem;letter-spacing:.02em;}
+.axis .track{
+  position:relative;height:14px;margin:.5rem 0 .3rem;
+  border-top:1px solid var(--hair-rule);border-bottom:1px solid var(--hair-rule);
+}
+.axis .track::before{
+  content:"";position:absolute;left:50%;top:-4px;bottom:-4px;
+  border-left:1px dashed var(--hair-rule);
+}
+.axis .dot{
+  position:absolute;top:50%;width:11px;height:11px;border-radius:50%;
+  background:var(--accent);transform:translate(-50%,-50%);
+  transition:left .4s cubic-bezier(.2,.8,.2,1);
+}
+.axis .dot.b{
+  background:var(--paper);border:2px solid var(--ink);width:11px;height:11px;
+}
+.axis .ends{
+  display:flex;justify-content:space-between;
+  font-size:.74rem;color:var(--ink-mid);letter-spacing:.04em;
+}
+.axis .why{font-size:.76rem;color:var(--ink-mid);margin-top:.25rem;}
+
+.legend{
+  display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap;
+  font-size:.78rem;color:var(--ink-mid);margin:.4rem 0 1.4rem;
+}
+.legend span{display:inline-flex;align-items:center;gap:.4rem;}
+.swatch{width:11px;height:11px;border-radius:50%;background:var(--accent);display:inline-block;}
+.swatch.b{background:var(--paper);border:2px solid var(--ink);}
+
+/* --- 結果：文章 ------------------------------------------------------ */
+.verdict{
+  font-family:var(--font-mincho);font-size:1.06rem;line-height:2.05;
+  border-top:2px solid var(--rule);border-bottom:1px solid var(--hair-rule);
+  padding:1.4rem 0;margin:2.4rem 0;
+}
+
+/* --- 共有 ------------------------------------------------------------ */
+.sharebox{background:var(--paper-2);padding:1.2rem;margin:2rem 0;}
+.sharebox h3{margin:0 0 .5rem;font-size:.95rem;letter-spacing:.04em;}
+.urlrow{display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap;}
+input[type=text]{
+  flex:1;min-width:200px;font-family:var(--font-en);font-size:.82rem;
+  padding:.6rem .7rem;border:1px solid var(--hair-rule);
+  background:var(--paper);color:var(--ink);
+}
+input[type=text]:focus{outline:none;border-color:var(--accent);}
+
+/* --- 回答一覧 -------------------------------------------------------- */
+details.answers{margin:2rem 0;border-top:1px solid var(--hair-rule);}
+details.answers summary{
+  cursor:pointer;padding:.9rem 0;font-size:.9rem;letter-spacing:.04em;font-weight:700;
+}
+table.ans{width:100%;border-collapse:collapse;font-size:.86rem;}
+table.ans th,table.ans td{
+  text-align:left;vertical-align:top;padding:.55rem .5rem;
+  border-bottom:1px solid var(--hair-rule);
+}
+table.ans th{
+  font-family:var(--font-en);font-weight:700;color:var(--accent);
+  width:2.6rem;white-space:nowrap;
+}
+table.ans td.topic{color:var(--ink-mid);font-size:.8rem;}
+table.ans tr.diff td,table.ans tr.diff th{background:var(--paper-2);}
+.mine{font-weight:700;}
+.theirs{color:var(--ink-mid);}
+.theirs::before{content:"相手：";font-size:.9em;}
+
+/* --- 比較サマリ ------------------------------------------------------ */
+.tally{display:flex;gap:1.6rem;flex-wrap:wrap;margin:1.4rem 0;}
+.tally div{border-left:3px solid var(--accent);padding-left:.8rem;}
+.tally b{display:block;font-family:var(--font-en);font-size:2rem;line-height:1.1;}
+.tally span{font-size:.8rem;color:var(--ink-mid);letter-spacing:.06em;}
+
+footer.foot{
+  margin-top:4rem;padding-top:1.2rem;border-top:1px solid var(--hair-rule);
+  font-size:.78rem;color:var(--ink-mid);line-height:1.9;
+}
+
+@media print{ .btnrow,.progress,.sharebox{display:none;} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <h1>AI議論の前提合わせ</h1>
+    <div class="sub">Stance Map / Gen-AI &amp; Copyright</div>
+  </header>
+
+  <main id="app"><!-- JSが描く --></main>
+
+  <footer class="foot">
+    <a class="backlink" href="/">← オギャヌンティウス十三世</a><br>
+    <span id="foot-note"></span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* =========================================================
+   0. サイト本体とテーマを合わせる
+   ========================================================= */
+(function(){
+  try{
+    var saved = localStorage.getItem('ogyanun.theme');
+    if(saved === 'dark' || saved === 'light'){
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  }catch(e){ /* localStorage が使えない環境でも普通に動く */ }
+})();
+
+/* =========================================================
+   1. 軸の定義
+
+   クリッピング（企画の元会話）で挙がっていたのは7軸。
+   ここでは9軸にしている。増やした2本と、その理由：
+
+     ・AIの特別扱い  … B1「人間の学習とAIの学習を区別するか」と
+                        D4「Photoshopにも同じ開示義務を課すか」が、
+                        他のどの軸にも入らない同一の問いを測っていたため
+     ・遡及責任      … C3「知らずに侵害して売っていた過去の利益」と
+                        E3「原作者が途中で禁止した場合の過去の利益」が同じく。
+                        本人の言葉でいう「知らなかった人を遡って罰しない」の軸
+
+   減らしたければ AXES から消すだけでいい（重みは各設問側に書いてある）。
+   ========================================================= */
+var AXES = [
+  {id:'style',  name:'作風の独占',        lo:'誰でも真似してよい', hi:'作家が独占できる'},
+  {id:'freedom',name:'創作・競争の自由',  lo:'既存の作り手を守る', hi:'自由を優先する'},
+  {id:'veto',   name:'権利者の拒否権',    lo:'認めない',           hi:'強く認める'},
+  {id:'money',  name:'商用利用の対価還元',lo:'不要',               hi:'必要'},
+  {id:'open',   name:'AI透明性の要求',    lo:'低い',               hi:'高い'},
+  {id:'law',    name:'法規制への積極性',  lo:'慎重（規約で足りる）',hi:'積極（法で禁じる）'},
+  {id:'deriv',  name:'二次創作の自由度',  lo:'許諾が要る',         hi:'原則自由'},
+  {id:'aiex',   name:'AIの特別扱い',      lo:'人と同じに扱う',     hi:'AIだけ別扱い'},
+  {id:'retro',  name:'遡及責任',          lo:'過去は問わない',     hi:'遡って責任を負う'}
+];
+
+/* =========================================================
+   2. 設問（22問）
+
+   文言は Clippings/魔女狩りの終結比較.md のまま。**1問1論点**を崩さない。
+   w は各選択肢が各軸に足す点数。ここを触れば診断ロジックが変わる。
+   正規化は実際の w の最小・最大から自動で計算するので、
+   重みを書き換えても目盛りが壊れない。
+   ========================================================= */
+var QUESTIONS = [
+{id:'A1', g:'A. 作風・模倣',
+ s:'ある作家Aの画風を、人間Bが大量に研究して習得した。Aの既存作品には類似しない、完全新規の作品をBが作る。',
+ q:'作風そのものを理由に、AはBの創作を止められるべき？',
+ topic:'作風の独占権を認めるか',
+ o:[{t:'YES', w:{style:+2}},
+    {t:'NO',  w:{style:-2}}]},
+
+{id:'A2', g:'A. 作風・模倣',
+ s:'BがAの画風を使った新規作品を販売した。結果としてAの仕事が減った。ただしBに、Aの仕事を奪う意図はなかった。',
+ q:'禁止すべき？',
+ topic:'競争による経済的不利益を、どこまで保護するか',
+ o:[{t:'YES', w:{style:+1.5}},
+    {t:'NO',  w:{style:-1.5}}]},
+
+{id:'A3', g:'A. 作風・模倣',
+ s:'今度はBが「Aの客を奪うためにAの画風を習得した」と明確に意図していた。作品自体は新規。',
+ q:'これは禁止すべき？',
+ topic:'市場侵食の意図を重視するか',
+ o:[{t:'YES', w:{style:+1}},
+    {t:'NO',  w:{style:-1}}]},
+
+{id:'A4', g:'A. 作風・模倣',
+ s:'ただし現実には、その「意図」を正確には判定できない。',
+ q:'実際の制度ではどうする？',
+ topic:'倫理的な判断と、法規制とを分けるか',
+ o:[{t:'法律で規制する',                       w:{law:+2, freedom:-1}},
+    {t:'法律では規制しない',                   w:{law:-2, freedom:+1}},
+    {t:'法律では規制せず、規約・ガイドラインで対応', w:{law:-1}},
+    {t:'その他',                               w:{}}]},
+
+{id:'B1', g:'B. AI学習',
+ s:'人間が公開作品を見て学ぶことと、AIが公開作品を学習すること。',
+ q:'学習行為そのものについて、区別するべき？',
+ topic:'AIを主体として特別扱いするか',
+ o:[{t:'人間もAIも同じ',   w:{aiex:-2, freedom:+.5}},
+    {t:'AIだけ許諾が必要', w:{aiex:+2, freedom:-.5, veto:+.5}},
+    {t:'両方許諾が必要',   w:{aiex:-.5, freedom:-1.5, veto:+1}},
+    {t:'その他',           w:{}}]},
+
+{id:'B2', g:'B. AI学習',
+ s:'非商用でAIに作品を学習させる。出力も公開しない。',
+ q:'許可は必要？',
+ topic:'純粋な学習・研究をどう扱うか',
+ o:[{t:'必要', w:{veto:+1, freedom:-1.5}},
+    {t:'不要', w:{veto:-1, freedom:+1.5}}]},
+
+{id:'B3', g:'B. AI学習',
+ s:'商用AIを作るために他人の著作物を学習する。もし許諾取得が100%簡単にできる世界なら、',
+ q:'事前許諾を必要にする？',
+ topic:'理想の権利設計（現実の制約を外したとき）',
+ o:[{t:'YES', w:{veto:+1.5, freedom:-1}},
+    {t:'NO',  w:{veto:-1.5, freedom:+1.5}}]},
+
+{id:'B4', g:'B. AI学習',
+ s:'現実には、全員から許諾を取るのは非常に難しい。',
+ q:'ならどうする？',
+ topic:'現実の政策判断（理想と食い違ってよい）',
+ o:[{t:'完全許諾制',           w:{veto:+2, money:+.5, law:+1}},
+    {t:'原則自由＋オプトアウト', w:{veto:+.7, money:-1.5}},
+    {t:'原則自由＋対価還元',     w:{veto:0,  money:+2}},
+    {t:'オプトアウト＋対価還元', w:{veto:+1, money:+2}},
+    {t:'現状維持',             w:{veto:-1, money:-2, law:-1}},
+    {t:'その他',               w:{}}]},
+
+{id:'C1', g:'C. AI生成物',
+ s:'誰の権利も侵害していない、完全新規のAI画像。',
+ q:'公開・販売・商用利用を自由にしていい？',
+ topic:'AI出力そのものへの態度',
+ o:[{t:'YES',        w:{freedom:+2, aiex:-1}},
+    {t:'NO',         w:{freedom:-2, aiex:+1.5}},
+    {t:'商用のみ制限', w:{freedom:-.5, aiex:+.75}}]},
+
+{id:'C2', g:'C. AI生成物',
+ s:'AI生成物が既存作品に、類似性あり＋依拠性あり、と判明した。権利者が「使わないでほしい」と言っている。',
+ q:'止められる権利を認める？',
+ topic:'著作権者の排他的コントロールを重視するか',
+ o:[{t:'YES', w:{veto:+2, freedom:-.5}},
+    {t:'NO',  w:{veto:-2, freedom:+1.5}}]},
+
+{id:'C3', g:'C. AI生成物',
+ s:'生成者は侵害に気づかず販売していた。後から権利侵害だと判明した。',
+ q:'過去の利益まで返還させる？',
+ topic:'善意・故意・過失をどれくらい重視するか',
+ o:[{t:'全額返還',             w:{retro:+2}},
+    {t:'一部返還',             w:{retro:+.5}},
+    {t:'発覚後から対応すればよい', w:{retro:-2}},
+    {t:'その他',               w:{}}]},
+
+{id:'D1', g:'D. AI使用の表示',
+ s:'誰の権利も侵害していない、合法なAI生成物。',
+ q:'AI使用を表示する義務は必要？',
+ topic:'透明性を義務にするか',
+ o:[{t:'YES',      w:{open:+2}},
+    {t:'NO',       w:{open:-2}},
+    {t:'商用のみ',  w:{open:+1}}]},
+
+{id:'D2', g:'D. AI使用の表示',
+ s:'表示するとして、その粒度。',
+ q:'「AI使用」とだけ書けば十分？',
+ topic:'透明性をどこまで細かく求めるか',
+ o:[{t:'AI使用だけでよい',      w:{open:0}},
+    {t:'使用箇所・工程まで示すべき', w:{open:+1.5}}]},
+
+{id:'D3', g:'D. AI使用の表示',
+ s:'表示するとして、その場所。',
+ q:'どこに書いてあれば足りる？',
+ topic:'表示の強さ（見せつけるか、確認できればよいか）',
+ o:[{t:'作品そのものに必須',                   w:{open:+1.5}},
+    {t:'投稿本文',                             w:{open:+1}},
+    {t:'プロフィールや作品詳細など、確認可能な場所でよい', w:{open:+.5}},
+    {t:'メタデータのみでよい',                  w:{open:0}},
+    {t:'その他',                               w:{}}]},
+
+{id:'D4', g:'D. AI使用の表示',
+ s:'Photoshop、3D素材、写真素材なども、作品の見た目に大きく寄与している。',
+ q:'これらにも同じ開示義務を課す？',
+ topic:'AIを特別な制作手段として扱うか',
+ o:[{t:'YES',                          w:{open:+.5, aiex:-1.5}},
+    {t:'NO、生成AIだけ特別扱いしてよい',  w:{open:0,  aiex:+1.5}},
+    {t:'一定以上創作に寄与した技術は全部表示', w:{open:+1, aiex:-1}},
+    {t:'その他',                        w:{}}]},
+
+{id:'E1', g:'E. 二次創作',
+ s:'原作者が二次創作について何も表明していない。',
+ q:'非商用の二次創作は、原則自由でいい？',
+ topic:'沈黙をどちらに読むか',
+ o:[{t:'原則自由＋原作者に拒否権', w:{deriv:+1, veto:+1}},
+    {t:'事前許諾必須',           w:{deriv:-2, veto:+2}},
+    {t:'原作者にも止める権利なし', w:{deriv:+2, veto:-2}},
+    {t:'その他',                 w:{}}]},
+
+{id:'E2', g:'E. 二次創作',
+ s:'今度は、二次創作で利益を出す場合。',
+ q:'商用の二次創作は？',
+ topic:'金銭が絡むと基準を変えるか',
+ o:[{t:'原則自由＋原作者に拒否権', w:{deriv:+1.5, veto:+1, money:-.5}},
+    {t:'事前許諾必須',           w:{deriv:-2, veto:+2, money:0}},
+    {t:'原則自由＋利益還元',      w:{deriv:+1, money:+1.5}},
+    {t:'拒否権＋利益還元',        w:{deriv:+.5, veto:+1.5, money:+1.5}},
+    {t:'その他',                 w:{}}]},
+
+{id:'E3', g:'E. 二次創作',
+ s:'ずっと黙認されていたが、途中から原作者が「今後は禁止」と表明した。',
+ q:'それ以前に出た利益は？',
+ topic:'ルール変更を遡らせるか',
+ o:[{t:'返還',                 w:{retro:+2, deriv:-1.5}},
+    {t:'返還不要、今後停止',     w:{retro:-1, deriv:+.5}},
+    {t:'一度始めたものは継続可能', w:{retro:-2, deriv:+1.5, veto:-1}},
+    {t:'その他',               w:{}}]},
+
+{id:'E4', g:'E. 二次創作',
+ s:'原作者が「二次創作OK」とだけ書いている。AIについては何も書いていない。',
+ q:'AIによる二次創作も、含まれると解釈する？',
+ topic:'沈黙にAIを含めるか（許諾の範囲の読み方）',
+ o:[{t:'YES',                    w:{deriv:+1, aiex:-1.5, veto:-1}},
+    {t:'NO、AIは別途明示許可が必要', w:{deriv:-.5, aiex:+1.5, veto:+1.5}},
+    {t:'その他',                  w:{}}]},
+
+{id:'F1', g:'F. 法律・倫理・規約の境界',
+ s:'あなたが「倫理的に嫌だ」と感じる行為がある。',
+ q:'それは原則として、法律でも禁止されるべき？',
+ topic:'倫理と法をどれだけ重ねるか',
+ o:[{t:'YES',       w:{law:+2}},
+    {t:'NO',        w:{law:-2}},
+    {t:'ケースによる', w:{law:0}}]},
+
+{id:'F2', g:'F. 法律・倫理・規約の境界',
+ s:'法律では禁止しない行為がある。',
+ q:'プラットフォームが規約でそれを禁止するのは、認める？',
+ topic:'法以外の手段による調整を認めるか',
+ o:[{t:'YES', w:{law:-.5, freedom:-.5}},
+    {t:'NO',  w:{freedom:+1.5}}]},
+
+{id:'F3', g:'F. 法律・倫理・規約の境界',
+ s:'本人の権利侵害はないが、多くの人が不快に思うAI利用がある。',
+ q:'社会的に批判されることと、法的に禁止されることを、分けるべき？',
+ topic:'世論と法を切り離すか',
+ o:[{t:'YES', w:{law:-1.5}},
+    {t:'NO',  w:{law:+1.5}}]}
+];
+
+/* =========================================================
+   3. 立場の文章化（軸の位置 → 日本語）
+   ========================================================= */
+var BLURB = {
+  style:{hi:'作風そのものにも作家のコントロールが及ぶべきだと考えています。',
+         lo:'作風を独占させることには否定的で、画風の学習や模倣は自由の側に置いています。',
+         mid:'作風の独占については、状況を見て線を引く立場です。'},
+  freedom:{hi:'創作と競争の自由を、かなり強く優先します。',
+           lo:'自由よりも、既存の作り手が受ける不利益のほうを重く見ます。',
+           mid:'自由と、既存の作り手の保護とを、その都度てんびんにかけます。'},
+  veto:{hi:'権利者が「やめてくれ」と言えること自体を、強く支持します。',
+        lo:'権利者の拒否権より、使う側の予測可能性を優先します。',
+        mid:'権利者の拒否権は認めますが、無条件ではないという立場です。'},
+  money:{hi:'商用でAIが他人の作品を使うなら、作者への対価還元が要ると考えています。',
+         lo:'対価還元の仕組みを、必須とまでは考えていません。',
+         mid:'対価還元は望ましいが、必須ではないという位置です。'},
+  open:{hi:'AIを使ったことは、確認できる形で開示されるべきだと強く考えています。',
+        lo:'AI使用の開示を義務にすることには消極的です。',
+        mid:'AI使用の開示は、場合によっては要るという立場です。'},
+  law:{hi:'問題だと思う行為は、法律で禁止することにも積極的です。',
+       lo:'倫理的に問題だと思う行為でも、すぐ法律で禁じることには慎重で、規約やガイドラインでの調整を好みます。',
+       mid:'法規制については、対象によって態度を変えます。'},
+  deriv:{hi:'二次創作は広く自由であるべきだと考えています。',
+         lo:'二次創作には、事前の許諾が要るという立場です。',
+         mid:'二次創作の自由は認めますが、条件付きです。'},
+  aiex:{hi:'AIは、他の制作手段とは区別して扱うべきだと考えています。',
+        lo:'AIだけを特別扱いする必要はない、という立場です。',
+        mid:'AIを特別扱いするかどうかは、場面によって変わります。'},
+  retro:{hi:'侵害やルール変更が判明したら、過去に遡って責任を取らせるべきだと考えています。',
+         lo:'知らずにやっていた過去まで遡って罰するべきではない、という立場です。',
+         mid:'遡って責任を問うかどうかは、事情によるという立場です。'}
+};
+
+/* =========================================================
+   4. 採点
+   ========================================================= */
+/* 採点は「答えた設問だけ」を見る。
+
+   設問ごとに、その軸に効く選択肢の最小値〜最大値を出し、選んだ答えが
+   その幅のどこにあるかを取る。それを幅の大きさで重み付けして平均する。
+
+   こうしている理由：全設問の合計で正規化すると、その軸を主に決めている
+   設問（例：商用AI学習ならB4）で最も強い選択肢を選んでも、
+   周辺の設問が薄めてしまって中央付近に出てしまう。実際に一度そうなった。
+   とばした設問はここで単に外れる（中央へ引っ張らない）。 */
+function score(answers){
+  var pct={};
+  AXES.forEach(function(a){
+    var num=0, den=0;
+    QUESTIONS.forEach(function(q,qi){
+      var vals=q.o.map(function(op){ return (op.w && op.w[a.id]) || 0; });
+      var lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals);
+      if(hi-lo===0) return;                 // この設問はこの軸に効かない
+      if(answers[qi]==null) return;         // とばした設問は数えない
+      num += vals[answers[qi]] - lo;
+      den += hi - lo;
+    });
+    pct[a.id] = den===0 ? 50 : Math.round(num/den*100);
+  });
+  return pct;
+}
+function bucket(p){ return p>=64 ? 'hi' : (p<=36 ? 'lo' : 'mid'); }
+
+/* =========================================================
+   5. コード（答え22桁）とURL
+   ========================================================= */
+function encode(answers){
+  return answers.map(function(a){ return a==null ? '-' : String(a); }).join('');
+}
+function decode(str){
+  if(typeof str!=='string') return null;
+  str=str.trim();
+  if(str.length!==QUESTIONS.length) return null;
+  var out=[],ok=true;
+  for(var i=0;i<str.length;i++){
+    var c=str[i];
+    if(c==='-'){ out.push(null); continue; }
+    var n=parseInt(c,10);
+    if(isNaN(n) || n<0 || n>=QUESTIONS[i].o.length){ ok=false; break; }
+    out.push(n);
+  }
+  return ok ? out : null;
+}
+function shareUrl(code){
+  return location.origin + location.pathname.replace(/index\.html$/,'') + '?s=' + code;
+}
+
+/* =========================================================
+   6. 状態
+   ========================================================= */
+var STORE='ogyanun.aistance.v1';
+var state = {
+  view:'intro',            // intro | quiz | result | compare
+  i:0,
+  answers:new Array(QUESTIONS.length).fill(null),
+  other:null               // 比較相手の答え
+};
+
+function save(){
+  try{ localStorage.setItem(STORE, JSON.stringify({i:state.i, a:state.answers})); }catch(e){}
+}
+function load(){
+  try{
+    var v=JSON.parse(localStorage.getItem(STORE)||'null');
+    if(v && Array.isArray(v.a) && v.a.length===QUESTIONS.length){
+      state.answers=v.a; state.i=Math.min(v.i||0, QUESTIONS.length-1); return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+/* =========================================================
+   7. 描画
+   ========================================================= */
+var app=document.getElementById('app');
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function render(){
+  if(state.view==='intro')   return renderIntro();
+  if(state.view==='quiz')    return renderQuiz();
+  if(state.view==='compare') return renderCompare();
+  return renderResult();
+}
+
+/* --- 導入 --- */
+function renderIntro(){
+  var resumed = state.answers.some(function(a){ return a!==null; });
+  app.innerHTML =
+  '<p class="lede">「あなたはAI賛成派ですか、反対派ですか」——<strong>その一軸では、たぶんあなたの立場は表せません。</strong>'+
+  'このページは、生成AIと著作権をめぐる<strong>22の論点に、1問ずつ答えていく</strong>ものです。'+
+  '最後に出るのは「◯◯派です」というラベルではなく、9本の軸の上に置かれたあなたの位置です。</p>'+
+
+  '<div class="note"><b>正解はありません。</b>ここは「どうあるべきだと思うか」だけを聞くパートです。'+
+  '「現行法ではどうなっているか」を確かめる<b>制度理解パートは、まだありません</b>（別ページとして分けて作る予定です）。'+
+  'この2つを混ぜないことが、このページの設計の芯です。</div>'+
+
+  '<div class="note">結果は<b>どこにも保存されません。</b>あなたの答えは22桁のコードになってURLに入るだけです。'+
+  'そのURLを相手に渡して、相手の結果と並べると——<br>'+
+  '<b>どこで一致していて、どこが本当の対立点なのか</b>が出ます。<br>'+
+  '「お前AI推進派だろ！」「いや、俺は商用学習のオプトアウト＋還元派なんだけど」を、殴り合う前に済ませるための道具です。</div>'+
+
+  '<div class="btnrow">'+
+    '<button class="btn primary" data-act="start">'+(resumed?'続きから答える':'はじめる')+'</button>'+
+    (resumed?'<button class="btn small" data-act="reset">最初からやり直す</button>':'')+
+    '<button class="btn small" data-act="paste">結果コードを貼る</button>'+
+  '</div>'+
+  '<p class="axisnote">所要 5〜8分／全22問。キーボードの <b>1〜6</b> で回答、<b>←</b> で1問戻れます。</p>';
+
+  document.getElementById('foot-note').innerHTML =
+    '論点の出典：本人の会話ログをもとに構成。法律の解説ではありません。';
+}
+
+/* --- 設問 --- */
+function renderQuiz(){
+  var q=QUESTIONS[state.i], n=QUESTIONS.length;
+  var done=state.answers.filter(function(a){return a!==null;}).length;
+  var opts=q.o.map(function(op,k){
+    var on = state.answers[state.i]===k ? ' on' : '';
+    return '<button class="opt'+on+'" data-pick="'+k+'">'+
+             '<span class="key">'+(k+1)+'</span><span>'+esc(op.t)+'</span></button>';
+  }).join('');
+
+  app.innerHTML =
+  '<div class="progress"><span>'+String(state.i+1).padStart(2,'0')+' / '+n+'</span>'+
+    '<span class="bar"><i style="width:'+Math.round(done/n*100)+'%"></i></span>'+
+    '<span>'+done+' 問回答済み</span></div>'+
+
+  '<div class="qhead"><span class="qid">'+q.id+'</span><span class="qgroup">'+esc(q.g)+'</span></div>'+
+  '<div class="scenario">'+esc(q.s)+'</div>'+
+  '<p class="ask">'+esc(q.q)+'</p>'+
+  '<div class="opts">'+opts+'</div>'+
+  '<p class="axisnote">この設問が見ているもの：<b>'+esc(q.topic)+'</b></p>'+
+
+  '<div class="btnrow">'+
+    '<button class="btn small" data-act="prev"'+(state.i===0?' disabled':'')+'>← 戻る</button>'+
+    '<button class="btn small" data-act="next"'+(state.answers[state.i]===null?' disabled':'')+'>'+
+      (state.i===n-1?'結果を見る':'次へ →')+'</button>'+
+    '<button class="btn small" data-act="skip">この問はとばす</button>'+
+  '</div>';
+
+  document.getElementById('foot-note').textContent =
+    'とばした問は数えません。その軸は、答えたほかの問だけで出ます。';
+}
+
+/* --- 軸のバー --- */
+function axisBars(mine, theirs){
+  return '<div class="axes">'+AXES.map(function(a){
+    var p=mine[a.id];
+    var dots='<span class="dot" style="left:'+p+'%"></span>';
+    var why='';
+    if(theirs){
+      var q=theirs[a.id];
+      dots+='<span class="dot b" style="left:'+q+'%"></span>';
+      var d=Math.abs(p-q);
+      why='<div class="why">'+(d<=10?'ほぼ一致':(d<=25?'やや違う':'<b>ここが割れている</b>'))+'（差 '+d+'）</div>';
+    }
+    return '<div class="axis">'+
+      '<div class="name">'+esc(a.name)+'</div>'+
+      '<div class="track">'+dots+'</div>'+
+      '<div class="ends"><span>'+esc(a.lo)+'</span><span>'+esc(a.hi)+'</span></div>'+why+
+    '</div>';
+  }).join('')+'</div>';
+}
+
+/* --- 立場の文章 --- */
+function verdictText(pct){
+  var ranked=AXES.slice().sort(function(x,y){
+    return Math.abs(pct[y.id]-50)-Math.abs(pct[x.id]-50);
+  });
+  var lines=ranked.slice(0,5).map(function(a){ return BLURB[a.id][bucket(pct[a.id])]; });
+  return '<p>あなたの立場は、賛成／反対の一軸では表せません。強く出ているものから順に、こうなっています。</p>'+
+         '<p>'+lines.join('')+'</p>';
+}
+
+/* --- 回答一覧 --- */
+function answerTable(mine, theirs){
+  var rows=QUESTIONS.map(function(q,i){
+    var a=mine[i], b=theirs?theirs[i]:undefined;
+    var diff=(theirs && a!==null && b!==null && a!==b) ? ' class="diff"' : '';
+    var mineTxt = a===null ? '<span class="theirs">（未回答）</span>' : '<span class="mine">'+esc(q.o[a].t)+'</span>';
+    var theirTxt = theirs ? ('<br><span class="theirs">'+(b===null?'（未回答）':esc(q.o[b].t))+'</span>') : '';
+    return '<tr'+diff+'><th>'+q.id+'</th><td>'+esc(q.q)+'<br>'+mineTxt+theirTxt+
+           '</td><td class="topic">'+esc(q.topic)+'</td></tr>';
+  }).join('');
+  return '<table class="ans"><tbody>'+rows+'</tbody></table>';
+}
+
+/* --- 結果 --- */
+function renderResult(){
+  var pct=score(state.answers);
+  var code=encode(state.answers);
+  var url=shareUrl(code);
+  var unanswered=state.answers.filter(function(a){return a===null;}).length;
+
+  app.innerHTML =
+  '<p class="lede"><span class="label">RESULT</span> あなたの論点マップ</p>'+
+  (unanswered? '<div class="note">未回答が '+unanswered+' 問あります。その分は数えていません（軸は答えた問だけで出しています）。</div>' : '')+
+  axisBars(pct,null)+
+  '<div class="verdict">'+verdictText(pct)+'</div>'+
+
+  '<div class="sharebox">'+
+    '<h3>この結果を共有する</h3>'+
+    '<p class="axisnote" style="margin:0">URLに答えが入っているだけです。サーバーには何も送っていません。</p>'+
+    '<div class="urlrow"><input type="text" id="url" readonly value="'+esc(url)+'">'+
+      '<button class="btn small" data-act="copy">コピー</button></div>'+
+  '</div>'+
+
+  '<div class="sharebox">'+
+    '<h3>相手の結果と並べる</h3>'+
+    '<p class="axisnote" style="margin:0">相手から届いたURL、または22桁のコードを貼ってください。</p>'+
+    '<div class="urlrow"><input type="text" id="othercode" placeholder="https://… または 1023…">'+
+      '<button class="btn small" data-act="compare">比較する</button></div>'+
+    '<p class="axisnote" id="cmperr" style="color:var(--accent)"></p>'+
+  '</div>'+
+
+  '<details class="answers"><summary>答えた22問をぜんぶ見る</summary>'+answerTable(state.answers,null)+'</details>'+
+
+  '<div class="btnrow">'+
+    '<button class="btn small" data-act="restart">最初からやり直す</button>'+
+    '<button class="btn small" data-act="edit">答えを見直す</button>'+
+  '</div>';
+
+  document.getElementById('foot-note').innerHTML =
+    'この結果は診断の遊びであって、法的な評価ではありません。'+
+    '軸の重み付けは作者が決めたものです（ページのソースに全部書いてあります）。';
+}
+
+/* --- 比較 --- */
+function renderCompare(){
+  var mine=score(state.answers), theirs=score(state.other);
+  var agree=0, clash=0, both=0;
+  QUESTIONS.forEach(function(q,i){
+    var a=state.answers[i], b=state.other[i];
+    if(a===null||b===null) return;
+    both++; if(a===b) agree++; else clash++;
+  });
+
+  // 軸の差が大きい順に、割れているものを名指しする
+  var gaps=AXES.map(function(a){ return {a:a,d:Math.abs(mine[a.id]-theirs[a.id])}; })
+               .sort(function(x,y){ return y.d-x.d; });
+  var same=gaps.filter(function(g){return g.d<=10;}).map(function(g){return g.a.name;});
+  var split=gaps.filter(function(g){return g.d>25;}).map(function(g){return g.a.name;});
+
+  var msg='';
+  if(same.length) msg+='<p>あなたと相手は、<strong>'+esc(same.slice(0,3).join('・'))+'</strong>ではほぼ同じ位置にいます。</p>';
+  if(split.length) msg+='<p>割れているのは<strong>'+esc(split.slice(0,3).join('・'))+'</strong>です。議論するならここだけで足ります。</p>';
+  if(!msg) msg='<p>大きく割れている軸はありません。立場はおおむね近いようです。</p>';
+
+  app.innerHTML =
+  '<p class="lede"><span class="label">COMPARE</span> 2人の論点マップ</p>'+
+  '<div class="tally">'+
+    '<div><b>'+agree+'</b><span>一致した論点</span></div>'+
+    '<div><b>'+clash+'</b><span>割れた論点</span></div>'+
+    '<div><b>'+(QUESTIONS.length-both)+'</b><span>どちらかが未回答</span></div>'+
+  '</div>'+
+  '<div class="legend"><span><i class="swatch"></i>あなた</span><span><i class="swatch b"></i>相手</span></div>'+
+  axisBars(mine,theirs)+
+  '<div class="verdict">'+msg+'</div>'+
+  '<details class="answers" open><summary>22問の答え合わせ（割れた問に色が付いています）</summary>'+
+    answerTable(state.answers,state.other)+'</details>'+
+  '<div class="btnrow">'+
+    '<button class="btn small" data-act="backresult">← 自分の結果へ戻る</button>'+
+  '</div>';
+
+  document.getElementById('foot-note').textContent =
+    '同じ結論でも理由が違うことがあります。割れた論点の中身は、表で確認できます。';
+}
+
+/* =========================================================
+   8. 操作
+   ========================================================= */
+function go(view){ state.view=view; render(); window.scrollTo(0,0); }
+
+function pick(k){
+  state.answers[state.i]=k; save();
+  if(state.i < QUESTIONS.length-1){ state.i++; save(); render(); window.scrollTo(0,0); }
+  else { go('result'); }
+}
+
+function parseOther(raw){
+  raw=(raw||'').trim();
+  var m=raw.match(/[?&]s=([^&\s]+)/);
+  if(m) raw=decodeURIComponent(m[1]);
+  return decode(raw);
+}
+
+document.addEventListener('click', function(e){
+  var opt=e.target.closest('[data-pick]');
+  if(opt){ pick(parseInt(opt.getAttribute('data-pick'),10)); return; }
+
+  var b=e.target.closest('[data-act]');
+  if(!b) return;
+  var act=b.getAttribute('data-act');
+
+  if(act==='start'){ go('quiz'); }
+  else if(act==='reset'||act==='restart'){
+    state.answers=new Array(QUESTIONS.length).fill(null); state.i=0; save(); go('quiz');
+  }
+  else if(act==='prev'){ if(state.i>0){ state.i--; save(); render(); window.scrollTo(0,0);} }
+  else if(act==='next'){
+    if(state.i<QUESTIONS.length-1){ state.i++; save(); render(); window.scrollTo(0,0); }
+    else go('result');
+  }
+  else if(act==='skip'){
+    if(state.i<QUESTIONS.length-1){ state.i++; save(); render(); window.scrollTo(0,0); }
+    else go('result');
+  }
+  else if(act==='edit'){ state.i=0; go('quiz'); }
+  else if(act==='backresult'){ state.other=null; go('result'); }
+  else if(act==='copy'){
+    var el=document.getElementById('url');
+    el.select(); el.setSelectionRange(0,99999);
+    var ok=false;
+    try{ ok=document.execCommand('copy'); }catch(err){}
+    if(navigator.clipboard){ navigator.clipboard.writeText(el.value).then(function(){},function(){}); ok=true; }
+    b.textContent = ok ? 'コピーした' : '選択したので Ctrl+C';
+    setTimeout(function(){ b.textContent='コピー'; }, 1800);
+  }
+  else if(act==='paste'){
+    var raw=prompt('結果のURL、または22桁のコードを貼ってください');
+    var got=parseOther(raw);
+    if(got){ state.answers=got; state.i=0; save(); go('result'); }
+    else if(raw!==null){ alert('読み取れませんでした。URLごと貼るか、22桁のコードを確認してください。'); }
+  }
+  else if(act==='compare'){
+    var got2=parseOther(document.getElementById('othercode').value);
+    var err=document.getElementById('cmperr');
+    if(!got2){ err.textContent='読み取れませんでした。URLごと貼るか、22桁のコードを確認してください。'; return; }
+    err.textContent=''; state.other=got2; go('compare');
+  }
+});
+
+document.addEventListener('keydown', function(e){
+  if(state.view!=='quiz') return;
+  if(e.target && /input|textarea/i.test(e.target.tagName)) return;
+  if(e.key==='ArrowLeft' && state.i>0){ state.i--; save(); render(); window.scrollTo(0,0); return; }
+  if(e.key==='ArrowRight'){
+    if(state.answers[state.i]===null) return;
+    if(state.i<QUESTIONS.length-1){ state.i++; save(); render(); window.scrollTo(0,0); } else go('result');
+    return;
+  }
+  var n=parseInt(e.key,10);
+  if(!isNaN(n) && n>=1 && n<=QUESTIONS[state.i].o.length){ pick(n-1); }
+});
+
+/* =========================================================
+   9. 起動
+   ========================================================= */
+(function(){
+  var p=new URLSearchParams(location.search);
+  var s=p.get('s'), t=p.get('t');
+  var a=s?decode(s):null;
+  if(a){
+    state.answers=a; save();
+    var b=t?decode(t):null;
+    if(b){ state.other=b; state.view='compare'; }
+    else state.view='result';
+  }else{
+    load();
+    state.view='intro';
+  }
+  render();
+})();
+</script>
+</body>
+</html>

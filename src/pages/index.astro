@@ -214,7 +214,9 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
       {/* 誌面の外にある行き先。**本棚をやめて素のリンクに戻した**
           （本人・2026-08-29「普通に、創刊号→ 卓報告→ みたいな感じで実装しよう」） */}
       <a href="/contents" class="cover__jump">創刊号 <span aria-hidden="true">→</span></a>
-      <a href="/sessions" class="cover__jump cover__jump--last">卓報告 <span aria-hidden="true">→</span></a>
+      <a href="/sessions" class="cover__jump">卓報告 <span aria-hidden="true">→</span></a>
+      {/* 紹介してくれる人向け。**素材と掲載条件が置いてある公開ページ**（関係者限定ではない） */}
+      <a href="/press" class="cover__jump cover__jump--last">プレスキット <span aria-hidden="true">→</span></a>
       {strip.map((h) => (
         <a class="cover__small" href={h.href}>
           <span aria-hidden="true">▶</span> {h.catch}
