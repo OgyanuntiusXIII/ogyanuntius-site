@@ -1,0 +1,173 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE, CONTACT, PRESS, CREDITS } from '../data/site';
+import { getCollection } from 'astro:content';
+
+/**
+ * PRESS KIT。
+ * **works / scenarios のデータをそのまま組み替えているだけ。**
+ * 作品を1件足せばここにも出る。プレス用に別データを持たない（二重入力を作らない）。
+ */
+const works = await getCollection('works');
+const scenarios = await getCollection('scenarios');
+
+const items = [
+  ...works.map((e) => ({ entry: e, href: `/works/${e.id}` })),
+  ...scenarios.map((e) => ({ entry: e, href: `/scenario/${e.id}` })),
+]
+  .filter(({ entry }) => entry.data.status !== 'making')
+  .sort((a, b) => b.entry.data.date.getTime() - a.entry.data.date.getTime());
+
+const CATEGORY: Record<string, string> = {
+  app: 'アプリ',
+  game: 'ゲーム',
+  scenario: 'TRPGシナリオ',
+  video: '動画',
+  blog: '記事',
+  other: 'その他',
+};
+const PRICE: Record<string, string> = {
+  free: '無料',
+  paid: '有料',
+  donation: '無料（投げ銭あり）',
+  unknown: '—',
+};
+
+const fmt = (d: Date) =>
+  `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+---
+
+<Base
+  title="プレスキット"
+  description="オギャヌンティウス十三世の作品を紹介するための、スクリーンショット・説明文・掲載条件をまとめたページです。"
+>
+  <div class="wrap measure">
+    <p class="kicker">PRESS KIT</p>
+
+    <h1 class="h1">PRESS KIT</h1>
+
+    <div class="prose">
+      <p>
+        オギャヌンティウス十三世の作品を、記事・動画・まとめで紹介するための素材と条件をここに置いています。
+        連絡は不要です。<strong>そのまま持っていってください。</strong>
+      </p>
+    </div>
+
+    <section class="terms" aria-labelledby="terms-h">
+      <h2 id="terms-h" class="h2">掲載条件</h2>
+      <ul class="terms__list">
+        {PRESS.terms.map((t) => <li>{t}</li>)}
+      </ul>
+      <p class="note">{PRESS.fanwork}</p>
+      <p class="note">{PRESS.assets}</p>
+    </section>
+
+    <section aria-labelledby="works-h">
+      <h2 id="works-h" class="h2">作品</h2>
+
+      {items.map(({ entry, href }, i) => (
+        <article class="item">
+          <p class="item__no">{String(i + 1).padStart(2, '0')}</p>
+
+          <div class="item__body">
+            <h3 class="item__title">
+              <a class="link" href={href}>{entry.data.title}</a>
+            </h3>
+            <p class="item__catch">{entry.data.catch}</p>
+
+            <dl class="spec">
+              <div><dt>種別</dt><dd>{CATEGORY[entry.data.category] ?? entry.data.category}</dd></div>
+              <div><dt>公開</dt><dd>{fmt(entry.data.date)}</dd></div>
+              <div><dt>価格</dt><dd>{PRICE[entry.data.priceType] ?? '—'}</dd></div>
+            </dl>
+
+            <p class="item__desc">{entry.data.description}</p>
+
+            {entry.data.links.length > 0 && (
+              <p class="item__links">
+                {entry.data.links.map((l, n) => (
+                  <>
+                    {n > 0 && <span aria-hidden="true"> / </span>}
+                    <a class="link" href={l.url} rel="noopener">{l.label} <span aria-hidden="true">↗</span></a>
+                  </>
+                ))}
+              </p>
+            )}
+
+            <figure class="shot">
+              <a href={entry.data.heroImage} rel="noopener">
+                <img
+                  src={entry.data.thumbnail}
+                  alt={`${entry.data.title} のスクリーンショット`}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
+              <figcaption>
+                画像を押すと大きい版が開きます。右クリックで保存して使ってかまいません。
+              </figcaption>
+            </figure>
+          </div>
+        </article>
+      ))}
+    </section>
+
+    <section class="prose" aria-labelledby="contact-h">
+      <h2 id="contact-h">連絡</h2>
+      <p>
+        <a class="link" href={PRESS.contact} rel="me noopener">X {PRESS.contactHandle} <span aria-hidden="true">↗</span></a>
+        へお願いします。取材・掲載連絡・素材の追加依頼、どれもここで受けます。
+      </p>
+      <p>
+        頒布ページ：<a class="link" href="https://tiiinnstudio.booth.pm/" rel="noopener">BOOTH T＆NN_studio <span aria-hidden="true">↗</span></a>
+      </p>
+    </section>
+
+    <p class="credits">{CREDITS.text}</p>
+
+    <p class="back"><a class="link" href="/">← 表紙へ戻る</a></p>
+  </div>
+  <p class="sr">{SITE.titleEn} — PRESS KIT</p>
+</Base>
+
+<style>
+  .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
+  .h1 { font-family: var(--font-en); font-size: clamp(1.9rem, 6vw, 3.6rem); line-height: 1.05; letter-spacing: -.02em; margin: 0 0 1.6rem; }
+  .h2 {
+    font-family: var(--font-en);
+    font-size: .78rem; letter-spacing: .2em; font-weight: 700;
+    margin: 3.2rem 0 1rem; padding-bottom: .5em;
+    border-bottom: 2px solid var(--rule);
+  }
+
+  .terms__list { margin: 0; padding-left: 1.3em; max-width: 40rem; }
+  .terms__list li { margin-bottom: .7em; line-height: 1.8; }
+  .note {
+    max-width: 40rem; margin: 1.2em 0 0;
+    font-size: .84rem; line-height: 1.8; color: var(--ink-mid);
+    border-left: 3px solid var(--accent); padding-left: .8em;
+  }
+
+  /* 1件ずつ。番号は誌面側の担当 */
+  .item { display: grid; grid-template-columns: 2.6rem 1fr; gap: 0 1rem; padding: 2rem 0; border-bottom: 1px solid var(--rule); }
+  .item__no { font-family: var(--font-en); font-size: 1.1rem; font-weight: 700; color: var(--accent); margin: .1em 0 0; }
+  .item__body { min-width: 0; }
+  .item__title { font-size: 1.3rem; margin: 0 0 .2em; line-height: 1.3; }
+  .item__catch { margin: 0 0 1em; font-size: .95rem; color: var(--ink-mid); }
+
+  .spec { display: flex; flex-wrap: wrap; gap: .2em 1.6em; margin: 0 0 1em; }
+  .spec div { display: flex; gap: .5em; align-items: baseline; }
+  .spec dt { font-family: var(--font-en); font-size: .68rem; letter-spacing: .12em; color: var(--ink-mid); margin: 0; }
+  .spec dd { margin: 0; font-size: .88rem; }
+
+  .item__desc { margin: 0 0 .8em; max-width: 40rem; line-height: 1.9; }
+  .item__links { margin: 0 0 1.2em; font-size: .9rem; }
+
+  .shot { margin: 0; }
+  .shot img { width: 100%; max-width: 34rem; height: auto; border: 1px solid var(--rule); display: block; }
+  .shot figcaption { margin-top: .6em; font-size: .78rem; color: var(--ink-mid); }
+
+  .credits { margin: 3rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--rule); font-size: .78rem; line-height: 1.7; color: var(--ink-mid); }
+  .back { margin-top: 1.2rem; }
+  .sr { position: absolute; left: -9999px; }
+</style>
