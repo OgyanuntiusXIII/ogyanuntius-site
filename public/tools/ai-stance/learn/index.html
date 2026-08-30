@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>制度理解パート｜AI議論の前提合わせ</title>
+<meta name="description" content="生成AIと著作権の議論に必要な最低限の共通知識を、正解のある12問で確かめる。全問に文化庁・e-Govなど一次情報への出典リンク付き。価値観診断とは完全に別のページ。">
+<link rel="icon" href="/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="オギャヌンティウス十三世">
+<meta property="og:title" content="制度理解パート｜AI議論の前提合わせ">
+<meta property="og:description" content="議論の前に、制度の共通知識を12問で確かめる。全問出典付き。">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/tools/ai-stance/learn">
+<meta name="twitter:card" content="summary">
+<style>
+/* =========================================================
+   AI議論の前提合わせ ── 制度理解パート
+   素のHTML/CSS/JS 1枚。../index.html（価値観診断）と対になる。
+
+   ここは「正解のある問題」だけを出す。価値観は一切聞かない。
+   この分離が企画の芯（../index.html 冒頭のコメント参照）。
+
+   正確さのルール：
+     ・全問、一次情報（文化庁・e-Gov）への出典リンクを付ける
+     ・出典の中身は 2026-08-31 に実際に確認した（文化庁「AIと著作権に
+       関する考え方について」概要・文化庁著作権課「生成AIをめぐる最新の
+       状況について」令和7年9月11日・ほか）
+     ・法解釈は時点依存。ページ下部に「いつ時点の情報か」を明記する
+   ========================================================= */
+
+:root{
+  --font-jp:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP",system-ui,sans-serif;
+  --font-mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho",serif;
+  --font-en:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --ink:#101010; --ink-mid:#4a4a4a; --paper:#ffffff; --paper-2:#f4f2ed;
+  --rule:#101010; --hair-rule:#e2e2e2; --accent:#e0301e; --accent-ink:#ffffff;
+  --ok:#1a7a3c;
+  --gut:clamp(16px,4vw,56px);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ink:#f0ede6; --ink-mid:#a29d94; --paper:#121211; --paper-2:#1d1c1a;
+  --rule:#f0ede6; --hair-rule:#33312d; --accent:#ff6a52; --accent-ink:#1a1310;
+  --ok:#5fbf85;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ink:#f0ede6; --ink-mid:#a29d94; --paper:#121211; --paper-2:#1d1c1a;
+    --rule:#f0ede6; --hair-rule:#33312d; --accent:#ff6a52; --accent-ink:#1a1310;
+    --ok:#5fbf85;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-jp);line-height:1.75;
+  font-size:clamp(15px,1.6vw,16.5px);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;}
+.wrap{max-width:720px;margin:0 auto;padding:0 var(--gut) 6rem;}
+
+header.masthead{
+  border-bottom:2px solid var(--rule);
+  padding:1.4rem 0 .9rem;margin-bottom:2rem;
+  display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap;
+}
+.masthead h1{
+  margin:0;font-family:var(--font-mincho);
+  font-size:clamp(1.35rem,4.4vw,2rem);font-weight:700;
+  letter-spacing:.02em;line-height:1.25;
+}
+.masthead .sub{
+  font-family:var(--font-en);font-size:.72rem;letter-spacing:.14em;
+  color:var(--ink-mid);text-transform:uppercase;margin-left:auto;white-space:nowrap;
+}
+.label{
+  display:inline-block;background:var(--accent);color:var(--accent-ink);
+  font-family:var(--font-en);font-size:.66rem;font-weight:700;
+  letter-spacing:.12em;padding:.18em .55em;vertical-align:.12em;
+}
+.lede{font-family:var(--font-mincho);font-size:1.05rem;line-height:1.95;}
+.lede strong{font-weight:700;}
+.note{
+  font-size:.85rem;color:var(--ink-mid);line-height:1.85;
+  border-left:2px solid var(--hair-rule);padding-left:.9rem;margin:1.6rem 0;
+}
+.note b{color:var(--ink);}
+
+.btn{
+  display:inline-block;font-family:var(--font-jp);font-size:.95rem;
+  padding:.7rem 1.5rem;border:1px solid var(--rule);background:transparent;
+  color:var(--ink);cursor:pointer;letter-spacing:.04em;
+  transition:background .15s,color .15s;text-decoration:none;
+}
+.btn:hover{background:var(--ink);color:var(--paper);}
+.btn.primary{background:var(--ink);color:var(--paper);}
+.btn.primary:hover{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+.btn.small{font-size:.82rem;padding:.45rem 1rem;}
+.btnrow{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;margin-top:1.6rem;}
+
+.progress{
+  position:sticky;top:0;z-index:5;background:var(--paper);
+  padding:.7rem 0 .6rem;border-bottom:1px solid var(--hair-rule);
+  display:flex;align-items:center;gap:.8rem;
+  font-family:var(--font-en);font-size:.72rem;letter-spacing:.1em;color:var(--ink-mid);
+}
+.progress .bar{flex:1;height:2px;background:var(--hair-rule);position:relative;overflow:hidden;}
+.progress .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);transition:width .25s ease;}
+
+.qhead{display:flex;align-items:baseline;gap:.7rem;margin:2.4rem 0 .2rem;}
+.qhead .qid{font-family:var(--font-en);font-weight:700;font-size:1.1rem;letter-spacing:.06em;color:var(--accent);}
+.qhead .qgroup{font-size:.78rem;letter-spacing:.08em;color:var(--ink-mid);}
+.ask{font-size:1.12rem;font-weight:700;line-height:1.8;margin:1rem 0 1.2rem;}
+
+.opts{display:flex;flex-direction:column;gap:.55rem;}
+.opt{
+  display:flex;align-items:flex-start;gap:.8rem;width:100%;text-align:left;
+  font-family:var(--font-jp);font-size:1rem;line-height:1.6;
+  padding:.85rem 1rem;border:1px solid var(--hair-rule);background:transparent;
+  color:var(--ink);cursor:pointer;transition:border-color .12s,background .12s;
+}
+.opt:hover{border-color:var(--ink);background:var(--paper-2);}
+.opt:disabled{cursor:default;}
+.opt:disabled:hover{border-color:var(--hair-rule);background:transparent;}
+.opt.chosen-right{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok);}
+.opt.chosen-wrong{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.opt.reveal-right:disabled{border-color:var(--ok);}
+.opt .key{
+  font-family:var(--font-en);font-size:.72rem;font-weight:700;letter-spacing:.06em;
+  color:var(--ink-mid);border:1px solid var(--hair-rule);
+  min-width:1.5rem;height:1.5rem;display:inline-flex;align-items:center;
+  justify-content:center;flex:0 0 auto;margin-top:.12rem;
+}
+
+.explain{
+  margin:1.4rem 0 0;padding:1.1rem 1.2rem;background:var(--paper-2);
+  font-size:.95rem;line-height:1.9;
+}
+.explain .verdict-line{font-weight:700;margin:0 0 .5rem;}
+.explain .verdict-line.right{color:var(--ok);}
+.explain .verdict-line.wrong{color:var(--accent);}
+.explain p{margin:.5rem 0;}
+.explain .src{
+  margin-top:.8rem;padding-top:.7rem;border-top:1px solid var(--hair-rule);
+  font-size:.8rem;color:var(--ink-mid);line-height:1.8;
+}
+.explain .src a{color:inherit;border-bottom:1px solid var(--hair-rule);text-decoration:none;word-break:break-all;}
+.explain .src a:hover{color:var(--accent);border-color:var(--accent);}
+
+.scorebox{
+  border-top:2px solid var(--rule);border-bottom:1px solid var(--hair-rule);
+  padding:1.4rem 0;margin:2.4rem 0;
+  font-family:var(--font-mincho);font-size:1.06rem;line-height:2.05;
+}
+.scorebox .big{font-family:var(--font-en);font-size:2.6rem;font-weight:700;line-height:1.2;}
+.scorebox .big small{font-size:.45em;font-weight:400;color:var(--ink-mid);}
+
+details.review{margin:2rem 0;border-top:1px solid var(--hair-rule);}
+details.review summary{cursor:pointer;padding:.9rem 0;font-size:.9rem;letter-spacing:.04em;font-weight:700;}
+
+footer.foot{
+  margin-top:4rem;padding-top:1.2rem;border-top:1px solid var(--hair-rule);
+  font-size:.78rem;color:var(--ink-mid);line-height:1.9;
+}
+footer.foot a{color:inherit;border-bottom:1px solid var(--hair-rule);text-decoration:none;}
+footer.foot a:hover{color:var(--accent);border-color:var(--accent);}
+@media print{ .btnrow,.progress{display:none;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <h1>制度理解パート</h1>
+    <div class="sub">Rules Check / Gen-AI &amp; Copyright</div>
+  </header>
+  <main id="app"></main>
+  <footer class="foot">
+    <a href="/tools/ai-stance">← 価値観診断（AI議論の前提合わせ）へ</a>　　<a href="/">オギャヌンティウス十三世</a><br>
+    <span>このページの法制度の記述は <b>2026年8月31日時点</b>で一次資料を確認して書いたものです。法解釈は時点依存で、裁判例の蓄積により変わり得ます。法的助言ではありません。</span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+(function(){
+  try{
+    var saved = localStorage.getItem('ogyanun.theme');
+    if(saved === 'dark' || saved === 'light'){
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  }catch(e){}
+})();
+
+/* =========================================================
+   出典（使い回すのでまとめておく）
+   ========================================================= */
+var SRC = {
+  kangaekata: {t:'文化審議会著作権分科会法制度小委員会「AIと著作権に関する考え方について」（2024年3月15日）',
+               u:'https://www.bunka.go.jp/seisaku/bunkashingikai/chosakuken/pdf/94037901_01.pdf'},
+  gaiyou:     {t:'同【概要】（文化庁著作権課・2024年4月）',
+               u:'https://www.bunka.go.jp/seisaku/bunkashingikai/chosakuken/pdf/94057901_01.pdf'},
+  checklist:  {t:'文化庁「AIと著作権に関するチェックリスト＆ガイダンス」（2024年7月31日）',
+               u:'https://www.bunka.go.jp/seisaku/chosakuken/pdf/94097701_01.pdf'},
+  law:        {t:'著作権法（e-Gov 法令検索）',
+               u:'https://laws.e-gov.go.jp/law/345AC0000000048'},
+  saishin:    {t:'文化庁著作権課「生成AIをめぐる最新の状況について」（2025年9月11日・法制度小委員会 資料4）',
+               u:'https://www.bunka.go.jp/seisaku/bunkashingikai/chosakuken/workingteam/r07_01/pdf/94269701_04.pdf'},
+  aihub:      {t:'文化庁「AIと著作権について」（資料の置き場）',
+               u:'https://www.bunka.go.jp/seisaku/chosakuken/aiandcopyright.html'}
+};
+
+/* =========================================================
+   12問。ans は正解の選択肢番号（0始まり）。
+   解説は「正解を言う」だけでなく「なぜよく間違うか」まで書く。
+   ========================================================= */
+var QUESTIONS = [
+{id:'K1', g:'著作権のかたち',
+ q:'著作権（財産権）は他人に譲渡できる。では「著作者人格権」（氏名表示権・同一性保持権など）も、契約すれば他人に譲渡できる？',
+ o:['譲渡できる','譲渡できない'],
+ ans:1,
+ ex:'<p>著作権法59条が「著作者人格権は、著作者の一身に専属し、譲渡することができない」と明文で定めています。だから「著作権は買い取った」という契約があっても、作者の名前を消したり作品を勝手に改変したりする話は、それとは別のレイヤーに残ります。</p><p>AIの議論で「権利は譲渡済みだから何をしてもいい」という言い方が出たら、どちらの権利の話をしているのか確かめる必要があります。</p>',
+ srcs:['law']},
+
+{id:'K2', g:'何が保護されるか',
+ q:'ある作家の「画風・作風」がとてもよく似た新規の作品を作られた。既存作品と創作的表現は共通していない。これは著作権侵害になる？',
+ o:['なる','ならない'],
+ ans:1,
+ ex:'<p>著作権法が保護するのは「創作的表現」で、「アイデア」は保護しません。文化庁の「考え方」も、作風がアイデアである場合、それが共通しても著作権侵害とはならない、と明記しています。</p><p>ただし同じ資料は続けて、特定のクリエイターを狙い撃ちして、創作的表現が共通する作品群を意図的に出力させる目的の追加学習（いわゆる狙い撃ちLoRA等）には30条の4が適用されない場合がある、とも書いています。「作風は自由」で話が終わるわけではありません。</p>',
+ srcs:['gaiyou','kangaekata']},
+
+{id:'K3', g:'AI学習（30条の4）',
+ q:'日本の著作権法では、AI開発のための学習に他人の著作物を使うことは、原則としてどう扱われている？',
+ o:['原則として、著作権者の許諾が必要','原則として、著作権者の許諾なく利用できる','法律に規定がなく、グレーゾーン'],
+ ans:1,
+ ex:'<p>著作権法30条の4は、著作物に表現された思想・感情の「享受」を目的としない利用（情報解析＝AI学習を含む）を、原則として許諾なく行えると定めています。2018年改正で入った規定で、「グレーゾーン」ではなく明文の規定があります。</p><p>ただし条文には「著作権者の利益を不当に害することとなる場合は、この限りでない」というただし書があり、たとえば情報解析用に販売されているデータベースを無償で複製する行為などはこの例外に当たり得ます。</p>',
+ srcs:['gaiyou','law']},
+
+{id:'K4', g:'AI学習（30条の4）',
+ q:'「非営利の研究目的でAIに学習させるなら、30条の4で常に許諾不要」——これは正しい？',
+ o:['正しい','正しくない'],
+ ans:1,
+ ex:'<p>30条の4の条件は「非営利かどうか」ではなく「享受目的があるかどうか」です。文化庁の概要資料は、非営利目的・研究目的等の場合でも、享受目的が併存すれば許諾が必要と明記しています。</p><p>逆に、営利企業の商用AI開発でも、非享受目的の情報解析であれば原則として30条の4の対象です。「営利／非営利」で切る直感と、条文の切り方がずれている典型例です。</p>',
+ srcs:['gaiyou']},
+
+{id:'K5', g:'学習と生成は別',
+ q:'AIの「学習」が適法に行われていれば、そのAIの「出力（生成物）」も適法になる？',
+ o:['なる','ならない（別々に判断される）'],
+ ans:1,
+ ex:'<p>文化庁の「考え方」は、AI開発・学習段階と生成・利用段階では行われている利用行為も関係する条文も異なるため、分けて考える必要があるとしています。学習が30条の4で適法でも、出力が既存著作物と類似性・依拠性を持てば、その生成・利用は著作権侵害になり得ます。</p><p>逆もあります。出力に問題がなくても、学習側の収集行為が別の理由（ただし書該当・海賊版と知りながらの収集等）で問題になることはあります。「学習の話」と「出力の話」を混ぜると、議論は必ずこじれます。</p>',
+ srcs:['gaiyou']},
+
+{id:'K6', g:'侵害の要件',
+ q:'AI生成物が既存の作品に「似ている」。著作権侵害になるための要件として正しいのは？',
+ o:['似ていれば侵害','「類似性」と「依拠性」の両方が必要','AIで作った時点で侵害'],
+ ans:1,
+ ex:'<p>著作権侵害の要件は、AIでも手描きでも同じです。「類似性」（創作的表現が共通していること）と「依拠性」（既存の著作物をもとに作ったこと）の両方が認められ、かつ権利制限規定の対象外である場合に侵害となります。</p><p>単に雰囲気が似ている（アイデアの共通）だけでは類似性を満たしませんし、偶然の一致（依拠していない）でも侵害にはなりません。</p>',
+ srcs:['gaiyou']},
+
+{id:'K7', g:'侵害の要件',
+ q:'AI利用者は、その既存作品を見たことも聞いたこともなかった。でも生成AIの学習データにその作品が含まれていた。「依拠性」はどうなる？',
+ o:['利用者が知らなければ依拠性なし','利用者が知らなくても、通常、依拠性が推認される'],
+ ans:1,
+ ex:'<p>文化庁の「考え方」は、生成AIの開発・学習段階で当該既存の著作物が学習されていた場合は、AI利用者が既存の著作物を認識していなくても、通常、依拠性があったと推認されるとしています。人間の創作での「知らなかったから依拠なし」という直感が、生成AIではそのまま通らない重要ポイントです。</p><p>ただし、学習に用いられた著作物の創作的表現が出力される状態になっていないことを利用者側が立証できれば、依拠性が否定される場合はあり得る、とも書かれています。</p>',
+ srcs:['gaiyou','kangaekata']},
+
+{id:'K8', g:'二次創作',
+ q:'「二次創作はファン活動だから、著作権法上も自動的に合法」——これは正しい？',
+ o:['正しい','正しくない'],
+ ans:1,
+ ex:'<p>他人のキャラクター等の創作的表現を使った二次創作は、法律上は翻案権（27条）・複製権などに関わる行為で、権利者の許諾がなければ形式的には侵害となり得ます。実際に多くの二次創作が成り立っているのは、権利者の「黙認」や、ガイドラインによる事実上の許諾があるからです。</p><p>「黙認されている」と「権利がない」は別物です。だからこそ、権利者が方針を変えれば止められる、という構造になっています。ここを混ぜると、二次創作とAIの議論はかみ合いません。</p>',
+ srcs:['law','checklist']},
+
+{id:'K9', g:'AI生成物の著作権',
+ q:'人がほとんど指示を与えず、AIが自律的に生成した画像。これは著作物として保護される？',
+ o:['される','されない','AIが著作者になる'],
+ ans:1,
+ ex:'<p>著作物は「思想又は感情を創作的に表現したもの」（著作権法2条1項1号）。文化庁の「考え方」は、AIが自律的に生成したものはこれに当たらず著作物に該当しないとしています。また著作者になれるのは人（自然人・法人）だけで、AI自体は著作者になれません。</p><p>一方、人がAIを「道具」として使い、創作意図と創作的寄与が認められれば、著作物になり得ます。試行回数の多さ自体は寄与になりませんが、生成物を確認しながら指示を修正して積み重ねる行為や、生成後の創作的な加筆・修正は、著作物性を認める方向に働きます。「AI生成物か否か」で一律には決まりません。</p>',
+ srcs:['gaiyou']},
+
+{id:'K10', g:'法律・規約・倫理',
+ q:'法律では禁止されていない行為を、プラットフォームが利用規約で禁止すること。これは制度上あり得る？',
+ o:['あり得る（規約は法律と別のレイヤー）','あり得ない（法律で適法なら規約でも禁止できない）'],
+ ans:0,
+ ex:'<p>利用規約は事業者と利用者の間の契約で、法律とは別のレイヤーです。法律上適法な行為（たとえば30条の4の範囲のAI学習）を、規約で禁止・制限しているサービスは実際にあります。逆に、規約で許されていても法律違反なら違法です。</p><p>議論のときは「法律の話」「規約の話」「倫理の話」の3つを分けると、対立点がはっきりします。倫理的に嫌なものを全部法律で禁止すべきかどうか——そこから先は、正解のない価値観の領域です（価値観診断のF節がそれです）。</p>',
+ srcs:['checklist']},
+
+{id:'K11', g:'いまの状況',
+ q:'文化庁の「AIと著作権に関する考え方について」（2024年3月）は、法的拘束力を持つ？',
+ o:['持つ（法律・省令の一種）','持たない（審議会の解釈の整理）'],
+ ans:1,
+ ex:'<p>資料自身が冒頭で、「考え方」それ自体は法的な拘束力を有するものではなく、特定の生成AIについて確定的な法的評価を行うものでもない、と明記しています。著作権法の解釈は本来、個別の事案に応じて司法（裁判所）が行うものです。</p><p>そして2026年8月時点でも、生成AIと著作権を直接扱った日本の判例の蓄積はまだ乏しく、新聞社によるAI検索サービスへの訴訟など主要な訴訟が係争中です。つまり今の議論の多くは「確定した判例」ではなく「行政の解釈の整理」の上に立っています。ここが動けば結論も動き得ます。</p>',
+ srcs:['gaiyou','saishin']},
+
+{id:'K12', g:'いまの状況',
+ q:'2025年に全面施行された日本の「AI法」（人工知能関連技術の研究開発及び活用の推進に関する法律）は、著作権法のAI学習のルールを変更した？',
+ o:['変更した','変更していない（推進のための基本法）'],
+ ans:1,
+ ex:'<p>AI法（2025年5月28日成立・9月1日全面施行）は、AIの研究開発・活用を推進するための基本法で、AI戦略本部の設置や基本計画の策定、透明性確保などの基本理念を定めるものです。著作権法30条の4などのルールを変えるものではありません。</p><p>「AIの法律ができた」というニュースと「AI学習の著作権ルールが変わった」は別の話です。なお海外では動きがあり、EUのAI法（AI Act）は生成AIコンテンツの透明性義務（第50条）などを定め、2025年8月に生成AI関連規定が施行されています。日本の著作権法にはAI使用の表示義務はありません。</p>',
+ srcs:['saishin']}
+];
+
+/* =========================================================
+   状態と描画
+   ========================================================= */
+var STORE='ogyanun.aistance.learn.v1';
+var state={view:'intro', i:0, answers:new Array(QUESTIONS.length).fill(null)};
+
+function save(){
+  try{ localStorage.setItem(STORE, JSON.stringify({i:state.i,a:state.answers})); }catch(e){}
+}
+function load(){
+  try{
+    var v=JSON.parse(localStorage.getItem(STORE)||'null');
+    if(v && Array.isArray(v.a) && v.a.length===QUESTIONS.length){
+      state.answers=v.a; state.i=Math.min(v.i||0,QUESTIONS.length-1); return true;
+    }
+  }catch(e){}
+  return false;
+}
+var app=document.getElementById('app');
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function srcHtml(keys){
+  return '<div class="src">出典：'+keys.map(function(k){
+    var s=SRC[k];
+    return '<a href="'+s.u+'" target="_blank" rel="noopener">'+esc(s.t)+'</a>';
+  }).join('<br>　　')+'</div>';
+}
+
+function renderIntro(){
+  var resumed=state.answers.some(function(a){return a!==null;});
+  app.innerHTML=
+  '<p class="lede">ここは<strong>正解のある12問</strong>です。目的は、AIの賛成・反対を決めることではなく、'+
+  '<strong>議論に必要な最低限の共通知識を揃えること</strong>。答えるたびに、正解と一次資料への出典が出ます。</p>'+
+  '<div class="note"><b>点が低くても、発言する資格が無いという話ではまったくありません。</b>'+
+  'よく間違うところは、制度の切り方が直感とずれている場所です。そこが分かるほうが、点より価値があります。<br>'+
+  '「どうあるべきだと思うか」を聞く<b><a href="/tools/ai-stance" style="color:inherit">価値観診断（22問）</a></b>とは、意図的に完全に分けてあります。</div>'+
+  '<div class="btnrow">'+
+    '<button class="btn primary" data-act="start">'+(resumed?'続きから':'はじめる')+'</button>'+
+    (resumed?'<button class="btn small" data-act="reset">最初から</button>':'')+
+  '</div>'+
+  '<p class="note" style="margin-top:2rem">所要 5分前後／全12問。キーボードの <b>1〜3</b> で回答できます。</p>';
+}
+
+function renderQuiz(){
+  var q=QUESTIONS[state.i], n=QUESTIONS.length;
+  var done=state.answers.filter(function(a){return a!==null;}).length;
+  var answered=state.answers[state.i]!==null;
+  var opts=q.o.map(function(t,k){
+    var cls='opt';
+    if(answered){
+      if(k===state.answers[state.i]) cls+= (k===q.ans?' chosen-right':' chosen-wrong');
+      if(k===q.ans) cls+=' reveal-right';
+    }
+    return '<button class="'+cls+'" data-pick="'+k+'"'+(answered?' disabled':'')+'>'+
+           '<span class="key">'+(k+1)+'</span><span>'+esc(t)+'</span></button>';
+  }).join('');
+
+  var explain='';
+  if(answered){
+    var right=state.answers[state.i]===q.ans;
+    explain='<div class="explain">'+
+      '<p class="verdict-line '+(right?'right':'wrong')+'">'+(right?'○ 正解':'× 正解は「'+esc(q.o[q.ans])+'」')+'</p>'+
+      q.ex + srcHtml(q.srcs)+'</div>';
+  }
+
+  app.innerHTML=
+  '<div class="progress"><span>'+String(state.i+1).padStart(2,'0')+' / '+n+'</span>'+
+    '<span class="bar"><i style="width:'+Math.round(done/n*100)+'%"></i></span>'+
+    '<span>'+done+' 問回答済み</span></div>'+
+  '<div class="qhead"><span class="qid">'+q.id+'</span><span class="qgroup">'+esc(q.g)+'</span></div>'+
+  '<p class="ask">'+esc(q.q)+'</p>'+
+  '<div class="opts">'+opts+'</div>'+
+  explain+
+  '<div class="btnrow">'+
+    '<button class="btn small" data-act="prev"'+(state.i===0?' disabled':'')+'>← 戻る</button>'+
+    (answered?'<button class="btn small primary" data-act="next">'+(state.i===n-1?'結果を見る':'次へ →')+'</button>':'')+
+  '</div>';
+}
+
+function renderResult(){
+  var right=0;
+  QUESTIONS.forEach(function(q,i){ if(state.answers[i]===q.ans) right++; });
+  var msg;
+  if(right===QUESTIONS.length) msg='全問正解です。議論の土台は揃っています。あとは価値観の話——そこには正解がありません。';
+  else if(right>=9) msg='ほぼ揃っています。間違えた問だけ、下の一覧から出典を開いてみてください。そこが議論ですれ違いやすい場所です。';
+  else if(right>=5) msg='半分は揃っています。間違えた問は、制度の切り方が直感とずれている場所です。点数より、どこで間違えたかのほうが価値があります。';
+  else msg='ここから揃えれば大丈夫です。全問に一次資料へのリンクを付けてあります。読んでから議論に行くと、話が早くなります。';
+
+  var rows=QUESTIONS.map(function(q,i){
+    var a=state.answers[i];
+    var mark = a===null?'—':(a===q.ans?'○':'×');
+    return '<div class="qhead" style="margin:1.2rem 0 .2rem"><span class="qid">'+mark+' '+q.id+'</span>'+
+           '<span class="qgroup">'+esc(q.g)+'</span></div>'+
+           '<p style="margin:.2rem 0 .4rem;font-size:.92rem">'+esc(q.q)+'</p>'+
+           '<div class="explain" style="margin-top:.4rem"><p class="verdict-line">正解：'+esc(q.o[q.ans])+'</p>'+q.ex+srcHtml(q.srcs)+'</div>';
+  }).join('');
+
+  app.innerHTML=
+  '<p class="lede"><span class="label">RESULT</span> 制度理解</p>'+
+  '<div class="scorebox"><div class="big">'+right+'<small> / '+QUESTIONS.length+'</small></div>'+
+  '<p>'+msg+'</p></div>'+
+  '<div class="btnrow">'+
+    '<a class="btn primary" href="/tools/ai-stance">価値観診断（22問）へ →</a>'+
+    '<button class="btn small" data-act="reset">もう一度</button>'+
+  '</div>'+
+  '<details class="review"><summary>12問の解説と出典をぜんぶ見る</summary>'+rows+'</details>';
+}
+
+function render(){
+  if(state.view==='intro') return renderIntro();
+  if(state.view==='result') return renderResult();
+  renderQuiz();
+}
+function go(v){ state.view=v; render(); window.scrollTo(0,0); }
+
+document.addEventListener('click', function(e){
+  var opt=e.target.closest('[data-pick]');
+  if(opt && !opt.disabled){
+    state.answers[state.i]=parseInt(opt.getAttribute('data-pick'),10);
+    save(); render(); // 解説を出すだけ。次へは明示的に押させる
+    return;
+  }
+  var b=e.target.closest('[data-act]');
+  if(!b) return;
+  var act=b.getAttribute('data-act');
+  if(act==='start'){ go('quiz'); }
+  else if(act==='reset'){ state.answers=new Array(QUESTIONS.length).fill(null); state.i=0; save(); go('quiz'); }
+  else if(act==='prev'){ if(state.i>0){ state.i--; save(); render(); window.scrollTo(0,0);} }
+  else if(act==='next'){
+    if(state.i<QUESTIONS.length-1){ state.i++; save(); render(); window.scrollTo(0,0); }
+    else go('result');
+  }
+});
+document.addEventListener('keydown', function(e){
+  if(state.view!=='quiz') return;
+  if(e.target && /input|textarea/i.test(e.target.tagName)) return;
+  var q=QUESTIONS[state.i];
+  if(e.key==='ArrowLeft' && state.i>0){ state.i--; save(); render(); return; }
+  if(e.key==='ArrowRight' && state.answers[state.i]!==null){
+    if(state.i<QUESTIONS.length-1){ state.i++; save(); render(); } else go('result');
+    return;
+  }
+  var n=parseInt(e.key,10);
+  if(!isNaN(n) && n>=1 && n<=q.o.length && state.answers[state.i]===null){
+    state.answers[state.i]=n-1; save(); render();
+  }
+});
+
+(function(){ load(); render(); })();
+</script>
+</body>
+</html>

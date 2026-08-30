@@ -22,7 +22,7 @@
      1. 「AI賛成/反対」の一軸をやめて、論点ごとに立場を置く
      2. 1問に1論点しか入れない
      3. **正解のある「制度理解」と、正解のない「価値観」を絶対に混ぜない**
-        → このページは価値観パートのみ。制度理解パートは未実装（作るなら別ページ）
+        → このページは価値観パートのみ。制度理解パートは learn/index.html（別ページ）
      4. サーバーに何も保存しない。答えは22桁のコードにしてURLへ入れる
         → 共有も2人比較も静的HTMLのままできる。DBもログインも要らない
 
@@ -249,6 +249,10 @@ table.ans th{
   width:2.6rem;white-space:nowrap;
 }
 table.ans td.topic{color:var(--ink-mid);font-size:.8rem;}
+table.ans .sit{
+  display:block;color:var(--ink-mid);font-size:.78rem;line-height:1.65;
+  margin-bottom:.25rem;
+}
 table.ans tr.diff td,table.ans tr.diff th{background:var(--paper-2);}
 .mine{font-weight:700;}
 .theirs{color:var(--ink-mid);}
@@ -432,14 +436,14 @@ var QUESTIONS = [
     {t:'商用のみ',  w:{open:+1}}]},
 
 {id:'D2', g:'D. AI使用の表示',
- s:'表示するとして、その粒度。',
+ s:'かりに表示する（または表示義務がある）として、その粒度。',
  q:'「AI使用」とだけ書けば十分？',
  topic:'透明性をどこまで細かく求めるか',
  o:[{t:'AI使用だけでよい',      w:{open:0}},
     {t:'使用箇所・工程まで示すべき', w:{open:+1.5}}]},
 
 {id:'D3', g:'D. AI使用の表示',
- s:'表示するとして、その場所。',
+ s:'かりに表示する（または表示義務がある）として、その場所。',
  q:'どこに書いてあれば足りる？',
  topic:'表示の強さ（見せつけるか、確認できればよいか）',
  o:[{t:'作品そのものに必須',                   w:{open:+1.5}},
@@ -650,8 +654,8 @@ function renderIntro(){
   '最後に出るのは「◯◯派です」というラベルではなく、9本の軸の上に置かれたあなたの位置です。</p>'+
 
   '<div class="note"><b>正解はありません。</b>ここは「どうあるべきだと思うか」だけを聞くパートです。'+
-  '「現行法ではどうなっているか」を確かめる<b>制度理解パートは、まだありません</b>（別ページとして分けて作る予定です）。'+
-  'この2つを混ぜないことが、このページの設計の芯です。</div>'+
+  '「現行法ではどうなっているか」を確かめる<b><a href="/tools/ai-stance/learn" style="color:inherit">制度理解パート（12問・全問出典付き）</a></b>は別ページにあります。'+
+  'この2つを混ぜないことが、このページの設計の芯です。先にどちらをやっても構いません。</div>'+
 
   '<div class="note">結果は<b>どこにも保存されません。</b>あなたの答えは22桁のコードになってURLに入るだけです。'+
   'そのURLを相手に渡して、相手の結果と並べると——<br>'+
@@ -738,7 +742,8 @@ function answerTable(mine, theirs){
     var diff=(theirs && a!==null && b!==null && a!==b) ? ' class="diff"' : '';
     var mineTxt = a===null ? '<span class="theirs">（未回答）</span>' : '<span class="mine">'+esc(q.o[a].t)+'</span>';
     var theirTxt = theirs ? ('<br><span class="theirs">'+(b===null?'（未回答）':esc(q.o[b].t))+'</span>') : '';
-    return '<tr'+diff+'><th>'+q.id+'</th><td>'+esc(q.q)+'<br>'+mineTxt+theirTxt+
+    return '<tr'+diff+'><th>'+q.id+'</th><td>'+
+           '<span class="sit">'+esc(q.s)+'</span>'+esc(q.q)+'<br>'+mineTxt+theirTxt+
            '</td><td class="topic">'+esc(q.topic)+'</td></tr>';
   }).join('');
   return '<table class="ans"><tbody>'+rows+'</tbody></table>';
@@ -775,6 +780,7 @@ function renderResult(){
   '<details class="answers"><summary>答えた22問をぜんぶ見る</summary>'+answerTable(state.answers,null)+'</details>'+
 
   '<div class="btnrow">'+
+    '<a class="btn small" href="/tools/ai-stance/learn">制度理解パート（正解あり・12問）へ</a>'+
     '<button class="btn small" data-act="restart">最初からやり直す</button>'+
     '<button class="btn small" data-act="edit">答えを見直す</button>'+
   '</div>';
