@@ -15,8 +15,16 @@ const sessions = (await getCollection('sessions')).sort((a, b) => {
 const kp = sessions.filter((s) => s.data.role === 'KP').length;
 const jp = (d: string | null) =>
   d ? `${d.slice(0, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}` : '——.——.——';
+
+/**
+ * D&Dの卓が1件でもあるなら、ページ下部に Fan Content Policy の定型文を出す。
+ * WotC は非商用のファンコンテンツを許可する代わりに **この文言の明記** を求めている。
+ * https://company.wizards.com/en/legal/fancontentpolicy
+ * 卓が全部CoCに戻れば自動で消えるので、手で足したり消したりしなくていい。
+ */
+const hasDnd = sessions.some((s) => /d\s*&\s*d|dnd|ダンジョンズ/i.test(s.data.system));
 ---
-<Base title="卓の記録" description="回した卓、座った卓。25卓ぶんのクトゥルフ神話TRPGのプレイ記録。">
+<Base title="卓の記録" description={`回した卓、座った卓。${sessions.length}卓ぶんのTRPGプレイ記録。`}>
   <div class="wrap measure">
     <p class="kicker">SESSION LOG</p>
     <h1 class="h1">卓の記録</h1>
@@ -52,6 +60,17 @@ const jp = (d: string | null) =>
     </ol>
 
     <p class="back"><a class="link" href="/contents">← 目次へ戻る</a></p>
+
+    {hasDnd && (
+      <p class="fanpolicy">
+        このページのダンジョンズ＆ドラゴンズに関する記録は、Wizards of the Coast の
+        Fan Content Policy に基づく非公式のファンコンテンツです。Wizards の承認・推奨を受けたものではありません。
+        <span lang="en">卓の記録 is unofficial Fan Content permitted under the <a
+          href="https://company.wizards.com/en/legal/fancontentpolicy" rel="noopener" target="_blank"
+        >Fan Content Policy</a>. Not approved/endorsed by Wizards. Portions of the materials used are
+        property of Wizards of the Coast. ©Wizards of the Coast LLC.</span>
+      </p>
+    )}
   </div>
 
   {sessions.map((s) => (
@@ -138,4 +157,8 @@ const jp = (d: string | null) =>
   .pop__credit { margin: 0 0 1rem; font-size: .78rem; color: var(--ink-mid); }
   .pop__img { display: block; width: 100%; height: auto; margin-top: .8rem; border: 1px solid var(--rule); }
   .back { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
+  /* 規約の定型文。読ませるものではないので、面積を取らせず最後に沈める */
+  .fanpolicy { margin: 2.4rem 0 0; font-size: .68rem; line-height: 1.7; color: var(--ink-mid); opacity: .8; }
+  .fanpolicy span { display: block; margin-top: .35em; font-family: var(--font-en); }
+  .fanpolicy a { color: inherit; }
 </style>
