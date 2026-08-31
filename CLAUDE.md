@@ -72,6 +72,20 @@ Vault へは **`mybrain` MCP**（`search_notes` / `read_note` / `get_bearings`�
 `src/content/news/YYYY-MM-DD-<slug>.md` を1件足す。`kind` は
 `release` / `update` / `video` / `blog` / `other` から選ぶ。
 
+> [!IMPORTANT] **作品ページがあるものは `ref` だけ書く。`url` は書かない**（本人・2026-08-31）
+> 「今月の制作物から飛ぶ場合は、プロダクトページあるものについては
+> **ちゃんとプロダクトページに飛んでほしい（直接ではなく）**」
+>
+> | 書くもの | どういうお知らせか | 飛び先 |
+> |---|---|---|
+> | `ref` だけ | works / scenarios にページがある | **その作品ページ** |
+> | `url` だけ | 作品ページを持たない（外部記事・告知など） | その URL |
+> | 両方 | — | **ビルドが落ちる** |
+>
+> 中身（ゲーム本体・ツール本体）への直リンクは、**作品ページの `links` に置く**。
+> NEWS から直行させると、何の作品なのか・ほかに何があるのかを見せる場所を素通りする。
+> 解決するのは `src/lib/newsLink.ts`。**`url` を `ref` より優先へ戻さないこと。**
+
 ### 「この作品を NOW MAKING から公開済みに移して」
 
 1. `src/content/nowmaking/<slug>.md` を削除

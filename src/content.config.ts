@@ -146,13 +146,24 @@ const blog = defineCollection({
 
 const news = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/news' }),
-  schema: z.object({
-    title: z.string(),
-    date: z.coerce.date(),
-    kind: z.enum(['release', 'update', 'video', 'blog', 'other']),
-    url: z.string().url().optional(),
-    ref: z.string().optional(),
-  }),
+  schema: z
+    .object({
+      title: z.string(),
+      date: z.coerce.date(),
+      kind: z.enum(['release', 'update', 'video', 'blog', 'other']),
+      /** 作品ページを**持たない**お知らせの飛び先。ref があるときは書かない */
+      url: z.string().url().optional(),
+      /** works / scenarios の slug。**あればここが最優先で飛び先になる** */
+      ref: z.string().optional(),
+    })
+    // 作品ページがあるものは必ず作品ページを経由させる（本人・2026-08-31）。
+    // ref があるとき url は絶対に使われないので、残っていると「効いている」と誤読される。
+    .refine((d) => !(d.ref && d.url), {
+      message:
+        'news は ref と url を両方持てない。作品ページがあるなら ref だけにする' +
+        '（url は絶対に使われない）。中身への直リンクは作品ページの links に置くこと',
+      path: ['url'],
+    }),
 });
 
 const nowmaking = defineCollection({
