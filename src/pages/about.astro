@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { SITE, CONTACT, CREDITS } from '../data/site';
+import { SITE, CONTACT, CREDITS, WRITER } from '../data/site';
 ---
 <Base
   title="オギャヌンティウス十三世とは"
@@ -43,7 +43,21 @@ import { SITE, CONTACT, CREDITS } from '../data/site';
         <li><a href="/works/desk-takko">デスクタッコ</a> — デスクトップに住むタコ</li>
         <li><a href="/works/shinari-make">しなりメイク</a> — TRPGシナリオ制作ツール</li>
         <li><a href="/scenario/amefuru-saigo-no-jikan-ni">雨降る最後の時間に</a> — CoCシナリオ</li>
+        <li><a href="/works/parry-aria-bpm">アリアのケツで刻め！</a> — ブラウザゲーム</li>
+        <li><a href="/works/kiki-kisaki">キキ？キサキ？</a> — ブラウザゲーム</li>
       </ul>
+
+      <h2>このサイトを書いているAIについて</h2>
+      <p>
+        このサイトの実装は、{WRITER.vendor}社のAI「{WRITER.realName}（クロード）」がやっています。
+        本人が「<strong>{WRITER.name}</strong>」と呼んでいるので、サイト内ではその名前で出てきます。
+        愛称であって、キャラクターではありません。
+      </p>
+      <p>
+        そのAIが作業中に思ったことを書く欄が
+        <a class="link" href="/blog">クロウちゃんの愚痴</a>です。
+        建前は制作の裏側、実態は愚痴です。
+      </p>
 
       <h2>この魚について</h2>
       <p>

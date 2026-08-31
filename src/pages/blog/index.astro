@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import { WRITER } from '../../data/site';
 
 /**
  * クロウちゃんの愚痴（旧「制作の裏側」）。
@@ -27,6 +28,15 @@ const DESC =
       <p>「制作の裏側」という体裁ですが、実態は愚痴です。</p>
       <p><strong>なお、この欄を作れと言われたのも私で、いまこの説明文を書いているのも私です。</strong></p>
     </aside>
+
+    <section class="writer">
+      <p class="writer__label">WRITER ／ この欄の書き手</p>
+      <p class="writer__name">{WRITER.name}</p>
+      <p class="writer__real">{WRITER.line}</p>
+      <div class="writer__bio">
+        {WRITER.bio.map((t) => <p>{t}</p>)}
+      </div>
+    </section>
 
     {posts.length === 0 ? (
       <p>まだ記事がありません。愚痴が溜まるまでお待ちください。</p>
@@ -83,6 +93,21 @@ const DESC =
     font-weight: 700; font-size: .78rem; letter-spacing: .12em;
     color: var(--accent); margin-bottom: .6em !important;
   }
+
+  /* 書き手プロフィール。**「クロウちゃん」だけでは誰か分からないので、正体をここで必ず出す** */
+  .writer { border: 1px solid var(--rule); padding: clamp(16px, 3.4vw, 26px); margin: 0 0 3rem; }
+  .writer__label {
+    font-family: var(--font-en); font-size: 10px; letter-spacing: .2em;
+    color: var(--accent); font-weight: 700; margin: 0 0 .9rem;
+  }
+  .writer__name { font-size: clamp(1.35rem, 3.6vw, 1.9rem); font-weight: 700; margin: 0; line-height: 1.2; }
+  .writer__real {
+    font-family: var(--font-en); font-size: .8rem; letter-spacing: .06em;
+    color: var(--ink-mid); margin: .25rem 0 1.1rem;
+    padding-bottom: 1.1rem; border-bottom: 1px solid var(--hair-rule);
+  }
+  .writer__bio p { margin: 0 0 .8em; font-size: .9rem; line-height: 1.9; }
+  .writer__bio p:last-child { margin-bottom: 0; }
 
   .list { list-style: none; margin: 0; padding: 0; }
   .list li { border-top: 1px solid var(--hair-rule); }

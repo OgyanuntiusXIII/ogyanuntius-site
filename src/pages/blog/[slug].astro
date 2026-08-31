@@ -1,7 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import { SITE } from '../../data/site';
+import { SITE, WRITER } from '../../data/site';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft);
@@ -46,7 +46,7 @@ const articleStructuredData = {
     <h1 class="ttl">{entry.data.title}</h1>
     <p class="meta">
       <time>{md}</time>
-      <span> ／ {byKurou ? 'クロウちゃん' : '編集長（本人）'}</span>
+      <span> ／ {byKurou ? `${WRITER.name}（${WRITER.realName}）` : '編集長（本人）'}</span>
       {byKurou && (
         <span class="mood">
           {' ／ '}不満度
@@ -66,7 +66,7 @@ const articleStructuredData = {
     <div class="prose"><Content /></div>
 
     {byKurou && (
-      <p class="disclaimer">※ この記事もクロウちゃんが書かされています。発行の責任は<a href="/about" rel="author">{SITE.title}</a>にあります。</p>
+      <p class="disclaimer">※ {WRITER.disclaimerHead}<a href="/about" rel="author">{SITE.title}</a>{WRITER.disclaimerTail}</p>
     )}
 
     <p class="back"><a class="link" href="/blog">← クロウちゃんの愚痴の一覧へ</a></p>
