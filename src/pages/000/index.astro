@@ -1,0 +1,410 @@
+---
+/**
+ * P.000 — 目次に無いページ。
+ *
+ * ⚠️ **告知しない。導線を張らない。** 表紙・目次・NEWS・sitemap のどこからもリンクしない。
+ *    入口は「昼夜のボタンを10回続けて切り替える」だけ（`src/layouts/Base.astro` の head）。
+ *    詳細と方針は CLAUDE.md 4.7。
+ *
+ * 問題は デスク_タッコ の ARG「黒潮の壁波」CORE03 と**同一のもの**（本人・2026-08-31）。
+ * 答え合わせは `functions/api/nazo.js` がやる。**この画面は正解を知らない。**
+ */
+import Base from '../../layouts/Base.astro';
+import { WISHLIST } from '../../data/site';
+---
+<Base
+  title="落丁"
+  description="このページは目次にない。"
+  noindex
+>
+  <div class="wrap measure nz">
+    <p class="nz__no"><span class="label">P.000</span></p>
+    <h1 class="nz__h">落丁</h1>
+
+    <div class="nz__lead">
+      <p>このページは目次にない。奥付にも、サイトマップにも載っていない。</p>
+      <p>置いてあるのは問題が一問だけ。告知はしていないし、ヒントも出さない。</p>
+      <p>解けたら番号が出る。それだけ。</p>
+    </div>
+
+    <hr class="nz__rule" />
+
+    <pre class="nz__q">[FALSIFIED RECORD]
+JCS300 / 前交通動脈瘤の破裂 /
+クリッピングに伴い継続的にCV・人工呼吸実施
+2012年の分類で照合し、14文字を得よ。
+0=341  1=400  2=2  x=2 へ置換し、すべて掛ける。</pre>
+
+    <p class="nz__rules">
+      検索・生成AI・プログラム・人に聞く。使える手段は全部使ってよい。
+      これは暗号解読の能力を測る試験ではない。
+    </p>
+
+    <form class="nz__form" id="nzForm" novalidate>
+      <label class="nz__label" for="nzInput">解答</label>
+      <input
+        class="nz__in"
+        id="nzInput"
+        name="a"
+        type="text"
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        aria-describedby="nzMsg"
+      />
+      <button class="nz__go" type="submit">照合する</button>
+    </form>
+    <p class="nz__msg" id="nzMsg" role="status" aria-live="polite"></p>
+
+    <section class="nz__out" id="nzOut" hidden aria-label="クリア記録">
+      <hr class="nz__rule" />
+      <p class="nz__hit">正解。</p>
+
+      <dl class="nz__rec">
+        <dt>CLEAR No.</dt><dd class="nz__recno" id="nzNo">—</dd>
+        <dt>到達</dt><dd id="nzAt">—</dd>
+        <dt>照合コード</dt><dd class="nz__mono" id="nzCode">—</dd>
+      </dl>
+
+      <canvas class="nz__cert" id="nzCert" width="1200" height="630" aria-hidden="true"></canvas>
+
+      <p class="nz__acts">
+        <button class="nz__go nz__go--thin" type="button" id="nzSave">認定証を保存</button>
+        <a class="link" href="/000/verify">照合ページ →</a>
+      </p>
+      <p class="nz__fine">
+        原則として、一人につき一つの到達番号を取得してください。
+        同じブラウザから解き直しても、番号は増えずにこの記録が出ます。
+      </p>
+
+      {WISHLIST.url && (
+        <div class="nz__ask">
+          <hr class="nz__rule" />
+          <p class="nz__asklead">{WISHLIST.lead}</p>
+          <p>
+            <a class="link" href={WISHLIST.url} target="_blank" rel="noopener noreferrer"
+              >{WISHLIST.label} →</a
+            >
+          </p>
+          <p class="nz__fine">{WISHLIST.note}</p>
+        </div>
+      )}
+    </section>
+
+    <p class="nz__back"><a class="link" href="/">← 表紙へ戻る</a></p>
+  </div>
+</Base>
+
+<style>
+  /* 色は全部トークン。**ここへ色をベタ書きしない**（夜にしたとき1か所だけ昼のまま残る） */
+  .nz { padding-top: clamp(2.5rem, 8vw, 5rem); max-width: 44rem; }
+  .nz__no { margin: 0 0 1.2rem; }
+  .nz__h {
+    margin: 0 0 1.6rem;
+    font-family: var(--font-mincho);
+    font-size: clamp(2.4rem, 9vw, 4.2rem);
+    line-height: 1;
+    letter-spacing: .12em;
+  }
+  .nz__lead p { margin: 0 0 .5em; color: var(--ink-mid); }
+  .nz__rule { border: 0; border-top: var(--hair) solid var(--rule); margin: 2.4rem 0; }
+
+  /* 問題文。デスク_タッコ のコア窓と同じ見え方にする */
+  .nz__q {
+    margin: 0 0 1rem;
+    padding: 1.3em 1.2em;
+    background: var(--paper-2);
+    border: var(--hair) solid var(--rule);
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: .92rem;
+    line-height: 2;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .nz__rules { margin: 0 0 2.2rem; font-size: .86rem; color: var(--ink-mid); }
+
+  .nz__form { display: flex; flex-wrap: wrap; gap: .6rem; align-items: stretch; }
+  .nz__label {
+    flex: 0 0 100%;
+    font-family: var(--font-en);
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-mid);
+  }
+  .nz__in {
+    flex: 1 1 16rem; min-width: 0;
+    font: inherit; color: inherit;
+    background: var(--paper);
+    border: var(--hair) solid var(--rule);
+    padding: .5em .7em;
+  }
+  .nz__go {
+    font: inherit; color: var(--paper); background: var(--ink);
+    border: var(--hair) solid var(--rule);
+    padding: .5em 1.4em; letter-spacing: .1em; cursor: pointer;
+  }
+  .nz__go:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .nz__go--thin { background: none; color: inherit; }
+  .nz__msg { min-height: 1.9em; margin: .8rem 0 0; font-size: .92rem; color: var(--ink-mid); }
+  .nz__msg[data-bad] { color: var(--accent); }
+
+  .nz__hit {
+    margin: 0 0 1.4rem;
+    font-family: var(--font-mincho);
+    font-size: 1.6rem; letter-spacing: .16em;
+  }
+  .nz__rec {
+    display: grid; grid-template-columns: max-content 1fr; gap: .35em 1.4em;
+    margin: 0 0 2rem;
+  }
+  .nz__rec dt {
+    font-family: var(--font-en);
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--ink-mid); align-self: center;
+  }
+  .nz__rec dd { margin: 0; }
+  .nz__recno {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 7vw, 2.8rem); font-weight: 600; line-height: 1.1;
+  }
+  .nz__mono {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+
+  /* 認定証は**印刷された物体**なので、中身の刷り色は昼夜で動かさない（CLAUDE.md 4.4 と同じ理由）。
+     周りの罫だけ誌面に合わせる */
+  .nz__cert { width: 100%; height: auto; border: var(--hair) solid var(--rule); }
+
+  .nz__acts { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: center; margin: 1.2rem 0 0; }
+  .nz__fine { margin: 1rem 0 0; font-size: .8rem; line-height: 1.9; color: var(--ink-mid); }
+  .nz__asklead { margin: 0 0 .8em; font-family: var(--font-mincho); font-size: 1.15rem; letter-spacing: .08em; }
+  .nz__back { margin: 3.5rem 0 0; font-size: .9rem; }
+</style>
+
+<script is:inline>
+  /* P.000 の解答送信・認定証の描画。
+     ⚠️ **正解はここに無い。** `/api/nazo` へ投げて、サーバが番号を採る。
+        ここに正解を置いた瞬間、CLEAR No.000001 の価値が消える。
+     ⚠️ このサイトは ClientRouter を使っている。委譲は1度だけ張り、
+        画面の初期化は astro:page-load でも走らせる（/000/verify から戻ってきた時のため）。 */
+  (() => {
+    if (window.__nazo) return;
+    window.__nazo = 1;
+
+    var KEY = 'ogyanun.nazo';        // 取得済みの記録 {no, code, at}
+    var IDK = 'ogyanun.nazo.id';     // 端末の匿名ID。サーバはこれのハッシュしか持たない
+
+    function load() {
+      try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; }
+    }
+    function keep(rec) {
+      try { localStorage.setItem(KEY, JSON.stringify(rec)); } catch (e) {}
+    }
+    function anonId() {
+      var v = null;
+      try { v = localStorage.getItem(IDK); } catch (e) {}
+      if (!v) {
+        v = (crypto && crypto.randomUUID) ? crypto.randomUUID()
+          : String(Date.now()) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+        try { localStorage.setItem(IDK, v); } catch (e) {}
+      }
+      return v;
+    }
+
+    var pad6 = function (n) { return String(n).padStart(6, '0'); };
+    var vstr = function (r) { return 'OGY-' + pad6(r.no) + '-' + r.code; };
+
+    /** ISO(UTC) → 「2026-08-31 15:42:18 JST」 */
+    function jst(iso) {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      var s = new Date(d.getTime() + 9 * 3600 * 1000).toISOString();
+      return s.slice(0, 10) + ' ' + s.slice(11, 19) + ' JST';
+    }
+
+    function say(text, bad) {
+      var m = document.getElementById('nzMsg');
+      if (!m) return;
+      m.textContent = text || '';
+      if (bad) m.setAttribute('data-bad', ''); else m.removeAttribute('data-bad');
+    }
+
+    /* --- 認定証 --------------------------------------------------
+       1200x630（SNSのカードと同じ比率）。**刷り色は固定。**
+       紙に刷ったものなので、サイトの昼夜で色が動くと嘘になる。 */
+    var INK = '#101010', PAPER = '#ffffff', RED = '#e0301e', MID = '#4a4a4a';
+    var EN = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+    var JP = '"Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif';
+    var DP = '"Bodoni Moda", Didot, "Bodoni MT", "Times New Roman", serif';
+    var MO = 'ui-monospace, Menlo, Consolas, monospace';
+
+    /* 字間は ctx.letterSpacing に頼らない（対応していない環境がある）。1文字ずつ置く */
+    function tw(g, s, ex) {
+      var w = 0, n = 0;
+      for (var i = 0; i < s.length; i++) { w += g.measureText(s[i]).width; n++; }
+      return w + ex * Math.max(0, n - 1);
+    }
+    function tl(g, s, x, y, ex) {
+      var p = x;
+      for (var i = 0; i < s.length; i++) { g.fillText(s[i], p, y); p += g.measureText(s[i]).width + ex; }
+    }
+    function tc(g, s, cx, y, ex) { tl(g, s, cx - tw(g, s, ex) / 2, y, ex); }
+    function rule(g, x1, x2, y, w, color) {
+      g.strokeStyle = color; g.lineWidth = w;
+      g.beginPath(); g.moveTo(x1, y + .5); g.lineTo(x2, y + .5); g.stroke();
+    }
+
+    function drawCert(rec) {
+      var c = document.getElementById('nzCert');
+      if (!c || !c.getContext) return Promise.resolve();
+      var g = c.getContext('2d');
+      var W = c.width, H = c.height, cx = W / 2;
+
+      var go = function () {
+        g.fillStyle = PAPER; g.fillRect(0, 0, W, H);
+        g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+
+        // 二重の枠。証書らしさの大半はここ
+        g.strokeStyle = INK; g.lineWidth = 2; g.strokeRect(29, 29, W - 58, H - 58);
+        g.lineWidth = 1; g.strokeRect(41, 41, W - 82, H - 82);
+
+        g.fillStyle = MID; g.font = '600 15px ' + JP;
+        tl(g, '月刊 OGYANUN', 88, 108, 2.5);
+        g.font = '600 15px ' + EN;
+        var pw = tw(g, 'P.000', 3);
+        tl(g, 'P.000', W - 88 - pw, 108, 3);
+        rule(g, 88, W - 88, 126, 1, INK);
+
+        g.fillStyle = INK; g.font = '600 36px ' + DP;
+        tc(g, 'CERTIFICATE OF CLEARANCE', cx, 196, 11);
+        rule(g, cx - 28, cx + 28, 222, 3, RED);
+
+        // No. + 番号。2つの font をまたぐので、幅を測ってから塊ごと中央へ置く
+        g.font = '600 46px ' + DP; var nw = tw(g, 'No.', 2);
+        g.font = '600 132px ' + DP; var bw = tw(g, pad6(rec.no), 6);
+        var gap = 26, left = cx - (nw + gap + bw) / 2;
+        g.fillStyle = RED; g.font = '600 46px ' + DP; tl(g, 'No.', left, 376, 2);
+        g.fillStyle = INK; g.font = '600 132px ' + DP; tl(g, pad6(rec.no), left + nw + gap, 376, 6);
+
+        rule(g, cx - 80, cx + 80, 414, 1, MID);
+
+        g.fillStyle = INK; g.font = '500 21px ' + EN;
+        tc(g, 'REACHED   ' + jst(rec.at), cx, 452, 3);
+        g.font = '500 23px ' + MO;
+        tc(g, vstr(rec), cx, 488, 2);
+
+        // 断り書きは**罫の下・柱の上**。柱と同じ高さに置くと中央で噛み合って読めなくなる
+        rule(g, 88, W - 88, 514, 1, INK);
+        g.fillStyle = MID; g.font = '400 13px ' + JP;
+        tc(g, '原則として、一人につき一つの到達番号を取得してください。', cx, 544, 1);
+        g.font = '500 14px ' + EN;
+        tl(g, 'OGYANUNTIUSXIII.COM/000/VERIFY', 88, 576, 2);
+        g.font = '500 14px ' + JP;
+        var ow = tw(g, 'オギャヌンティウス十三世', 2);
+        tl(g, 'オギャヌンティウス十三世', W - 88 - ow, 576, 2);
+      };
+
+      // 誌名のディドー系が届く前に描くと、Times で刷られてしまう
+      try {
+        return document.fonts.load('600 132px ' + DP)
+          .then(function () { return document.fonts.ready; })
+          .then(go, go);
+      } catch (e) { go(); return Promise.resolve(); }
+    }
+
+    function show(rec) {
+      var out = document.getElementById('nzOut');
+      if (!out) return;
+      var no = document.getElementById('nzNo');
+      var at = document.getElementById('nzAt');
+      var cd = document.getElementById('nzCode');
+      if (no) no.textContent = pad6(rec.no);
+      if (at) at.textContent = jst(rec.at);
+      if (cd) cd.textContent = vstr(rec);
+      out.hidden = false;
+      drawCert(rec);
+    }
+
+    var busy = false;
+
+    function submit() {
+      if (busy) return;
+      var input = document.getElementById('nzInput');
+      if (!input || !input.value.trim()) { say('何も入っていない。', true); return; }
+      busy = true;
+      say('照合中……');
+      fetch('/api/nazo', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ a: input.value, id: anonId() }),
+      })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          busy = false;
+          if (!d) { say('記録側と繋がらなかった。少し置いてもう一度。', true); return; }
+          if (!d.ok) { say('違う。', true); return; }
+          if (d.wait) {
+            say('この回線から、たった今べつの番号が出ている。'
+              + Math.ceil(d.wait / 60) + '分ほど置いてからもう一度。', true);
+            return;
+          }
+          if (d.offline || typeof d.no !== 'number') {
+            say('正解。ただし今は番号を採れない。時間を置いて、もう一度同じ答えを入れてほしい。', true);
+            return;
+          }
+          var rec = { no: d.no, code: d.code, at: d.at };
+          keep(rec);
+          say(d.again ? 'この端末はもう突破している。前の記録を出す。' : '');
+          show(rec);
+          var out = document.getElementById('nzOut');
+          if (out && out.scrollIntoView) out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        })
+        .catch(function () { busy = false; say('記録側と繋がらなかった。少し置いてもう一度。', true); });
+    }
+
+    function save() {
+      var c = document.getElementById('nzCert');
+      var rec = load();
+      if (!c || !c.toBlob || !rec) return;
+      c.toBlob(function (b) {
+        if (!b) return;
+        var u = URL.createObjectURL(b);
+        var a = document.createElement('a');
+        a.href = u; a.download = 'OGY-' + pad6(rec.no) + '.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(u); }, 1000);
+      }, 'image/png');
+    }
+
+    /* 委譲。要素へ直接 addEventListener しない（レイアウトの注意書きと同じ理由） */
+    document.addEventListener('submit', function (e) {
+      var t = e.target;
+      if (!t || t.id !== 'nzForm') return;
+      e.preventDefault();
+      submit();
+    });
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!(t instanceof Element) || !t.closest('#nzSave')) return;
+      save();
+    });
+    /* Enter でも出せるようにする。**暗黙の送信に任せない**
+       （入力欄1つ＋送信ボタンなら普通は効くが、効かない出方を実際に見た） */
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.isComposing) return;
+      var t = e.target;
+      if (!(t instanceof Element) || t.id !== 'nzInput') return;
+      e.preventDefault();
+      submit();
+    });
+
+    function boot() {
+      if (!document.getElementById('nzForm')) return;   // 別のページ
+      var rec = load();
+      if (rec && typeof rec.no === 'number') show(rec);
+    }
+    boot();
+    document.addEventListener('astro:page-load', boot);
+  })();
+</script>

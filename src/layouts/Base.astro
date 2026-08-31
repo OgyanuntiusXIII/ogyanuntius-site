@@ -12,6 +12,8 @@ interface Props {
   cover?: boolean;
   /** About ページだけ true。ProfilePage / Person を出す */
   profile?: boolean;
+  /** 検索避け。**告知しないページ専用**。sitemap.xml のほうも許可制なので足さないこと */
+  noindex?: boolean;
   /** 記事など、ページ側で組み立てた構造化データ */
   structuredData?: Record<string, unknown>;
 }
@@ -22,6 +24,7 @@ const {
   ogImage = SITE.ogImage,
   cover = false,
   profile = false,
+  noindex = false,
   structuredData: suppliedStructuredData,
 } = Astro.props;
 
@@ -83,6 +86,7 @@ const structuredDataJson = structuredData
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {/* スマホのブラウザの枠の色。中身は下のスクリプトが今の明暗に合わせて書き換える */}
     <meta name="theme-color" content="#ffffff" />
@@ -118,6 +122,29 @@ const structuredDataJson = structuredData
         /* 何も押していない人が、OS側で夜に切り替えたとき */
         mq.addEventListener('change', paint);
 
+        /* --- ここから下は誌面の機能ではない ----------------------
+           **10回続けて切り替えると、目次に無いページが開く。**
+           告知しない。導線も張らない。詳しくは CLAUDE.md 4.7。
+
+           3秒あくと数え直すので、普通に昼夜を切り替えて読んでいる人には起きない。
+           **連打を要求しない間隔**にしてあるのは、白と黒が高速で入れ替わるのを
+           避けるため（3秒あれば、ゆっくり10回押しても届く）。 */
+        let hit = 0, last = 0;
+        function slip() {
+          if (!document.body) { location.href = '/000'; return; }
+          const v = document.createElement('div');
+          /* ⚠️ ここだけ昼夜のトークンに従わない。**黒はこの演出の一部**なので固定する
+                （4.6節「色をベタ書きしない」の例外。誌面の色ではない） */
+          v.setAttribute('style',
+            'position:fixed;inset:0;z-index:9999;background:#000;color:#f0ede6;' +
+            'display:grid;place-content:center;gap:1.2em;text-align:center;' +
+            'font-size:12px;letter-spacing:.34em;line-height:2.6;opacity:0;transition:opacity .45s');
+          v.innerHTML = '<div>この雑誌には、目次にないページがある。</div><div>P.000</div>';
+          document.body.appendChild(v);
+          requestAnimationFrame(() => { v.style.opacity = '1'; });
+          setTimeout(() => { location.href = '/000'; }, 1500);
+        }
+
         /* ボタンは遷移のたびに作り直される。だから document で受ける
            （本文側の委譲と同じ理由。個別の要素へ addEventListener しない） */
         document.addEventListener('click', (e) => {
@@ -126,6 +153,11 @@ const structuredDataJson = structuredData
           const now = root.getAttribute('data-theme') || (mq.matches ? 'dark' : 'light');
           try { localStorage.setItem(KEY, now === 'dark' ? 'light' : 'dark'); } catch (err) {}
           paint();
+
+          const t2 = Date.now();
+          hit = (t2 - last < 3000) ? hit + 1 : 1;
+          last = t2;
+          if (hit >= 10) { hit = 0; slip(); }
         });
       })();
     </script>

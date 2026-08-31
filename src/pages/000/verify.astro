@@ -1,0 +1,195 @@
+---
+/**
+ * P.000 の照合。認定証が本物かをサーバの記録と突き合わせる。
+ *
+ * ⚠️ **ここも目次・sitemap に載せない。** 認定証に刷られた行から辿り着く場所。
+ *    存在を知るのは、突破した人と、その人が画像を見せた相手だけ。
+ *
+ * 画像は加工できるので、番号の詐称（「自分が No.000001 だった」）を防ぐのはここ。
+ * 判定は `functions/api/nazo.js` の GET。**番号が存在するかどうかも返さない。**
+ */
+import Base from '../../layouts/Base.astro';
+---
+<Base
+  title="照合"
+  description="到達番号の照合。"
+  noindex
+>
+  <div class="wrap measure nv">
+    <p class="nv__no"><span class="label">VERIFY</span></p>
+    <h1 class="nv__h">照合</h1>
+
+    <p class="nv__lead">
+      認定証に刷られている <span class="nv__mono">Verify</span> の行を、そのまま貼ってください。
+      サーバの記録と一致すれば <span class="nv__mono">VALID</span> が出ます。
+    </p>
+
+    <form class="nv__form" id="nvForm" novalidate>
+      <label class="nv__label" for="nvInput">照合コード</label>
+      <input
+        class="nv__in"
+        id="nvInput"
+        name="v"
+        type="text"
+        placeholder="OGY-000037-8F3A2C19"
+        autocomplete="off"
+        autocapitalize="characters"
+        autocorrect="off"
+        spellcheck="false"
+        aria-describedby="nvMsg"
+      />
+      <button class="nv__go" type="submit">照合する</button>
+    </form>
+    <p class="nv__msg" id="nvMsg" role="status" aria-live="polite"></p>
+
+    <section class="nv__out" id="nvOut" hidden aria-label="照合結果">
+      <hr class="nv__rule" />
+      <p class="nv__valid">VALID</p>
+      <dl class="nv__rec">
+        <dt>CLEAR No.</dt><dd class="nv__recno" id="nvNo">—</dd>
+        <dt>到達</dt><dd id="nvAt">—</dd>
+      </dl>
+      <p class="nv__fine">
+        この番号と日時は、突破した時点でサーバ側に記録されたものです。
+        認定証の画像に書かれている内容がこれと違うなら、その画像は書き換えられています。
+      </p>
+    </section>
+
+    <p class="nv__back"><a class="link" href="/000">← P.000 へ戻る</a></p>
+  </div>
+</Base>
+
+<style>
+  .nv { padding-top: clamp(2.5rem, 8vw, 5rem); max-width: 44rem; }
+  .nv__no { margin: 0 0 1.2rem; }
+  .nv__h {
+    margin: 0 0 1.4rem;
+    font-family: var(--font-mincho);
+    font-size: clamp(2.2rem, 8vw, 3.6rem);
+    line-height: 1; letter-spacing: .14em;
+  }
+  .nv__lead { margin: 0 0 2.2rem; color: var(--ink-mid); }
+  .nv__mono {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: .9em;
+  }
+  .nv__rule { border: 0; border-top: var(--hair) solid var(--rule); margin: 2.4rem 0; }
+
+  .nv__form { display: flex; flex-wrap: wrap; gap: .6rem; align-items: stretch; }
+  .nv__label {
+    flex: 0 0 100%;
+    font-family: var(--font-en);
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-mid);
+  }
+  .nv__in {
+    flex: 1 1 18rem; min-width: 0;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 1rem; color: inherit;
+    background: var(--paper);
+    border: var(--hair) solid var(--rule);
+    padding: .5em .7em;
+  }
+  .nv__go {
+    font: inherit; color: var(--paper); background: var(--ink);
+    border: var(--hair) solid var(--rule);
+    padding: .5em 1.4em; letter-spacing: .1em; cursor: pointer;
+  }
+  .nv__go:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .nv__msg { min-height: 1.9em; margin: .8rem 0 0; font-size: .92rem; color: var(--ink-mid); }
+  .nv__msg[data-bad] { color: var(--accent); }
+
+  .nv__valid {
+    margin: 0 0 1.4rem;
+    font-family: var(--font-en);
+    font-size: clamp(1.8rem, 7vw, 2.6rem); font-weight: 700; letter-spacing: .3em;
+  }
+  .nv__rec {
+    display: grid; grid-template-columns: max-content 1fr; gap: .35em 1.4em;
+    margin: 0 0 1.6rem;
+  }
+  .nv__rec dt {
+    font-family: var(--font-en);
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--ink-mid); align-self: center;
+  }
+  .nv__rec dd { margin: 0; }
+  .nv__recno {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 7vw, 2.8rem); font-weight: 600; line-height: 1.1;
+  }
+  .nv__fine { margin: 0; font-size: .8rem; line-height: 1.9; color: var(--ink-mid); }
+  .nv__back { margin: 3.5rem 0 0; font-size: .9rem; }
+</style>
+
+<script is:inline>
+  /* 照合。ClientRouter があるので委譲は1度だけ張る（/000 側と同じ作り） */
+  (() => {
+    if (window.__nazoV) return;
+    window.__nazoV = 1;
+
+    function say(text, bad) {
+      var m = document.getElementById('nvMsg');
+      if (!m) return;
+      m.textContent = text || '';
+      if (bad) m.setAttribute('data-bad', ''); else m.removeAttribute('data-bad');
+    }
+    function hide() {
+      var o = document.getElementById('nvOut');
+      if (o) o.hidden = true;
+    }
+    function jst(iso) {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      var s = new Date(d.getTime() + 9 * 3600 * 1000).toISOString();
+      return s.slice(0, 10) + ' ' + s.slice(11, 19) + ' JST';
+    }
+
+    var busy = false;
+
+    function run() {
+      if (busy) return;
+      var input = document.getElementById('nvInput');
+      if (!input) return;
+      hide();
+
+      // 区切りも大小も揺れるので、英数字だけにしてから形を見る
+      var n = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      var m = /^OGY(\d{6})([0-9A-F]{8})$/.exec(n);
+      if (!m) { say('形が違う。認定証の Verify の行をそのまま貼ってほしい。', true); return; }
+
+      busy = true;
+      say('照合中……');
+      fetch('/api/nazo?no=' + Number(m[1]) + '&code=' + m[2])
+        .then(function (r) { return (r.ok && r.status !== 204) ? r.json() : null; })
+        .then(function (d) {
+          busy = false;
+          if (!d) { say('記録側と繋がらなかった。少し置いてもう一度。', true); return; }
+          if (!d.valid) { say('一致する記録が無い。', true); return; }
+          say('');
+          var no = document.getElementById('nvNo');
+          var at = document.getElementById('nvAt');
+          var out = document.getElementById('nvOut');
+          if (no) no.textContent = String(d.no).padStart(6, '0');
+          if (at) at.textContent = jst(d.at);
+          if (out) out.hidden = false;
+        })
+        .catch(function () { busy = false; say('記録側と繋がらなかった。少し置いてもう一度。', true); });
+    }
+
+    document.addEventListener('submit', function (e) {
+      var t = e.target;
+      if (!t || t.id !== 'nvForm') return;
+      e.preventDefault();
+      run();
+    });
+    /* Enter でも照合できるようにする。**暗黙の送信に任せない**（/000 と同じ理由） */
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.isComposing) return;
+      var t = e.target;
+      if (!(t instanceof Element) || t.id !== 'nvInput') return;
+      e.preventDefault();
+      run();
+    });
+  })();
+</script>
