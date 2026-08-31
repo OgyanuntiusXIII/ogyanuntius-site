@@ -324,10 +324,10 @@ var AXES = [
   {id:'veto',   name:'権利者の拒否権',    lo:'認めない',           hi:'強く認める'},
   {id:'money',  name:'商用利用の対価還元',lo:'不要',               hi:'必要'},
   {id:'open',   name:'AI透明性の要求',    lo:'低い',               hi:'高い'},
-  {id:'law',    name:'法規制への積極性',  lo:'慎重（規約で足りる）',hi:'積極（法で禁じる）'},
+  {id:'law',    name:'法規制への積極性',  lo:'慎重（法では禁じない）',hi:'積極（法で禁じる）'},
   {id:'deriv',  name:'二次創作の自由度',  lo:'許諾が要る',         hi:'原則自由'},
   {id:'aiex',   name:'AIの特別扱い',      lo:'人と同じに扱う',     hi:'AIだけ別扱い'},
-  {id:'retro',  name:'遡及責任',          lo:'過去は問わない',     hi:'遡って責任を負う'}
+  {id:'retro',  name:'遡及責任',          lo:'過去は問わない',     hi:'遡って責任を問う'}
 ];
 
 /* =========================================================
@@ -335,12 +335,15 @@ var AXES = [
 
    文言は Clippings/魔女狩りの終結比較.md のまま。**1問1論点**を崩さない。
    w は各選択肢が各軸に足す点数。ここを触れば診断ロジックが変わる。
+   ⚠️ **w に 0 と書いても「中立」にはならない。** 採点は設問ごとの最小〜最大で
+      正規化するので、その設問に負の値が無ければ 0 はその軸の最低の極になる。
+      中立にしたい選択肢は w:{} にする（空の w は集計から外れる）。
    正規化は実際の w の最小・最大から自動で計算するので、
    重みを書き換えても目盛りが壊れない。
    ========================================================= */
 var QUESTIONS = [
 {id:'A1', g:'A. 作風・模倣',
- s:'ある作家Aの画風を、人間Bが大量に研究して習得した。Aの既存作品には類似しない、完全新規の作品をBが作る。',
+ s:'ある作家Aの作品を、人間Bが大量に見て研究し、その画風を習得した。Aの既存作品には類似しない、完全新規の作品をBが作る。',
  q:'作風そのものを理由に、AはBの創作を止められるべき？',
  topic:'作風の独占権を認めるか',
  o:[{t:'YES', w:{style:+2}},
@@ -375,7 +378,7 @@ var QUESTIONS = [
  topic:'AIを主体として特別扱いするか',
  o:[{t:'人間もAIも同じ',   w:{aiex:-2, freedom:+.5}},
     {t:'AIだけ許諾が必要', w:{aiex:+2, freedom:-.5, veto:+.5}},
-    {t:'両方許諾が必要',   w:{aiex:-.5, freedom:-1.5, veto:+1}},
+    {t:'両方許諾が必要',   w:{aiex:-2, freedom:-1.5, veto:+1}},
     {t:'その他',           w:{}}]},
 
 {id:'B2', g:'B. AI学習',
@@ -409,7 +412,7 @@ var QUESTIONS = [
  topic:'AI出力そのものへの態度',
  o:[{t:'YES',        w:{freedom:+2, aiex:-1}},
     {t:'NO',         w:{freedom:-2, aiex:+1.5}},
-    {t:'商用のみ制限', w:{freedom:-.5, aiex:+.75}}]},
+    {t:'商用のみ制限', w:{freedom:-1, aiex:+.75}}]},
 
 {id:'C2', g:'C. AI生成物',
  s:'AI生成物が既存作品に、類似性あり＋依拠性あり、と判明した。権利者が「使わないでほしい」と言っている。',
@@ -454,9 +457,9 @@ var QUESTIONS = [
 
 {id:'D4', g:'D. AI使用の表示',
  s:'Photoshop、3D素材、写真素材なども、作品の見た目に大きく寄与している。',
- q:'これらにも同じ開示義務を課す？',
+ q:'これらにも同じ表示義務を課す？',
  topic:'AIを特別な制作手段として扱うか',
- o:[{t:'YES',                          w:{open:+.5, aiex:-1.5}},
+ o:[{t:'YES（同じ表示義務を課す）',      w:{open:+.5, aiex:-1.5}},
     {t:'NO、生成AIだけ特別扱いしてよい',  w:{open:0,  aiex:+1.5}},
     {t:'一定以上創作に寄与した技術は全部表示', w:{open:+1, aiex:-1}},
     {t:'その他',                        w:{}}]},
@@ -486,15 +489,15 @@ var QUESTIONS = [
  topic:'ルール変更を遡らせるか',
  o:[{t:'返還',                 w:{retro:+2, deriv:-1.5}},
     {t:'返還不要、今後停止',     w:{retro:-1, deriv:+.5}},
-    {t:'一度始めたものは継続可能', w:{retro:-2, deriv:+1.5, veto:-1}},
+    {t:'一度始めたものは継続可能', w:{retro:-2, deriv:+1.5}},
     {t:'その他',               w:{}}]},
 
 {id:'E4', g:'E. 二次創作',
  s:'原作者が「二次創作OK」とだけ書いている。AIについては何も書いていない。',
  q:'AIによる二次創作も、含まれると解釈する？',
  topic:'沈黙にAIを含めるか（許諾の範囲の読み方）',
- o:[{t:'YES',                    w:{deriv:+1, aiex:-1.5, veto:-1}},
-    {t:'NO、AIは別途明示許可が必要', w:{deriv:-.5, aiex:+1.5, veto:+1.5}},
+ o:[{t:'YES',                    w:{deriv:+1, aiex:-1.5}},
+    {t:'NO、AIは別途明示許可が必要', w:{deriv:-.5, aiex:+1.5, veto:+.5}},
     {t:'その他',                  w:{}}]},
 
 {id:'F1', g:'F. 法律・倫理・規約の境界',
@@ -510,10 +513,10 @@ var QUESTIONS = [
  q:'プラットフォームが規約でそれを禁止するのは、認める？',
  topic:'法以外の手段による調整を認めるか',
  o:[{t:'YES', w:{law:-.5, freedom:-.5}},
-    {t:'NO',  w:{freedom:+1.5}}]},
+    {t:'NO',  w:{law:-.5, freedom:+1.5}}]},
 
 {id:'F3', g:'F. 法律・倫理・規約の境界',
- s:'本人の権利侵害はないが、多くの人が不快に思うAI利用がある。',
+ s:'誰の権利も侵害していないが、多くの人が不快に思うAI利用がある。',
  q:'社会的に批判されることと、法的に禁止されることを、分けるべき？',
  topic:'世論と法を切り離すか',
  o:[{t:'YES', w:{law:-1.5}},
@@ -536,8 +539,8 @@ var BLURB = {
   money:{hi:'商用でAIが他人の作品を使うなら、作者への対価還元が要ると考えています。',
          lo:'対価還元の仕組みを、必須とまでは考えていません。',
          mid:'対価還元は望ましいが、必須ではないという位置です。'},
-  open:{hi:'AIを使ったことは、確認できる形で開示されるべきだと強く考えています。',
-        lo:'AI使用の開示を義務にすることには消極的です。',
+  open:{hi:'AIを使ったことは、確認できる形で表示されるべきだと強く考えています。',
+        lo:'AI使用の表示を義務にすることには消極的です。',
         mid:'AI使用の開示は、場合によっては要るという立場です。'},
   law:{hi:'問題だと思う行為は、法律で禁止することにも積極的です。',
        lo:'倫理的に問題だと思う行為でも、すぐ法律で禁じることには慎重で、規約やガイドラインでの調整を好みます。',
@@ -574,6 +577,11 @@ function score(answers){
       var lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals);
       if(hi-lo===0) return;                 // この設問はこの軸に効かない
       if(answers[qi]==null) return;         // とばした設問は数えない
+      // 「その他」(w:{}) は立場の表明ではないので、とばしたのと同じに扱う。
+      // これを入れる前は「全軸0点の回答」として採点され、重みが片側に寄る
+      // 設問ではその軸の極端値になっていた（例：E3の「その他」で拒否権が最大）。
+      var chosen=q.o[answers[qi]];
+      if(!chosen || !chosen.w || Object.keys(chosen.w).length===0) return;
       num += vals[answers[qi]] - lo;
       den += hi - lo;
     });
@@ -615,19 +623,37 @@ var state = {
   view:'intro',            // intro | quiz | result | compare
   i:0,
   answers:new Array(QUESTIONS.length).fill(null),
-  other:null               // 比較相手の答え
+  other:null,              // 比較相手の答え
+  fromUrl:false,           // 共有URL(?s=)で開いたか
+  savedAnswers:null        // その場合に、この端末へ保存されていた自分の答え
 };
 
 function save(){
   try{ localStorage.setItem(STORE, JSON.stringify({i:state.i, a:state.answers})); }catch(e){}
 }
-function load(){
+/* 保存された回答は、長さだけでなく中身も検証する。
+   壊れたデータや、設問を減らす改修をしたあとの古い保存が入っていると、
+   score() が NaN を返し結果画面が描けなくなるため。 */
+function normalizeAnswers(arr){
+  return arr.map(function(v,i){
+    if(v===null || v===undefined) return null;
+    var k=parseInt(v,10);
+    return (!isNaN(k) && k>=0 && k<QUESTIONS[i].o.length) ? k : null;
+  });
+}
+function loadSaved(){
   try{
     var v=JSON.parse(localStorage.getItem(STORE)||'null');
     if(v && Array.isArray(v.a) && v.a.length===QUESTIONS.length){
-      state.answers=v.a; state.i=Math.min(v.i||0, QUESTIONS.length-1); return true;
+      return {a:normalizeAnswers(v.a), i:Math.min(v.i||0, QUESTIONS.length-1)};
     }
   }catch(e){}
+  return null;
+}
+function hasAnswers(a){ return !!a && a.some(function(x){ return x!==null; }); }
+function load(){
+  var v=loadSaved();
+  if(v){ state.answers=v.a; state.i=v.i; return true; }
   return false;
 }
 
@@ -657,7 +683,7 @@ function renderIntro(){
   '「現行法ではどうなっているか」を確かめる<b><a href="/tools/ai-stance/learn" style="color:inherit">制度理解パート（12問・全問出典付き）</a></b>は別ページにあります。'+
   'この2つを混ぜないことが、このページの設計の芯です。先にどちらをやっても構いません。</div>'+
 
-  '<div class="note">結果は<b>どこにも保存されません。</b>あなたの答えは22桁のコードになってURLに入るだけです。'+
+  '<div class="note">結果は<b>サーバーには送られません。</b>あなたの答えが残るのは、この端末のブラウザの中（途中から再開するため）と、22桁のコードを入れたURLだけです。'+
   'そのURLを相手に渡して、相手の結果と並べると——<br>'+
   '<b>どこで一致していて、どこが本当の対立点なのか</b>が出ます。<br>'+
   '「お前AI推進派だろ！」「いや、俺は商用学習のオプトアウト＋還元派なんだけど」を、殴り合う前に済ませるための道具です。</div>'+
@@ -670,7 +696,7 @@ function renderIntro(){
   '<p class="axisnote">所要 5〜8分／全22問。キーボードの <b>1〜6</b> で回答、<b>←</b> で1問戻れます。</p>';
 
   document.getElementById('foot-note').innerHTML =
-    '論点の出典：本人の会話ログをもとに構成。法律の解説ではありません。';
+    '論点の出典：作者自身の会話ログをもとに構成しています。法律の解説ではありません。';
 }
 
 /* --- 設問 --- */
@@ -752,12 +778,23 @@ function answerTable(mine, theirs){
 /* --- 結果 --- */
 function renderResult(){
   var pct=score(state.answers);
+  // 共有URLで開いたときは、それが他人の結果である可能性を明示する。
+  // （この端末に保存された自分の回答は、URLで開いても上書きしていない）
+  var shared='';
+  if(state.fromUrl){
+    shared='<div class="note"><b>これは共有されたリンクの結果です。</b>'+
+      'この端末に保存されているあなた自身の回答は、そのまま残っています。'+
+      (hasAnswers(state.savedAnswers)
+        ? '<br><button class="btn small" data-act="compare-saved" style="margin-top:.6rem">保存されている自分の回答と比べる</button>'
+        : '')+'</div>';
+  }
   var code=encode(state.answers);
   var url=shareUrl(code);
   var unanswered=state.answers.filter(function(a){return a===null;}).length;
 
   app.innerHTML =
-  '<p class="lede"><span class="label">RESULT</span> あなたの論点マップ</p>'+
+  '<p class="lede"><span class="label">RESULT</span> '+(state.fromUrl?'共有された論点マップ':'あなたの論点マップ')+'</p>'+
+  shared+
   (unanswered? '<div class="note">未回答が '+unanswered+' 問あります。その分は数えていません（軸は答えた問だけで出しています）。</div>' : '')+
   axisBars(pct,null)+
   '<div class="verdict">'+verdictText(pct)+'</div>'+
@@ -837,6 +874,7 @@ function renderCompare(){
 function go(view){ state.view=view; render(); window.scrollTo(0,0); }
 
 function pick(k){
+  state.fromUrl=false;   // 自分で答え始めた時点で、これは自分の回答になる
   state.answers[state.i]=k; save();
   if(state.i < QUESTIONS.length-1){ state.i++; save(); render(); window.scrollTo(0,0); }
   else { go('result'); }
@@ -844,8 +882,11 @@ function pick(k){
 
 function parseOther(raw){
   raw=(raw||'').trim();
-  var m=raw.match(/[?&]s=([^&\s]+)/);
-  if(m) raw=decodeURIComponent(m[1]);
+  var m=raw.match(/[?&]s=([^&#\s]+)/);   // # を止めるとフラグメント付きURLも読める
+  if(m){
+    // 不正な % が混じった文字列で例外が飛び、UIが無言で止まるのを防ぐ
+    try{ raw=decodeURIComponent(m[1]); }catch(e){ return null; }
+  }
   return decode(raw);
 }
 
@@ -872,19 +913,40 @@ document.addEventListener('click', function(e){
   }
   else if(act==='edit'){ state.i=0; go('quiz'); }
   else if(act==='backresult'){ state.other=null; go('result'); }
+  else if(act==='compare-saved'){
+    // 共有リンクの結果を「相手」、この端末に保存された自分の回答を「あなた」にする
+    state.other=state.answers;
+    state.answers=state.savedAnswers;
+    state.fromUrl=false;
+    go('compare');
+  }
   else if(act==='copy'){
+    // 成否を確かめてから表示を変える。
+    // clipboard API は iframe や権限の無い環境で拒否されるので、
+    // 待たずに「コピーした」と出すと嘘になる。
     var el=document.getElementById('url');
     el.select(); el.setSelectionRange(0,99999);
-    var ok=false;
-    try{ ok=document.execCommand('copy'); }catch(err){}
-    if(navigator.clipboard){ navigator.clipboard.writeText(el.value).then(function(){},function(){}); ok=true; }
-    b.textContent = ok ? 'コピーした' : '選択したので Ctrl+C';
-    setTimeout(function(){ b.textContent='コピー'; }, 1800);
+    var done=function(ok){
+      b.textContent = ok ? 'コピーした' : '選択したので Ctrl+C';
+      setTimeout(function(){ b.textContent='コピー'; }, 1800);
+    };
+    var fallback=function(){
+      var ok=false; try{ ok=document.execCommand('copy'); }catch(err){}
+      done(ok);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(el.value).then(function(){ done(true); }, fallback);
+    }else fallback();
   }
   else if(act==='paste'){
     var raw=prompt('結果のURL、または22桁のコードを貼ってください');
     var got=parseOther(raw);
-    if(got){ state.answers=got; state.i=0; save(); go('result'); }
+    if(got){
+      var cur=loadSaved();
+      if(cur && hasAnswers(cur.a) &&
+         !confirm('この端末に保存されているあなたの回答が、貼り付けた回答に置き換わります。よろしいですか？')) return;
+      state.answers=got; state.i=0; state.fromUrl=false; save(); go('result');
+    }
     else if(raw!==null){ alert('読み取れませんでした。URLごと貼るか、22桁のコードを確認してください。'); }
   }
   else if(act==='compare'){
@@ -916,7 +978,11 @@ document.addEventListener('keydown', function(e){
   var s=p.get('s'), t=p.get('t');
   var a=s?decode(s):null;
   if(a){
-    state.answers=a; save();
+    // ⚠️ ここで save() してはいけない。共有リンクを開いただけで、
+    //    この端末に保存されている閲覧者自身の回答が消えてしまう。
+    var mine=loadSaved();
+    state.savedAnswers = mine ? mine.a : null;
+    state.answers=a; state.fromUrl=true;
     var b=t?decode(t):null;
     if(b){ state.other=b; state.view='compare'; }
     else state.view='result';
