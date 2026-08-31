@@ -41,6 +41,12 @@ headlines:
     catch: アリアのケツで刻め！
     badge: NEW
     no: 5
+  - ref: ai-stance
+    collection: works
+    slot: side
+    catch: 論点を揃えてから殴れ
+    badge: NEW
+    no: 6
   - ref: /about
     collection: page
     catch: WHO IS OGYANUNTIUS XIII?

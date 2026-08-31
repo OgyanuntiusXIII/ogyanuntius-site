@@ -201,6 +201,10 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
     font-size: .92rem;
   }
   .meta div { display: flex; gap: .7em; }
+  /* ⚠️ `.meta div` の display が、ブラウザ既定の [hidden]{display:none} を上書きしてしまう。
+     これが無いと、プレイ回数を持たない作品（ゲーム以外）のページに
+     中身が空の「プレイ　play」が出る（実際に本番で出ていた）。 */
+  .meta div[hidden] { display: none; }
   .meta dt { color: var(--ink-mid); margin: 0; }
   .meta dd { margin: 0; font-weight: 700; }
   .links { display: flex; flex-wrap: wrap; gap: 1.4rem; margin: 0 0 2rem; font-weight: 700; }
