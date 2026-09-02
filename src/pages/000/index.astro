@@ -61,6 +61,12 @@ JCS300 / 前交通動脈瘤の破裂 /
       <hr class="nz__rule" />
       <p class="nz__hit">正解。</p>
 
+      {/* 突破の報酬は番号そのものなので、**日本語で一番大きく出す**（本人・2026-09-02）。
+          CLEAR No. は同じ数字の正式な表記だが、下の記録欄へ譲る */}
+      <p class="nz__ord">
+        あなたは<span class="nz__ordno" id="nzOrd">—</span>人目です。
+      </p>
+
       <dl class="nz__rec">
         <dt>CLEAR No.</dt><dd class="nz__recno" id="nzNo">—</dd>
         <dt>到達</dt><dd id="nzAt">—</dd>
@@ -149,9 +155,26 @@ JCS300 / 前交通動脈瘤の破裂 /
   .nz__msg[data-bad] { color: var(--accent); }
 
   .nz__hit {
-    margin: 0 0 1.4rem;
+    margin: 0 0 .6rem;
     font-family: var(--font-mincho);
     font-size: 1.6rem; letter-spacing: .16em;
+  }
+  /* この画面で一番大きいのはここ。番号そのものが報酬なので、他へ譲らない */
+  .nz__ord {
+    margin: 0 0 2.2rem;
+    font-family: var(--font-mincho);
+    font-size: clamp(1.1rem, 3.6vw, 1.5rem);
+    letter-spacing: .1em;
+    line-height: 1.3;
+  }
+  .nz__ordno {
+    font-family: var(--font-display);
+    font-size: clamp(3.2rem, 15vw, 6rem);
+    font-weight: 600; line-height: .9;
+    color: var(--accent);
+    padding: 0 .12em;
+    /* 数字だけベースラインを揃える。前後の「あなたは」「人目です」が浮かないように */
+    display: inline-block; vertical-align: -.06em;
   }
   .nz__rec {
     display: grid; grid-template-columns: max-content 1fr; gap: .35em 1.4em;
@@ -316,9 +339,12 @@ JCS300 / 前交通動脈瘤の破裂 /
     function show(rec) {
       var out = document.getElementById('nzOut');
       if (!out) return;
+      var ord = document.getElementById('nzOrd');
       var no = document.getElementById('nzNo');
       var at = document.getElementById('nzAt');
       var cd = document.getElementById('nzCode');
+      // 「あなたは◯人目です」。桁が増えたら 1,000 と区切る
+      if (ord) ord.textContent = rec.no.toLocaleString('ja-JP');
       if (no) no.textContent = pad6(rec.no);
       if (at) at.textContent = jst(rec.at);
       if (cd) cd.textContent = vstr(rec);
