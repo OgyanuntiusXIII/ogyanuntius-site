@@ -59,6 +59,10 @@ headlines:
     collection: page
     catch: クロウちゃんの愚痴
     slot: strip
+  - ref: /contact
+    collection: page
+    catch: お問い合わせ・ご感想
+    slot: strip
 strips:
   - 定価 ¥0（なんでも見ていってください）
 colophon:
