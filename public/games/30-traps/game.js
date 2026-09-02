@@ -822,6 +822,12 @@
     if (!w) return;
     var bar = w.querySelector('.bar');
     var drag = null;
+
+    // ⚠️ iOS（Xのアプリ内ブラウザ含む）は touchmove を止めないと
+    //    スクロールやダブルタップ拡大が走って、掴んでも動かせない。
+    //    pointer events だけでは足りないので、touch も直接止める。
+    bar.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
+    bar.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
     var thresh = Math.max(48, Math.min(96, Math.round(desk.W * 0.2)));
 
     bar.addEventListener('pointerdown', function (e) {
@@ -1027,8 +1033,15 @@
      改行は NL でつなぐ。ここに '\n' を直接書くと編集時に実改行へ化ける事故があった。 */
   var NL = String.fromCharCode(10);
   function shareText(kind, ms) {
+    // ⚠️ **1行目に作品名を置く。** タイムとURLとタグだけだと、
+    //    共有された側から見て「乗っ取られた投稿」に見える（本人の指摘・2026-09-02）。
+    //    人がスコアを報告している形にしておく。
     var label = kind === 'rta' ? 'RTA' : kind === 'replay' ? '再走' : '初見';
-    return [label + ' ' + fmtJp(ms),
+    var line = kind === 'rta' ? 'タイムアタックしてきました。'
+             : kind === 'replay' ? '中身を知ってて、もう一回やりました。'
+             : 'まんまと釣られました。';
+    return ['30 TRAPS｜' + label + ' ' + fmtJp(ms),
+            line,
             '#怒られたら消えるサイト',
             location.origin + location.pathname].join(NL);
   }

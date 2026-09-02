@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>30 TRAPS</title>
 <meta name="description" content="ブロック崩しをクリアすると報酬が解放される、無料ブラウザゲーム。">
 <meta property="og:type" content="website">
@@ -272,7 +272,12 @@ h1.big{font-size:clamp(20px,4.2vw,30px);line-height:1.35;margin:.2em 0 .5em}
 /* ---------------- TRAP デスク ---------------- */
 #desk{
   position:fixed;inset:0;z-index:80;display:none;
-  background:var(--desk);overscroll-behavior:none;
+  background:var(--desk);
+  /* ⚠️ ここを緩めない。**Xのアプリ内ブラウザで、掴むたびに拡大されて動かせなくなる。**
+     touch-action:none でブラウザ側のスクロール・ピンチ・ダブルタップ拡大を全部止める */
+  touch-action:none;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
 }
 #desk.on{display:block}
 #deskHud{
@@ -335,6 +340,7 @@ h1.big{font-size:clamp(20px,4.2vw,30px);line-height:1.35;margin:.2em 0 .5em}
 .tw{
   position:absolute;left:0;top:0;border:2px outset var(--bevel-hi);background:var(--panel-2);
   box-shadow:0 8px 26px rgba(0,0,0,.55);will-change:transform;
+  touch-action:none;
 }
 .tw .bar{
   display:flex;align-items:center;gap:6px;padding:3px 4px;
@@ -347,6 +353,11 @@ h1.big{font-size:clamp(20px,4.2vw,30px);line-height:1.35;margin:.2em 0 .5em}
   background:repeating-linear-gradient(0deg,rgba(255,255,255,.85) 0 2px,transparent 2px 4px);
 }
 .tw.dragging .bar{cursor:grabbing}
+/* 指で操作するときは、掴める帯を厚くする。ここしか掴めないので細いと詰む */
+@media (pointer:coarse){
+  .tw .bar{padding:11px 6px;font-size:13px}
+  .tw .bar .x{width:26px;height:24px;font-size:13px}
+}
 .tw .bar .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tw .bar .x{
   width:18px;height:16px;border:2px outset var(--bevel-hi);background:var(--panel-2);
