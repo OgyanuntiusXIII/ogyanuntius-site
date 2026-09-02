@@ -100,17 +100,30 @@ async function ensure(db) {
  * `CONTACT_WEBHOOK` が設定されていなければ何も起きない。Discord のWebhook形式。
  */
 async function notify(env, rec) {
-  if (!env.CONTACT_WEBHOOK) return;
+  // 前後の空白を落とす。シークレットに改行が1つ混ざっただけで fetch が落ちる
+  const hook = String(env.CONTACT_WEBHOOK == null ? "" : env.CONTACT_WEBHOOK).trim();
+  if (!hook) {
+    // **黙って諦めない。** 未設定なのか失敗なのかを `wrangler pages deployment tail` で見分ける
+    console.log("contact: CONTACT_WEBHOOK が空。通知は飛ばさない");
+    return;
+  }
   const line =
     "お問い合わせが1件届いています。" +
     "\n種別: " + rec.topic + (rec.work ? " / 作品: " + rec.work : "") +
     "\n返信先: " + (rec.email ? "あり" : "なし") +
     "\n本文は `npm run inbox` で読んでください。";
-  await fetch(env.CONTACT_WEBHOOK, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ content: line }),
-  }).catch(() => {});
+  try {
+    const r = await fetch(hook, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: line }),
+    });
+    // **URLも本文もログに出さない。** 出るのは結果だけ
+    if (!r.ok) console.log("contact: 通知が拒否された status=" + r.status);
+    else console.log("contact: 通知を送った");
+  } catch (e) {
+    console.log("contact: 通知を送れなかった: " + (e && e.message));
+  }
 }
 
 async function post(request, env, waitUntil) {
@@ -167,8 +180,11 @@ async function post(request, env, waitUntil) {
       "ON CONFLICT(k) DO UPDATE SET at = ?, n = n + 1"
   ).bind(rk, now, now).run();
 
-  // 通知は返事を待たせない。失敗しても受理は受理
+  // 通知は返事を待たせない。失敗しても受理は受理。
+  // ⚠️ **waitUntil が無い実行環境で通知ごと消えないようにする。**
+  //    以前は `if (waitUntil)` だけで、無ければ notify を1回も呼んでいなかった
   if (waitUntil) waitUntil(notify(env, rec));
+  else await notify(env, rec);
 
   return json({ ok: true });
 }
