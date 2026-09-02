@@ -142,7 +142,7 @@ async function notify(env, rec) {
   }
 }
 
-async function post(request, env, waitUntil) {
+async function post(request, env) {
   const raw = await request.json().catch(() => ({}));
 
   // --- 人ではないものを静かに落とす -------------------------------------
@@ -196,18 +196,19 @@ async function post(request, env, waitUntil) {
       "ON CONFLICT(k) DO UPDATE SET at = ?, n = n + 1"
   ).bind(rk, now, now).run();
 
-  // 通知は返事を待たせない。失敗しても受理は受理。
-  // ⚠️ **waitUntil が無い実行環境で通知ごと消えないようにする。**
-  //    以前は `if (waitUntil)` だけで、無ければ notify を1回も呼んでいなかった
-  if (waitUntil) waitUntil(notify(env, rec));
-  else await notify(env, rec);
+  // ⚠️ **通知は待ってから返す。`waitUntil` に載せない。**
+  //    2026-09-02、載せたら Discord にも届かず **D1 の ops にも1行も残らなかった。**
+  //    ＝ 応答を返したあとの処理が走っていない。数百ミリ秒を削るために
+  //    原因の分からない沈黙を抱えるのは、この用途では割に合わない。
+  //    送信者が待つのは通知1回ぶん（数百ms）。**戻すなら、まず ops に足跡が残ることを確かめてから。**
+  await notify(env, rec);
 
   return json({ ok: true });
 }
 
-export async function onRequest({ request, env, waitUntil }) {
+export async function onRequest({ request, env }) {
   try {
-    if (request.method === "POST") return await post(request, env, waitUntil);
+    if (request.method === "POST") return await post(request, env);
   } catch (e) {
     // 無料枠切れ・D1の一時障害など。**受理したふりをしない**
     return json({ error: "unavailable" }, 503);
