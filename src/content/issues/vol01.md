@@ -33,13 +33,11 @@ headlines:
     collection: works
     slot: side
     catch: キキ？キサキ？
-    badge: NEW
     no: 4
   - ref: parry-aria-bpm
     collection: works
     slot: side
     catch: アリアのケツで刻め！
-    badge: NEW
     no: 5
   - ref: ai-stance
     collection: works
@@ -49,7 +47,6 @@ headlines:
   - ref: 30-traps
     collection: works
     slot: side
-    catch: 怒られたら消す
     badge: NEW
     no: 7
   - ref: /about

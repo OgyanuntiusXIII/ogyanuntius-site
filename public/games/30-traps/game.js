@@ -1092,16 +1092,19 @@
     $('#siteHead .logo').addEventListener('click', tapRta);
   }
 
-  /* ---- 経過時間。釣り画像を押した瞬間から、全部の画面の上に出し続ける ----
-     初見でもRTAでも出す（本人の指示・2026-09-02「初見の計測時もそれで揃えとこうか」）。
-     見えている状態でそれでも進むところまでが、この作品の中身。 */
+  /* ---- RTAモードのタイマー。釣り画像を押した瞬間から画面上部に出る ----
+     **初見では出さない**（本人の指示・2026-09-02「RTAモードにしない限りは出さないで」）。
+     初回は最後まで時間を見せない。それがこの作品のオチだから。 */
   var clockRaf = 0;
   function startClock() {
     var el = $('#clock');
+    // **初見では出さない。** 最後まで時間を見せないのが初回の作り
+    // （本人の指示・2026-09-02「RTAモードにしない限りは出さないで」）
+    if (state.mode !== 'rta') { el.hidden = true; return; }
     el.hidden = false;
     el.classList.remove('stopped', 'ready');
     el.classList.toggle('rta', state.mode === 'rta');
-    $('#clockLabel').textContent = state.mode === 'rta' ? 'RTA' : '経過時間';
+    $('#clockLabel').textContent = 'RTA';
     (function tick() {
       $('#clockTime').textContent = fmtJp(performance.now() - state.t0);
       clockRaf = requestAnimationFrame(tick);
@@ -1109,7 +1112,7 @@
   }
   function stopClock() {
     cancelAnimationFrame(clockRaf);
-    if (!state.total) return;
+    if ($('#clock').hidden || !state.total) return;
     $('#clockTime').textContent = fmtJp(state.total);
     $('#clock').classList.add('stopped');
   }
@@ -1226,7 +1229,9 @@
   /* ---------------- 起動 ---------------- */
   function boot() {
     state.mode = decideMode();
-    renderAds(0);
+    // RTAモードで来た人には、開いた時点で0秒のタイマーを見せておく
+    if (state.mode === 'rta') previewClock();
+    renderAds();
     buildBoard();
     wireSweeper();
     wireResult();

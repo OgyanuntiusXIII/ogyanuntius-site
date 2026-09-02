@@ -6,12 +6,17 @@
 <title>30 TRAPS</title>
 <meta name="description" content="ブロック崩しをクリアすると報酬が解放される、無料ブラウザゲーム。">
 <meta property="og:type" content="website">
-<meta property="og:title" content="【無料】ブロック崩しをクリアすると報酬が解放されるやつ">
-<meta property="og:description" content="登録不要・ブラウザだけで遊べます。クリア報酬あり。">
+<meta property="og:title" content="怒られたらすぐ消えます">
+<meta property="og:description" content="登録不要、スマホでプレイ可。">
 <meta property="og:site_name" content="月刊OGYANUN">
 <meta property="og:image" content="https://ogyanuntiusxiii.com/games/30-traps/ogp.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:url" content="https://ogyanuntiusxiii.com/games/30-traps/">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="怒られたらすぐ消えます">
+<meta name="twitter:description" content="登録不要、スマホでプレイ可。">
+<meta name="twitter:image" content="https://ogyanuntiusxiii.com/games/30-traps/ogp.jpg">
 <style>
 :root{
   /* 作品の世界の色。2008年ごろの無料ゲームサイトの再現。
@@ -476,7 +481,7 @@ h1.big{font-size:clamp(20px,4.2vw,30px);line-height:1.35;margin:.2em 0 .5em}
   display:inline-block;background:var(--ink);color:var(--gold);
   font-family:var(--font-retro);font-weight:700;padding:1px 8px;margin:0 2px;
 }
-/* 経過時間。ページの上でもTRAPデスクの上でも、同じ場所に出続ける */
+/* RTAモードのタイマー。**初見では出さない。** ページの上でもTRAPデスクの上でも同じ場所 */
 #clock{
   position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:900;
   display:flex;align-items:baseline;gap:10px;
@@ -520,7 +525,7 @@ h1.big{font-size:clamp(20px,4.2vw,30px);line-height:1.35;margin:.2em 0 .5em}
 <body>
 
 <!-- 釣り画像を押した瞬間から動く。初見でもRTAでも出る -->
-<div id="clock" hidden aria-live="off"><span id="clockLabel">経過時間</span><b id="clockTime">0:00.0</b></div>
+<div id="clock" hidden aria-live="off"><span id="clockLabel">RTA</span><b id="clockTime">0:00.0</b></div>
 
 <div id="chrome">
   <header id="siteHead">
