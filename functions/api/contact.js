@@ -147,8 +147,10 @@ async function notify(env, rec) {
     // **URLも本文も記録しない。** 残すのは結果だけ
     await ops(env, r.ok ? "通知を送った" : "通知が拒否された status=" + r.status);
   } catch (e) {
-    // **失敗したときだけ形を添える。** 次に同じことが起きたとき、また往復しないため
-    await ops(env, "通知を送れなかった: " + (e && e.message) + " / " + shapeOf(env.CONTACT_WEBHOOK));
+    // ⚠️ **例外のメッセージをそのまま残さない。** `Invalid URL: <値>` のように
+    //    **シークレットの中身が混ざって D1 に残る**（2026-09-02 実際に残った）。
+    //    残すのは種類と、値の「形」だけ
+    await ops(env, "通知を送れなかった: " + (e && e.name ? e.name : "Error") + " / " + shapeOf(env.CONTACT_WEBHOOK));
   }
 }
 
