@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ココロのみそ汁</title>
+<meta name="description" content="指を1本ずつ動かしてハンドサインを作る。成功すると先生が海から具材を持ってくる。3つ集まったら全力でみそ汁を作れ。作らないと時間が尽きる。">
+<link rel="icon" href="/favicon.svg">
+<!-- Xやチャットにリンクを貼ったときに出る絵と文言。
+     X は webp のOGPを取りこぼすことがあるので jpg で置いている。 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="オギャヌンティウス十三世">
+<meta property="og:title" content="ココロのみそ汁">
+<meta property="og:description" content="指を動かせ。みそ汁を作れ。生き延びろ。">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/games/kokoro-misoshiru">
+<meta property="og:image" content="https://ogyanuntiusxiii.com/games/kokoro-misoshiru/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+/* =========================================================
+   『ココロのみそ汁』（HAND SIGN × MISOSHIRU）
+   素のHTML/CSS/JS 1枚。Astroのビルドを通らない（public/配下）。
+   消せば元通り。サイト本体には一切干渉しない。
+
+   色はサイト本体のトークン（DESIGN.md / global.css）と同じ値を写している。
+   ここは public/ なので global.css を読めない。値を変えるときは向こうも見る。
+   ========================================================= */
+
+:root{
+  --ink:#101010;
+  --ink-mid:#6a6a6a;
+  --paper:#ffffff;
+  --paper-2:#f4f2ed;
+  --accent:#e0301e;
+  --ok:#1a7f37;
+  --hair:#e2e2e2;
+  --font-jp:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP",system-ui,sans-serif;
+  --font-en:"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-jp);
+  -webkit-text-size-adjust:100%;
+  overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:manipulation;
+  user-select:none;-webkit-user-select:none;
+}
+button{font:inherit;color:inherit;}
+
+#app{
+  position:fixed;top:0;left:0;right:0;height:100%;
+  /* hud / bar / stage / pad / footer の5行。伸びるのは stage だけ */
+  display:grid;grid-template-rows:auto auto 1fr auto auto;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* --- 上段：残り時間・具材・杯数 --------------------------- */
+#hud{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:1em;padding:9px clamp(12px,4vw,40px);
+  font-family:var(--font-en);font-size:11px;letter-spacing:.18em;
+  border-bottom:1px solid var(--ink);
+  visibility:hidden;
+  padding-right:96px;   /* 右上の SOUND ボタンと杯数が重ならないように */
+}
+#hud.on{visibility:visible;}
+#time{font-size:17px;font-variant-numeric:tabular-nums;letter-spacing:.06em;flex:none;}
+#time.hot{color:var(--accent);}
+#bowls{white-space:nowrap;flex:none;}
+#bowls b{font-size:15px;}
+#hudMid{display:flex;gap:5px;align-items:center;min-width:0;overflow:hidden;}
+/* 具材名は「うにょうにょした何か」のように長いものが混ざる。
+   幅を切らないと、狭い画面で杯数が縦積みになって上段が崩れる（実測）。
+   全文はみそ汁フェーズの「〜のみそ汁」で出るので、ここは切ってよい。 */
+.gu{
+  font-family:var(--font-jp);font-size:10.5px;letter-spacing:0;
+  border:1px solid var(--ink);padding:.18em .5em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:9em;
+}
+.gu.empty{border-style:dashed;border-color:var(--hair);color:var(--hair);}
+@media (max-width:600px){ .gu{font-size:9.5px;padding:.14em .35em;max-width:4.6em;} }
+
+/* --- 残り時間バー ----------------------------------------- */
+#bar{height:7px;background:var(--paper-2);position:relative;overflow:hidden;}
+#barFill{position:absolute;inset:0;transform-origin:left center;background:var(--ink);}
+#barFill.hot{background:var(--accent);}
+#bar.off{visibility:hidden;}
+
+/* --- 中段 -------------------------------------------------- */
+.stage{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:clamp(10px,2.4vh,24px);padding:clamp(10px,3vw,32px);text-align:center;
+  min-height:0;position:relative;
+}
+
+/* タイトル */
+.kicker{
+  font-family:var(--font-en);font-size:11px;letter-spacing:.3em;
+  color:var(--accent);text-transform:uppercase;
+}
+h1{
+  margin:0;font-size:clamp(34px,10vw,78px);line-height:1;
+  letter-spacing:.02em;font-feature-settings:"palt" 1;
+}
+.lead{margin:0;font-size:clamp(13px,3.4vw,17px);line-height:1.95;max-width:34em;}
+.rule{font-size:12.5px;color:var(--ink-mid);letter-spacing:.06em;line-height:1.9;}
+.big{
+  border:none;background:var(--ink);color:var(--paper);
+  padding:.85em 2.6em;font-family:var(--font-en);
+  font-size:18px;letter-spacing:.28em;cursor:pointer;
+}
+.big:hover{background:var(--accent);}
+.best{font-family:var(--font-en);font-size:12px;letter-spacing:.14em;color:var(--ink-mid);}
+
+/* --- 手 ---------------------------------------------------- */
+/* 指は「短くなる」のではなく「手のひらの裏へ滑り落ちる」。
+   SVGのgeometry属性(y/height)へCSSトランジションを掛けるのはブラウザ差があるので、
+   transform: translateY() で動かしている。手のひらは指より後に描いて上へ被せる。 */
+/* SVGは viewBox で letterbox されるので、枠の大きさだけ決めれば中身は勝手に収まる。
+   height:100% / width:auto で組むと、枠の幅を無視して溢れる（実測で起きた）。 */
+.hand{display:block;width:100%;height:100%;}
+.hand .fg{transition:transform 90ms cubic-bezier(.2,.8,.2,1);}
+.hand .fg.down{transform:translateY(var(--d));}
+
+/* お題は塗りつぶしのシルエット。ただし白の縁を入れないと、
+   折った指が手のひらへ溶けて「何本折れているか」が読めない（実測）。 */
+.hand.target rect{fill:var(--ink);stroke:var(--paper);stroke-width:4;stroke-linejoin:round;}
+.hand.play rect{fill:var(--paper);stroke:var(--ink);stroke-width:3.5;stroke-linejoin:round;}
+.hand.play .fg.down rect{fill:var(--paper-2);}
+.hand.ok rect{fill:var(--accent);stroke:var(--accent);}
+
+#duo{
+  display:flex;align-items:stretch;justify-content:center;
+  gap:clamp(14px,4vw,52px);min-height:0;flex:1 1 auto;width:100%;
+}
+.slot{
+  display:flex;flex-direction:column;align-items:center;gap:6px;min-height:0;
+}
+/* 幅は割合で先に決める。auto にすると SVG が枠の外へはみ出して、
+   2つの手の間隔が計算と合わなくなる（実測：slotの幅が80pxしか無かった） */
+#slotT{flex:0 1 34%;}
+#slotP{flex:0 1 46%;}
+.slot .cap{
+  font-size:10px;letter-spacing:.2em;color:var(--ink-mid);
+  font-family:var(--font-en);text-transform:uppercase;white-space:nowrap;
+}
+.slot .cap em{font-style:normal;font-family:var(--font-jp);letter-spacing:.08em;}
+.slot .box{
+  min-height:0;flex:1 1 auto;width:100%;
+  display:flex;align-items:center;justify-content:center;
+}
+/* お題側だけ枠の高さの上限を下げると、**上に寄って2つの手の高さがずれる**（実測）。
+   枠は同じ高さのまま中央寄せにして、小ささは SVG の height で作る。 */
+#slotT .box > .hand{height:76%;}
+
+@media (max-width:600px){
+  #duo{gap:8px;}
+  #slotT{flex:0 1 42%;}
+  #slotP{flex:0 1 54%;}
+  /* ココロが入ると3列になる。狭い画面ではココロを細くして手の幅を守る */
+  #slotK{flex:0 1 20%;}
+  #duo.withK #slotT{flex-basis:36%;}
+  #duo.withK #slotP{flex-basis:44%;}
+  #sensei{height:34%;max-width:40%;}
+}
+
+/* --- 絵の枠（img/ に画像があるときだけ出る） ---------------- */
+#slotK{flex:0 1 22%;}
+#duo.withK #slotT{flex-basis:27%;}
+#duo.withK #slotP{flex-basis:37%;}
+.art{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;}
+
+/* 先生。具材を取ってきた瞬間だけ右下から出て、勝手に引っ込む */
+#sensei{
+  position:absolute;right:1%;bottom:0;height:46%;max-width:34%;
+  object-fit:contain;object-position:right bottom;
+  opacity:0;pointer-events:none;
+}
+#sensei.show{animation:senseiIn .78s ease-out forwards;}
+@keyframes senseiIn{
+  0%{opacity:0;transform:translateY(26px);}
+  18%{opacity:1;transform:translateY(0);}
+  68%{opacity:1;transform:translateY(0);}
+  100%{opacity:0;transform:translateY(12px);}
+}
+
+/* みそ汁。フェーズのあいだ出しっぱなしで、完成した瞬間だけ跳ねる */
+#misoArt{
+  display:block;height:clamp(64px,16vh,165px);width:auto;max-width:60%;
+  object-fit:contain;
+}
+#misoArt.done{animation:bowlPop .5s cubic-bezier(.2,1.5,.4,1);}
+@keyframes bowlPop{
+  0%{transform:scale(1);}
+  40%{transform:scale(1.2) rotate(-4deg);}
+  100%{transform:scale(1);}
+}
+
+/* 成功・失敗の判定文字。
+   画面のど真ん中に大きく出すと**手そのものを覆ってしまう**（実測）。
+   見るべきものは手なので、判定は下に小さく置く。 */
+#judge{
+  position:absolute;left:50%;bottom:1%;transform:translateX(-50%);
+  font-family:var(--font-jp);font-size:clamp(19px,4.2vw,36px);letter-spacing:.04em;
+  pointer-events:none;opacity:0;white-space:nowrap;
+}
+#judge.show{animation:pop .42s ease-out forwards;}
+#judge.ng{color:var(--accent);}
+#judge.go{color:var(--ok);}
+@keyframes pop{
+  0%{opacity:0;transform:translateX(-50%) scale(.82);}
+  18%{opacity:1;transform:translateX(-50%) scale(1.04);}
+  70%{opacity:1;}
+  100%{opacity:0;transform:translateX(-50%) scale(1);}
+}
+.shake{animation:shake .16s;}
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-7px);}
+  75%{transform:translateX(7px);}
+}
+
+/* --- みそ汁フェーズ ---------------------------------------- */
+#misoWrap{display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2.6vh,22px);width:100%;}
+#chance{
+  font-family:var(--font-en);font-size:clamp(26px,8vw,64px);letter-spacing:.08em;
+  color:var(--accent);line-height:1;
+}
+#bowlNo{font-size:12px;letter-spacing:.2em;color:var(--ink-mid);font-family:var(--font-en);}
+#recipe{font-size:13px;color:var(--ink-mid);letter-spacing:.04em;}
+
+/* 矢印の列。現在地が真ん中に来るように帯ごと動かす */
+#strip{
+  width:100%;overflow:hidden;position:relative;
+  border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);
+  padding:clamp(8px,2vh,16px) 0;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);
+}
+#stripInner{
+  display:flex;gap:clamp(6px,1.6vw,14px);align-items:center;
+  transition:transform 90ms ease-out;will-change:transform;
+}
+.ar{
+  flex:none;width:clamp(40px,9vw,58px);height:clamp(40px,9vw,58px);
+  display:grid;place-items:center;
+  border:2px solid var(--hair);color:var(--hair);
+  font-size:clamp(19px,4.6vw,30px);line-height:1;
+  transition:transform 90ms ease-out,color 90ms,border-color 90ms,background 90ms;
+}
+.ar.done{border-color:var(--ink);background:var(--ink);color:var(--paper);}
+.ar.now{border-color:var(--accent);color:var(--accent);transform:scale(1.26);}
+#qbar{width:min(560px,86%);height:7px;background:var(--paper-2);overflow:hidden;}
+#qbarFill{height:100%;transform-origin:left center;background:var(--accent);}
+
+/* --- 下段：キーの割り当て（そのまま画面ボタンにもなる） ---- */
+#pad{
+  display:none;border-top:1px solid var(--ink);
+  padding:8px clamp(8px,3vw,40px) 10px;
+  gap:6px;
+}
+#pad.on{display:block;}
+#padSign{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;max-width:520px;margin:0 auto;}
+#padSign button{
+  border:1px solid var(--ink);background:var(--paper);
+  padding:.5em 0;font-family:var(--font-en);font-size:16px;letter-spacing:.1em;cursor:pointer;
+}
+#padSign button:active,#padSign button.hit{background:var(--ink);color:var(--paper);}
+#padSign .nm{
+  font-family:var(--font-jp);font-size:10px;letter-spacing:.02em;
+  color:var(--ink-mid);text-align:center;padding-top:3px;
+}
+#padSign .lbl{
+  grid-column:1 / -1;font-size:9.5px;letter-spacing:.18em;color:var(--ink-mid);
+  font-family:var(--font-en);text-align:left;padding-bottom:1px;
+}
+#padMiso{display:none;grid-template-columns:repeat(3,64px);gap:5px;justify-content:center;}
+#padMiso button{
+  border:1px solid var(--ink);background:var(--paper);
+  padding:.5em 0;font-family:var(--font-en);font-size:15px;cursor:pointer;
+}
+#padMiso button:active,#padMiso button.hit{background:var(--accent);color:var(--paper);border-color:var(--accent);}
+#padMiso .sp{visibility:hidden;}
+#pad.miso #padSign{display:none;}
+#pad.miso #padMiso{display:grid;}
+
+/* --- 結果 -------------------------------------------------- */
+#res{display:flex;flex-direction:column;align-items:center;gap:clamp(8px,2vh,18px);}
+.bowlBig{font-size:clamp(46px,15vw,120px);line-height:1;letter-spacing:.01em;}
+.bowlBig small{font-size:.32em;letter-spacing:.1em;margin-left:.2em;}
+#stats{
+  display:grid;grid-template-columns:auto auto;gap:2px clamp(14px,4vw,30px);
+  font-size:13px;line-height:1.85;
+}
+#stats dt{color:var(--ink-mid);text-align:right;}
+#stats dd{margin:0;font-variant-numeric:tabular-nums;text-align:left;}
+.mini{
+  display:inline-block;border:1px solid var(--ink);padding:.5em 1.4em;
+  font-size:13px;letter-spacing:.1em;text-decoration:none;color:inherit;cursor:pointer;
+  background:var(--paper);
+}
+.mini:hover{background:var(--ink);color:var(--paper);}
+#note{font-size:11px;color:var(--ink-mid);min-height:1.4em;}
+
+/* --- 一時停止 ---------------------------------------------- */
+#pause{
+  position:fixed;inset:0;background:rgba(255,255,255,.94);
+  display:none;place-items:center;text-align:center;z-index:20;
+  font-size:14px;letter-spacing:.1em;line-height:2;
+}
+#pause.on{display:grid;}
+
+/* --- 音 ---------------------------------------------------- */
+#snd{position:fixed;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:10;display:flex;gap:6px;align-items:center;}
+#mute{
+  border:1px solid var(--hair);background:var(--paper);color:var(--ink-mid);
+  font-family:var(--font-en);font-size:10px;letter-spacing:.14em;padding:.34em .6em;cursor:pointer;
+}
+#mute.off{color:var(--hair);}
+
+footer{
+  padding:7px clamp(12px,4vw,40px) 11px;
+  font-size:10.5px;line-height:1.7;color:var(--ink-mid);text-align:center;
+}
+footer a{color:inherit;}
+/* サイトへの戻り線。素のHTMLで置いているので、これが無いとゲームから出られない */
+#back{
+  display:inline-block;margin-bottom:6px;
+  font-size:11.5px;letter-spacing:.08em;color:var(--ink);
+  text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;
+}
+#back:hover{color:var(--accent);}
+
+@media (prefers-reduced-motion:reduce){
+  .hand .fg,#stripInner,.ar{transition:none;}
+  #judge.show{animation-duration:.01s;}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div id="snd"><button id="mute" type="button" aria-label="音を消す">SOUND</button></div>
+
+  <div id="hud">
+    <span id="time">20.00</span>
+    <span id="hudMid"></span>
+    <span id="bowls">みそ汁 <b>0</b></span>
+  </div>
+  <div id="bar" class="off"><div id="barFill"></div></div>
+
+  <main class="stage" id="stage"></main>
+
+  <div id="pad">
+    <div id="padSign"></div>
+    <div id="padMiso"></div>
+  </div>
+
+  <footer>
+    <a id="back" href="/">← オギャヌンティウス十三世</a><br>
+    『ブルーアーカイブ -Blue Archive-』の非公式ファンメイド作品であり、公式とは関係ありません。<br>
+    非営利のファンコンテンツです。
+  </footer>
+
+</div>
+
+<div id="pause"><div>一時停止中<br><span style="font-size:12px;color:var(--ink-mid)">画面をさわるか、なにかキーを押すと戻る</span></div></div>
+
+<script>
+(() => {
+"use strict";
+
+/* =========================================================================
+   0. 調整するところ（ここだけ触れば手触りが変わる）
+   ⚠️ 数字は机上の見積もりで置いた初期値。実際に遊んで詰める前提。
+   ========================================================================= */
+const T = {
+  /* 開始だけ上限より多い。最初の1サイクルぶんの余裕を渡すため。
+     上限（timeMax）は据え置きなので、**後半の難しさは変わらない**。 */
+  timeStart: 17000,      // 開始の持ち時間(ms)
+  timeMax:   14000,      // 貯められる上限。これが無いと後半が無限に太る
+  drainBase: 1.0,        // 減り方の倍率
+  drainPerBowl: 0.02,    // みそ汁1杯ごとに減りが速くなる
+  drainMax:  1.7,
+
+  /* ハンドサインの制限時間。問題数 → ms。あいだは直線で結ぶ。
+     ⚠️ **最初の数問は「キーを探す時間」が要る。** ここを詰めると初見が即死して、
+        指とキーの対応を覚える前に終わる（企画書9節の「序盤：Qが小指で……」が成立しない）。 */
+  signGrace: [
+    { at: 0,  ms: 5000 },
+    { at: 4,  ms: 4200 },
+    { at: 10, ms: 3200 },
+    { at: 20, ms: 2200 },
+    { at: 34, ms: 1500 },
+    { at: 50, ms: 1000 },
+  ],
+
+  missPenalty: 400,      // 目標と逆向きに指を動かしたときに減る時間(ms)
+  flashMs: 260,          // 成功/失敗の表示
+
+  guPerBowl: 3,          // 具材いくつでみそ汁へ
+
+  qteLen0: 4,            // 1杯目の入力数
+  qteLenStep: 2,         // 1杯ごとに増える
+  qteLenMax: 24,
+  qtePer0: 500,          // 1入力あたりに与える時間(ms)
+  qtePerMin: 160,
+  qtePerStep: 13,        // 1杯ごとに短くなる
+  qteGrace: 950,         // 読み始めの猶予（1杯目でWASDを探す時間）
+  qteMiss: 250,          // QTEで打ち間違えたときに減るQTE時間
+
+  /* ⚠️ tick を大きくすると「23個まで入れて時間切れ」が成功とほぼ同じ回復になり、
+     完成させる意味が消える。**戻るのは完成したときだけ**にしておく。 */
+  tickPerInput: 110,     // QTEを1つ処理するごとに戻る時間(ms)
+  bowlBase: 3600,        // みそ汁完成のボーナス(ms)
+  bowlPerInput: 150,     // ＋入力数ぶん（timeMax があるので青天井にはならない）
+};
+
+/* 絵。`img/` に置くだけで出る。**コードを触る必要は無い。**
+     img/kokoro.png     ココロ。お題の手の左に立つ（縦長・透過PNG推奨）
+     img/sensei.png     先生。具材を取ってきた瞬間だけ右下に出る
+     img/misoshiru.png  みそ汁。みそ汁フェーズのあいだ出て、完成した瞬間に跳ねる
+   ファイルが無い項目は**枠ごと出ない**ので、1枚ずつ増やしていける。
+   ⚠️ 公式素材の流用・トレースは二次創作ガイドライン違反。自分で描いたものだけ置く。 */
+const ART = {
+  kokoro: "img/kokoro.png",
+  sensei: "img/sensei.png",
+  miso:   "img/misoshiru.png",
+};
+
+/* 存在確認は起動時に1回だけ。
+   ⚠️ 毎回 onerror で消す作りにすると、**その回だけ枠が出て消える**ちらつきが出る。 */
+const artOK = { kokoro: false, sensei: false, miso: false };
+Object.keys(ART).forEach((k) => {
+  if (!ART[k]) return;
+  const im = new Image();
+  im.onload = () => { artOK[k] = true; };
+  im.src = ART[k];
+});
+
+const PLAY_SLUG = "kokoro-misoshiru";
+const SHARE_URL = "https://ogyanuntiusxiii.com/games/kokoro-misoshiru";
+const BEST_KEY  = "kokoro-misoshiru:best";
+
+/* =========================================================================
+   1. 手のかたち
+   小指→薬指→中指→人差し指 の並びが、そのまま QA / WS / ED / RF に対応する。
+   左手を甲側から見ているので、画面の左から 小指・薬指・中指・人差し指・親指。
+   ========================================================================= */
+const FINGERS = ["小指","薬指","中指","人差し指"];
+const EXT_KEY = ["Q","W","E","R"];   // 伸ばす
+const BND_KEY = ["A","S","D","F"];   // 曲げる
+
+/* x=左端 / top=伸ばしたときの上端 / d=曲げたときに落とす量。
+   曲げても上端が y=104 に残るので、手のひら(top=118)から14だけ覗く。 */
+const FING = [
+  { x:40,  top:58, d:46 },
+  { x:68,  top:32, d:72 },
+  { x:96,  top:22, d:82 },
+  { x:124, top:36, d:68 },
+];
+
+function handSVG(kind){
+  let f = "";
+  for (let i = 0; i < 4; i++){
+    const g = FING[i];
+    f += '<g class="fg" data-i="' + i + '" style="--d:' + g.d + 'px">'
+       +   '<rect x="' + g.x + '" y="' + g.top + '" width="24" height="' + (140 - g.top) + '" rx="12"/>'
+       + '</g>';
+  }
+  return '<svg class="hand ' + kind + '" viewBox="0 0 200 250" aria-hidden="true">'
+       +   f
+       +   '<rect class="wrist" x="54" y="204" width="80" height="44" rx="12"/>'
+       +   '<rect class="palm"  x="36" y="118" width="116" height="96" rx="26"/>'
+       +   '<rect class="thumb" x="148" y="132" width="46" height="26" rx="13" transform="rotate(-24 148 145)"/>'
+       + '</svg>';
+}
+
+/* 手の状態を絵に反映する。1=伸ばす / 0=曲げる */
+function paint(svg, state){
+  if (!svg) return;
+  const gs = svg.querySelectorAll(".fg");
+  for (let i = 0; i < 4; i++) gs[i].classList.toggle("down", !state[i]);
+}
+
+/* =========================================================================
+   2. 具材
+   ========================================================================= */
+const GU_NORMAL = ["わかめ","あさり","豆腐","ねぎ","しじみ","昆布","油揚げ","なめこ","大根","えのき","岩のり","ほたて"];
+const GU_JOKE   = ["名前のわからない貝","うにょうにょした何か","たぶん海藻","やたら重い石","元気な魚","先生の靴"];
+
+/* =========================================================================
+   3. 小道具
+   ========================================================================= */
+const $ = (id) => document.getElementById(id);
+const stage = $("stage"), hud = $("hud"), bar = $("bar"), barFill = $("barFill"),
+      timeEl = $("time"), hudMid = $("hudMid"), bowlsEl = $("bowls").querySelector("b"),
+      pad = $("pad"), padSign = $("padSign"), padMiso = $("padMiso"), pauseEl = $("pause");
+
+const ri = (n) => Math.floor(Math.random() * (n + 1));          // 0..n
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+
+const fmtSec = (ms) => (Math.max(0, ms) / 1000).toFixed(2);
+const fmtRun = (ms) => {
+  ms = Math.max(0, ms);
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor(ms % 60000 / 1000);
+  const f = Math.floor(ms % 1000 / 100);
+  return m + ":" + String(s).padStart(2, "0") + "." + f;
+};
+
+/* --- 音（ファイルを持たない。WebAudioで鳴らすだけ） ------------------- */
+let actx = null, muted = false;
+function beep(freq, dur, type, gain){
+  if (muted) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || "square"; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain || 0.05, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + dur);
+  } catch (e) {}
+}
+const sfxMove = () => beep(520, .04, "square", .028);
+const sfxOk   = () => { beep(760, .07, "square", .05); setTimeout(() => beep(1140, .09, "square", .045), 55); };
+const sfxNg   = () => beep(150, .12, "sawtooth", .05);
+const sfxTick = () => beep(880, .035, "square", .035);
+const sfxBowl = () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .12, "triangle", .06), i * 70)); };
+const sfxDead = () => { [400, 320, 250, 180].forEach((f, i) => setTimeout(() => beep(f, .2, "sawtooth", .06), i * 110)); };
+
+$("mute").addEventListener("click", () => {
+  muted = !muted;
+  $("mute").classList.toggle("off", muted);
+  $("mute").textContent = muted ? "MUTED" : "SOUND";
+});
+
+/* =========================================================================
+   4. 状態
+   ========================================================================= */
+const S = {
+  phase: "title",   // title / count / sign / flash / misoIn / miso / misoOut / over
+  time: 0,          // 残り持ち時間(ms)
+  elapsed: 0,       // 生存時間(ms)
+  last: 0,
+  paused: false,
+
+  hand: [0,0,0,0],  // いまの手。フェーズをまたいで持ち越す
+  target: [1,1,1,1],
+  signLimit: 0, signLeft: 0,
+  signNo: 0,        // 出した問題数
+  signOk: 0, run: 0, runMax: 0,
+
+  gu: [],           // 集めた具材
+  bowls: 0,         // 作れたみそ汁
+
+  seq: [], qi: 0, qLimit: 0, qLeft: 0, qGained: 0,
+  wait: 0,          // 演出のための待ち(ms)
+  next: null,       // 待ちが明けたら呼ぶもの
+};
+
+let refs = {};      // 画面ごとのDOM参照
+
+/* =========================================================================
+   5. プレイ回数を数える
+   1プレイ＝1回。サイト側の /api/plays へ送る。
+   ⚠️ D1が繋がるまでは204が返るだけで、何も起きない（失敗しても無視する）。
+   連打で増えないよう、3秒以内の二度打ちは送らない。
+   ========================================================================= */
+let lastCount = 0;
+function countPlay(){
+  const now = Date.now();
+  if (now - lastCount < 3000) return;
+  lastCount = now;
+  try {
+    fetch("/api/plays?g=" + PLAY_SLUG, { method: "POST", keepalive: true }).catch(() => {});
+  } catch (e) {}
+}
+
+/* =========================================================================
+   6. 画面
+   ========================================================================= */
+function best(){
+  try { return JSON.parse(localStorage.getItem(BEST_KEY)) || null; } catch (e) { return null; }
+}
+function saveBest(r){
+  const b = best();
+  if (b && b.score >= r.score) return false;
+  try { localStorage.setItem(BEST_KEY, JSON.stringify(r)); } catch (e) {}
+  return true;
+}
+
+function keyTable(){
+  let h = '<div class="rule" style="display:grid;grid-template-columns:auto repeat(4,minmax(52px,1fr));gap:3px 8px;align-items:center;max-width:420px;margin:0 auto">';
+  h += '<span></span>' + FINGERS.map(n => '<span>' + n + '</span>').join("");
+  h += '<span style="text-align:right">伸ばす</span>'
+     + EXT_KEY.map(k => '<b style="font-family:var(--font-en);font-size:17px">' + k + '</b>').join("");
+  h += '<span style="text-align:right">曲げる</span>'
+     + BND_KEY.map(k => '<b style="font-family:var(--font-en);font-size:17px">' + k + '</b>').join("");
+  h += '</div>';
+  return h;
+}
+
+function showTitle(){
+  S.phase = "title";
+  hud.classList.remove("on"); bar.classList.add("off"); pad.classList.remove("on","miso");
+  const b = best();
+  stage.innerHTML =
+    '<div class="kicker">HAND SIGN &times; MISOSHIRU</div>'
+  + '<h1>ココロのみそ汁</h1>'
+  + '<p class="lead">ココロが出すハンドサインを、<b>指を1本ずつ動かして</b>作る。<br>'
+  + '成功すると先生が海から<b>みそ汁の具材</b>を持ってくる。<br>'
+  + '3つ集まったら、全力でみそ汁を作れ。<b>時間が戻る。</b></p>'
+  + keyTable()
+  + '<button class="big" id="go" type="button">START</button>'
+  + '<div class="rule">SPACE / ENTER でも始まる</div>'
+  + (b ? '<div class="best">BEST &nbsp;みそ汁 ' + b.bowls + '杯 &nbsp;/&nbsp; ' + b.score + ' pts</div>' : "");
+  $("go").addEventListener("click", startCount);
+}
+
+function startCount(){
+  S.phase = "count";
+  hud.classList.remove("on"); bar.classList.add("off"); pad.classList.remove("on","miso");
+  stage.innerHTML = '<div id="chance" style="color:var(--ink)">3</div>';
+  const el = $("chance");
+  let n = 3;
+  const iv = setInterval(() => {
+    n--;
+    if (n > 0) { el.textContent = n; beep(600, .06, "square", .04); }
+    else { clearInterval(iv); startRun(); }
+  }, 620);
+  beep(600, .06, "square", .04);
+}
+
+function startRun(){
+  countPlay();
+  S.time = T.timeStart; S.elapsed = 0;
+  S.hand = [0,0,0,0];
+  S.signNo = 0; S.signOk = 0; S.run = 0; S.runMax = 0;
+  S.gu = []; S.bowls = 0;
+  S.paused = false;
+
+  hud.classList.add("on"); bar.classList.remove("off");
+  bowlsEl.textContent = "0";
+  buildSignScreen();
+  nextSign();
+  S.last = performance.now();
+  requestAnimationFrame(loop);
+}
+
+/* --- ハンドサインの画面 ------------------------------------------------ */
+function buildSignScreen(){
+  pad.classList.add("on"); pad.classList.remove("miso");
+  stage.innerHTML =
+    '<div id="duo"' + (artOK.kokoro ? ' class="withK"' : '') + '>'
+  +   (artOK.kokoro
+        ? '<div class="slot" id="slotK"><div class="cap"><em>ココロ</em></div>'
+          + '<div class="box"><img class="art" src="' + ART.kokoro + '" alt=""></div></div>'
+        : "")
+  +   '<div class="slot" id="slotT"><div class="cap"><em>お題</em> &nbsp;KOKORO</div>'
+  +     '<div class="box">' + handSVG("target") + '</div></div>'
+  +   '<div class="slot" id="slotP"><div class="cap"><em>いまの手</em> &nbsp;YOU</div>'
+  +     '<div class="box">' + handSVG("play") + '</div></div>'
+  + '</div>'
+  + (artOK.sensei ? '<img id="sensei" src="' + ART.sensei + '" alt="">' : "")
+  + '<div id="judge"></div>';
+  refs = {
+    tgt: stage.querySelector(".hand.target"),
+    ply: stage.querySelector(".hand.play"),
+    judge: $("judge"),
+    duo: $("duo"),
+    sensei: $("sensei"),
+  };
+  paint(refs.ply, S.hand);
+  drawPadSign();
+  drawGu();
+}
+
+/* 同じ手のうち dist 本だけ違うものを目標にする。
+   「初期状態から変更する指の本数」がそのまま難易度（企画書 8節）。 */
+function distFor(n){
+  if (n < 5)  return 1;
+  if (n < 10) return 1 + ri(1);
+  if (n < 17) return 2 + ri(1);
+  if (n < 26) return 2 + ri(2);
+  return 3 + ri(1);
+}
+
+/* signGrace のアンカーのあいだを直線で結ぶ（キキキサキの猶予カーブと同じ作り） */
+function signLimitAt(n){
+  const g = T.signGrace;
+  if (n <= g[0].at) return g[0].ms;
+  for (let i = 1; i < g.length; i++){
+    if (n <= g[i].at){
+      const a = g[i - 1], b = g[i];
+      return a.ms + (b.ms - a.ms) * (n - a.at) / (b.at - a.at);
+    }
+  }
+  return g[g.length - 1].ms;
+}
+
+/* 出題しない形。並びは 小指・薬指・中指・人差し指。
+   "0010" ＝ 中指だけ立った形。**16通りの1つなので、放っておくと数十秒に一度は出る。**
+   スクショや動画に入ると意図しない意味になるので既定で外している。
+   出したいときはこの配列を空にする。 */
+const BAN_SIGNS = new Set(["0010"]);
+
+function pickTarget(cur, dist){
+  /* 4本ぶんのビットを総当たりする（最大15通り）。
+     ⚠️ 単純に「ランダムに dist 本ひっくり返して、禁止形なら引き直す」だと、
+        cur=1101 から dist=4 のように**候補が禁止形しか無い組み合わせ**で無限に回る。 */
+  for (let d = dist; d >= 1; d--){
+    const cands = [];
+    for (let m = 1; m < 16; m++){
+      let bits = 0;
+      for (let i = 0; i < 4; i++) if (m & (1 << i)) bits++;
+      if (bits !== d) continue;
+      const out = cur.map((v, i) => (m & (1 << i)) ? (v ? 0 : 1) : v);
+      if (!BAN_SIGNS.has(out.join(""))) cands.push(out);
+    }
+    if (cands.length) return pick(cands);
+  }
+  return cur.map(v => (v ? 0 : 1));   // ここへは来ない（保険）
+}
+
+function nextSign(){
+  S.phase = "sign";
+  S.target = pickTarget(S.hand, distFor(S.signNo));
+  S.signLimit = signLimitAt(S.signNo);
+  S.signLeft = S.signLimit;
+  S.signNo++;
+  paint(refs.tgt, S.target);
+  paint(refs.ply, S.hand);
+  refs.ply.classList.remove("ok");
+}
+
+function judge(text, cls){
+  const j = refs.judge; if (!j) return;
+  j.className = ""; void j.offsetWidth;
+  j.textContent = text; j.className = "show " + cls;
+}
+
+function signSuccess(){
+  S.signOk++; S.run++; if (S.run > S.runMax) S.runMax = S.run;
+  refs.ply.classList.add("ok");
+  sfxOk();
+  const g = (Math.random() < 0.18) ? pick(GU_JOKE) : pick(GU_NORMAL);
+  S.gu.push(g);
+  drawGu();
+  judge(g + " ＋1", "go");
+  if (refs.sensei){   // 先生が潜水先から取ってくる（企画書5節）
+    refs.sensei.classList.remove("show"); void refs.sensei.offsetWidth;
+    refs.sensei.classList.add("show");
+  }
+  hold(T.flashMs, () => {
+    if (S.gu.length >= T.guPerBowl) startMiso();
+    else nextSign();
+  });
+}
+
+function signFail(){
+  S.run = 0;
+  sfxNg();
+  judge("MISS", "ng");
+  hold(T.flashMs, nextSign);
+}
+
+/* 演出のあいだは時間を減らさない。ゲームの都合で作った間で殺さないため */
+function hold(ms, fn){ S.phase = "flash"; S.wait = ms; S.next = fn; }
+
+/* --- 具材の表示 -------------------------------------------------------- */
+function drawGu(){
+  let h = "";
+  for (let i = 0; i < T.guPerBowl; i++){
+    h += S.gu[i]
+      ? '<span class="gu">' + S.gu[i] + '</span>'
+      : '<span class="gu empty">具材</span>';
+  }
+  hudMid.innerHTML = h;
+}
+
+/* --- みそ汁フェーズ ---------------------------------------------------- */
+const ARROW = { "↑":"W", "←":"A", "↓":"S", "→":"D" };
+const ARROW_KEYS = Object.keys(ARROW);
+const DIRCODE = { KeyW:"↑", KeyA:"←", KeyS:"↓", KeyD:"→",
+                  ArrowUp:"↑", ArrowLeft:"←", ArrowDown:"↓", ArrowRight:"→" };
+
+function startMiso(){
+  S.phase = "misoIn";
+  const len = Math.min(T.qteLenMax, T.qteLen0 + T.qteLenStep * S.bowls);
+  const per = Math.max(T.qtePerMin, T.qtePer0 - T.qtePerStep * S.bowls);
+  S.seq = Array.from({ length: len }, () => pick(ARROW_KEYS));
+  S.qi = 0; S.qGained = 0;
+  S.qLimit = len * per + T.qteGrace;
+  S.qLeft = S.qLimit;
+
+  pad.classList.add("miso");
+  stage.innerHTML =
+    '<div id="misoWrap">'
+  +   '<div id="chance">MISOSHIRU CHANCE</div>'
+  +   '<div id="bowlNo">BOWL ' + (S.bowls + 1) + ' &nbsp;/&nbsp; ' + len + ' INPUTS</div>'
+  +   '<div id="recipe">' + S.gu.join("・") + ' のみそ汁</div>'
+  +   (artOK.miso ? '<img id="misoArt" src="' + ART.miso + '" alt="">' : "")
+  +   '<div id="strip"><div id="stripInner"></div></div>'
+  +   '<div id="qbar"><div id="qbarFill"></div></div>'
+  + '</div>'
+  + '<div id="judge"></div>';
+  refs = {
+    inner: $("stripInner"), qbar: $("qbarFill"), judge: $("judge"),
+    chance: $("chance"), duo: $("misoWrap"), misoArt: $("misoArt"),
+  };
+  refs.inner.innerHTML = S.seq.map(a => '<div class="ar">' + a + '</div>').join("");
+  drawStrip();
+  drawPadMiso();
+  sfxBowl();
+  S.wait = 620; S.next = () => { S.phase = "miso"; };
+}
+
+function drawStrip(){
+  const kids = refs.inner.children;
+  for (let i = 0; i < kids.length; i++){
+    kids[i].className = "ar" + (i < S.qi ? " done" : (i === S.qi ? " now" : ""));
+  }
+  // 現在地を帯の真ん中へ持ってくる
+  const cur = kids[S.qi] || kids[kids.length - 1];
+  if (cur){
+    const w = refs.inner.parentElement.clientWidth;
+    const x = cur.offsetLeft + cur.offsetWidth / 2;
+    refs.inner.style.transform = "translateX(" + (w / 2 - x) + "px)";
+  }
+}
+
+function misoInput(dir){
+  if (S.phase !== "miso") return;
+  if (dir === S.seq[S.qi]){
+    S.qi++;
+    S.qGained += T.tickPerInput;
+    S.time = Math.min(T.timeMax, S.time + T.tickPerInput);
+    sfxTick();
+    if (S.qi >= S.seq.length) endMiso(true);
+    else drawStrip();
+  } else {
+    S.qLeft -= T.qteMiss;
+    sfxNg();
+    refs.duo.classList.remove("shake"); void refs.duo.offsetWidth; refs.duo.classList.add("shake");
+  }
+}
+
+function endMiso(done){
+  S.phase = "misoOut";
+  if (done){
+    S.bowls++;
+    bowlsEl.textContent = String(S.bowls);
+    const bonus = T.bowlBase + T.bowlPerInput * S.seq.length;
+    S.time = Math.min(T.timeMax, S.time + bonus);
+    sfxBowl();
+    refs.chance.textContent = "みそ汁 完成";
+    refs.chance.style.color = "var(--ok)";
+    if (refs.misoArt) refs.misoArt.classList.add("done");
+    judge("+" + (bonus / 1000).toFixed(1) + "s", "go");
+  } else {
+    S.run = 0;
+    sfxNg();
+    refs.chance.textContent = "こぼした";
+    refs.chance.style.color = "var(--accent)";
+    judge(S.qGained ? "+" + (S.qGained / 1000).toFixed(1) + "s" : "±0", "ng");
+  }
+  drawStrip();
+  S.gu = [];
+  S.wait = 820;
+  S.next = () => { buildSignScreen(); nextSign(); };
+}
+
+/* --- 下段のキー表 ------------------------------------------------------ */
+function drawPadSign(){
+  let h = '<div class="lbl">EXTEND &nbsp;伸ばす</div>';
+  for (let i = 0; i < 4; i++) h += '<button type="button" data-code="Key' + EXT_KEY[i] + '">' + EXT_KEY[i] + '</button>';
+  h += '<div class="lbl" style="padding-top:4px">BEND &nbsp;曲げる</div>';
+  for (let i = 0; i < 4; i++) h += '<button type="button" data-code="Key' + BND_KEY[i] + '">' + BND_KEY[i] + '</button>';
+  for (let i = 0; i < 4; i++) h += '<div class="nm">' + FINGERS[i] + '</div>';
+  padSign.innerHTML = h;
+}
+function drawPadMiso(){
+  if (padMiso.dataset.built) return;
+  padMiso.dataset.built = "1";
+  padMiso.innerHTML =
+    '<button class="sp" type="button"></button>'
+  + '<button type="button" data-dir="↑">↑ W</button>'
+  + '<button class="sp" type="button"></button>'
+  + '<button type="button" data-dir="←">← A</button>'
+  + '<button type="button" data-dir="↓">↓ S</button>'
+  + '<button type="button" data-dir="→">→ D</button>';
+}
+
+/* =========================================================================
+   7. 入力
+   ========================================================================= */
+const SIGN_CODE = {
+  KeyQ:[0,1], KeyA:[0,0],
+  KeyW:[1,1], KeyS:[1,0],
+  KeyE:[2,1], KeyD:[2,0],
+  KeyR:[3,1], KeyF:[3,0],
+};
+
+function signInput(i, v){
+  if (S.phase !== "sign") return;
+  if (v !== S.target[i]){
+    /* 目標と逆へ動かしたら時間を削る。
+       これが無いと8つのキーを連打するだけで形が偶然そろってしまい、
+       「読んで指を動かす」という企画の芯（13節）が消える。 */
+    S.hand[i] = v;
+    S.time -= T.missPenalty;
+    paint(refs.ply, S.hand);
+    sfxNg();
+    refs.duo.classList.remove("shake"); void refs.duo.offsetWidth; refs.duo.classList.add("shake");
+    return;
+  }
+  const changed = S.hand[i] !== v;
+  S.hand[i] = v;
+  if (changed) { paint(refs.ply, S.hand); sfxMove(); }
+  if (S.hand.every((x, k) => x === S.target[k])) signSuccess();
+}
+
+function hitPad(sel){
+  const b = (S.phase === "miso" ? padMiso : padSign).querySelector(sel);
+  if (!b) return;
+  b.classList.add("hit");
+  setTimeout(() => b.classList.remove("hit"), 90);
+}
+
+window.addEventListener("keydown", (e) => {
+  if (e.repeat) return;
+
+  if (S.paused){ resume(); e.preventDefault(); return; }
+
+  if (S.phase === "title" || S.phase === "over"){
+    if (e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter"){
+      e.preventDefault(); startCount();
+    }
+    return;
+  }
+  if (S.phase === "sign" && SIGN_CODE[e.code]){
+    e.preventDefault();
+    hitPad('[data-code="' + e.code + '"]');
+    signInput(SIGN_CODE[e.code][0], SIGN_CODE[e.code][1]);
+    return;
+  }
+  if (S.phase === "miso" && DIRCODE[e.code]){
+    e.preventDefault();
+    hitPad('[data-dir="' + DIRCODE[e.code] + '"]');
+    misoInput(DIRCODE[e.code]);
+    return;
+  }
+  // 方向キーで画面を動かさない
+  if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
+});
+
+pad.addEventListener("pointerdown", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  e.preventDefault();
+  if (S.paused){ resume(); return; }
+  if (b.dataset.code && SIGN_CODE[b.dataset.code]){
+    signInput(SIGN_CODE[b.dataset.code][0], SIGN_CODE[b.dataset.code][1]);
+  } else if (b.dataset.dir){
+    misoInput(b.dataset.dir);
+  }
+});
+
+/* =========================================================================
+   8. 一時停止（タブを離れたら止める）
+   これが無いと、戻ってきた瞬間に離れていたぶんの時間が消えて即死する。
+   ========================================================================= */
+function pauseGame(){
+  if (S.paused) return;
+  if (S.phase !== "sign" && S.phase !== "flash" && S.phase !== "miso" && S.phase !== "misoIn" && S.phase !== "misoOut") return;
+  S.paused = true; pauseEl.classList.add("on");
+}
+function resume(){
+  if (!S.paused) return;
+  S.paused = false; pauseEl.classList.remove("on");
+  S.last = performance.now();
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) pauseGame(); });
+window.addEventListener("blur", pauseGame);
+pauseEl.addEventListener("pointerdown", (e) => { e.preventDefault(); resume(); });
+
+/* =========================================================================
+   9. 本体のループ
+   ========================================================================= */
+function drain(){
+  return Math.min(T.drainMax, T.drainBase + T.drainPerBowl * S.bowls);
+}
+
+function loop(now){
+  const raw = now - S.last;
+  S.last = now;
+  /* タブが裏に回ったときの飛びを潰す。visibilitychange より先に1フレーム来ることがある */
+  const dt = clamp(raw, 0, 60);
+
+  if (S.paused){ requestAnimationFrame(loop); return; }
+
+  if (S.phase === "flash" || S.phase === "misoIn" || S.phase === "misoOut"){
+    S.elapsed += dt;
+    S.wait -= dt;
+    if (S.wait <= 0){ const f = S.next; S.next = null; if (f) f(); }
+    paintHud();
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  if (S.phase === "sign" || S.phase === "miso"){
+    S.elapsed += dt;
+    S.time -= dt * drain();
+    if (S.time <= 0){ S.time = 0; paintHud(); gameOver(); return; }
+
+    if (S.phase === "sign"){
+      S.signLeft -= dt;
+      if (S.signLeft <= 0) signFail();
+    } else {
+      S.qLeft -= dt;
+      if (S.qLeft <= 0) endMiso(false);
+    }
+    paintHud();
+    requestAnimationFrame(loop);
+    return;
+  }
+}
+
+function paintHud(){
+  timeEl.textContent = fmtSec(S.time);
+  const hot = S.time < 5000;
+  timeEl.classList.toggle("hot", hot);
+  barFill.classList.toggle("hot", hot);
+  barFill.style.transform = "scaleX(" + clamp(S.time / T.timeMax, 0, 1) + ")";
+  if (S.phase === "miso" && refs.qbar){
+    refs.qbar.style.transform = "scaleX(" + clamp(S.qLeft / S.qLimit, 0, 1) + ")";
+  }
+}
+
+/* =========================================================================
+   10. 終わり
+   ========================================================================= */
+function gameOver(){
+  S.phase = "over";
+  sfxDead();
+  hud.classList.remove("on"); bar.classList.add("off"); pad.classList.remove("on","miso");
+
+  const score = S.bowls * 1000 + S.signOk * 100 + S.runMax * 50 + Math.floor(S.elapsed / 100);
+  const rec = { bowls: S.bowls, signOk: S.signOk, runMax: S.runMax, ms: S.elapsed, score: score };
+  const isBest = saveBest(rec);
+
+  const text =
+    "みそ汁 " + S.bowls + "杯\n"
+  + "ハンドサイン " + S.signOk + "回成功 ／ 生存 " + fmtRun(S.elapsed) + " ／ " + score + " pts\n"
+  + "『ココロのみそ汁』\n";
+  const share = "https://x.com/intent/post?text=" + encodeURIComponent(text) + "&url=" + encodeURIComponent(SHARE_URL);
+
+  stage.innerHTML =
+    '<div id="res">'
+  +   '<div class="kicker">TIME UP</div>'
+  +   '<div class="bowlBig">みそ汁 ' + S.bowls + '<small>杯</small></div>'
+  +   (isBest ? '<div class="kicker">NEW BEST</div>' : "")
+  +   '<dl id="stats">'
+  +     '<dt>生存時間</dt><dd>' + fmtRun(S.elapsed) + '</dd>'
+  +     '<dt>ハンドサイン成功</dt><dd>' + S.signOk + ' 回</dd>'
+  +     '<dt>最大連続成功</dt><dd>' + S.runMax + ' 回</dd>'
+  +     '<dt>スコア</dt><dd>' + score + ' pts</dd>'
+  +   '</dl>'
+  +   '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">'
+  +     '<button class="mini" id="again" type="button">もう一度</button>'
+  +     '<a class="mini" href="' + share + '" target="_blank" rel="noopener">結果をXに投稿</a>'
+  +   '</div>'
+  +   '<div id="note">SPACE / ENTER でもう一度</div>'
+  + '</div>';
+  $("again").addEventListener("click", startCount);
+}
+
+/* =========================================================================
+   11. 起動
+   ========================================================================= */
+showTitle();
+
+})();
+</script>
+</body>
+</html>

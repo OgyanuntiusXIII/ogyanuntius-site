@@ -19,7 +19,7 @@
  *    日をまたげば元の回線とは結びつかなくなる（nazo.js / contact.js と同じ考え方）。
  */
 
-const KEY = "30-traps";
+const KEY = "okoraretarakesu";
 
 /** 1回で足せる上限。3時間。タブを放置した人の分はここで頭打ちにする */
 const MAX_MS = 3 * 60 * 60 * 1000;

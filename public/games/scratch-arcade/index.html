@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SCRATCH ARCADE</title>
+<meta name="description" content="ジョグをまわす音ゲー。遊んでいたら、スクラッチできるようになっていた。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B0730; --plum:#2A0B45; --deep:#12041F;
+  --pink:#FF3D8B; --pink2:#FF8FC4; --cyan:#35E8FF;
+  --lemon:#FFE45E; --lilac:#B48CFF; --mint:#7CF5C4;
+  --paper:#FFF4FA;
+  --disp:Anton,Impact,"Arial Black",sans-serif;
+  --jp:"Zen Maru Gothic","Yu Gothic UI","Hiragino Maru Gothic ProN",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--deep);color:var(--ink);
+  font-family:var(--jp);font-weight:500;-webkit-font-smoothing:antialiased;
+  user-select:none;cursor:default}
+canvas#cv{display:block;position:fixed;inset:0}
+
+/* ---------- 粒子・網点・縁 ---------- */
+#grain{position:fixed;inset:-60%;z-index:60;pointer-events:none;opacity:.13;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:gr 1.1s steps(5) infinite}
+@keyframes gr{
+  0%{transform:translate(0,0)} 20%{transform:translate(-3%,2%)} 40%{transform:translate(2%,-3%)}
+  60%{transform:translate(-2%,-2%)} 80%{transform:translate(3%,1%)} 100%{transform:translate(0,0)}}
+
+#vrail{position:fixed;right:13px;top:0;bottom:26px;z-index:12;display:flex;
+  align-items:center;justify-content:center;
+  writing-mode:vertical-rl;font:700 11px/1 var(--jp);letter-spacing:.34em;
+  color:var(--ink);opacity:.4;pointer-events:none}
+#corner{position:fixed;left:16px;top:14px;z-index:12;font:400 12px/1 var(--disp);
+  letter-spacing:.16em;color:var(--ink);opacity:.5;pointer-events:none}
+
+#tick{position:fixed;left:0;right:0;bottom:0;height:26px;z-index:14;overflow:hidden;
+  background:var(--ink);display:flex;align-items:center;pointer-events:none}
+#tick .r{display:flex;white-space:nowrap;animation:tk 26s linear infinite}
+#tick span{font:700 11px/1 var(--jp);letter-spacing:.26em;color:var(--paper);padding-right:34px}
+#tick b{color:var(--pink2);font-weight:700}
+@keyframes tk{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+body.playing #tick{background:transparent}
+body.playing #tick span{color:rgba(255,244,250,.30)}
+body.playing #corner{color:var(--paper);opacity:.3}
+body.playing #vrail{display:none}
+
+/* ---------- オーバーレイ ---------- */
+.ov{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;text-align:center;
+  padding:44px 26px 52px;overflow-y:auto}
+.ov.on{display:flex}
+
+h1#logo{font-family:var(--disp);font-weight:400;line-height:.80;letter-spacing:-.022em;
+  font-size:clamp(56px,13.5vw,168px);color:var(--ink);position:relative}
+h1#logo .b{display:block}
+h1#logo .b2{color:var(--pink);margin-left:.06em;
+  text-shadow:6px 6px 0 var(--cyan),-2px -2px 0 rgba(255,255,255,.85)}
+#kana{font:700 12px/1 var(--jp);letter-spacing:.62em;color:var(--ink);opacity:.55;margin-top:2px}
+
+.lead{max-width:560px;font:500 13.5px/2.05 var(--jp);color:var(--ink);opacity:.78}
+.lead b{font-weight:900}
+
+.stick{display:inline-block;background:var(--ink);color:var(--paper);
+  padding:6px 13px 7px;border-radius:5px;font:700 11px/1 var(--jp);letter-spacing:.2em;
+  transform:rotate(-2.6deg);box-shadow:3px 3px 0 rgba(27,7,48,.22)}
+.stick.p{background:var(--pink);transform:rotate(2.2deg)}
+.stick.c{background:var(--cyan);color:var(--ink);transform:rotate(-1.4deg)}
+
+h2.sec{font-family:Anton,"Zen Maru Gothic","Yu Gothic UI",sans-serif;font-weight:900;
+  font-size:clamp(30px,6vw,58px);letter-spacing:.01em;color:var(--ink);line-height:1.05}
+h2.sec em{font-style:normal;color:var(--pink)}
+
+/* ---------- ボタン ---------- */
+.btns{display:flex;gap:13px;flex-wrap:wrap;justify-content:center;max-width:840px}
+.btn{position:relative;cursor:pointer;background:var(--paper);color:var(--ink);
+  border:2.5px solid var(--ink);border-radius:999px;padding:13px 25px 15px;min-width:172px;
+  box-shadow:5px 5px 0 var(--ink);transform:rotate(-1deg);
+  transition:transform .13s cubic-bezier(.34,1.7,.5,1),box-shadow .13s,background .13s}
+.btn:nth-child(even){transform:rotate(1.2deg)}
+.btn:hover{transform:translate(-3px,-3px) rotate(-2.4deg);box-shadow:9px 9px 0 var(--pink)}
+.btn:nth-child(even):hover{transform:translate(-3px,-3px) rotate(2.6deg)}
+.btn .t{font:400 20px/1 var(--disp);letter-spacing:.01em}
+.btn .s{margin-top:5px;font:700 10.5px/1.55 var(--jp);opacity:.62;letter-spacing:.04em}
+.btn.go{background:var(--pink);color:var(--paper)}
+.btn.go .s{opacity:.85}
+.btn.go:hover{box-shadow:9px 9px 0 var(--cyan)}
+.btn.sm{min-width:118px;padding:9px 17px 11px}
+.btn.sm .t{font-size:15px}
+.btn.sm .s{font-size:9.5px;margin-top:3px}
+.btn.dis{opacity:.3;cursor:not-allowed;box-shadow:5px 5px 0 rgba(27,7,48,.35)}
+.btn.dis:hover{transform:rotate(-1deg);box-shadow:5px 5px 0 rgba(27,7,48,.35)}
+.btn.on{background:var(--cyan)}
+
+/* ---------- MIDI ---------- */
+#setup .card{width:min(860px,94vw);text-align:left;background:var(--paper);
+  border:2.5px solid var(--ink);border-radius:20px;padding:20px 24px 22px;
+  box-shadow:8px 8px 0 var(--lilac)}
+.row{display:flex;align-items:center;gap:14px;padding:9px 2px;border-bottom:2px dotted rgba(27,7,48,.2)}
+.row:last-child{border-bottom:0}
+.row .k{width:150px;font:400 15px/1 var(--disp);letter-spacing:.02em;color:var(--ink)}
+.row .v{flex:1;font:700 12px/1.4 var(--jp);color:rgba(27,7,48,.55)}
+.row .v b{color:var(--pink);font-weight:900}
+.meter{height:9px;flex:1;max-width:180px;background:rgba(27,7,48,.1);border-radius:9px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--pink);border-radius:9px}
+#mon{margin-top:12px;height:104px;overflow:hidden;background:var(--ink);border-radius:12px;
+  padding:9px 13px;font:400 11.5px/1.62 ui-monospace,Consolas,monospace;color:rgba(255,244,250,.5)}
+#mon .n{color:var(--cyan)}
+#learnMsg{min-height:20px;font:900 14px/1.5 var(--jp);letter-spacing:.05em;color:var(--pink)}
+
+/* ---------- チュートリアル ---------- */
+#tut .big{font-family:var(--disp);font-weight:400;font-size:clamp(42px,10vw,116px);
+  line-height:.86;letter-spacing:-.02em;color:var(--ink);
+  text-shadow:5px 5px 0 var(--cyan)}
+#tut .cnt{font:900 15px/1 var(--jp);letter-spacing:.16em;color:var(--pink);min-height:20px}
+.pips{display:flex;gap:9px}
+.pip{width:40px;height:8px;border-radius:8px;background:rgba(27,7,48,.16)}
+.pip.on{background:var(--pink)}
+
+/* ---------- リザルト ---------- */
+#res .rank{font-family:var(--disp);font-weight:400;font-size:clamp(84px,17vw,190px);
+  line-height:.8;letter-spacing:-.03em;color:var(--pink);
+  text-shadow:8px 8px 0 var(--cyan),-3px -3px 0 var(--paper)}
+#res .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;width:min(720px,94vw)}
+#res .cell{background:var(--paper);border:2.5px solid var(--ink);border-radius:14px;padding:11px 6px;
+  box-shadow:4px 4px 0 var(--ink)}
+#res .cell:nth-child(2n){box-shadow:4px 4px 0 var(--lilac)}
+#res .cell .n{font:400 27px/1 var(--disp);color:var(--ink)}
+#res .cell .l{margin-top:5px;font:700 9.5px/1 var(--jp);letter-spacing:.14em;opacity:.5}
+#res .verdict{max-width:600px;font:500 12.5px/2.1 var(--jp);color:var(--ink);opacity:.8;
+  background:var(--paper);border:2.5px dashed var(--ink);border-radius:16px;padding:14px 20px}
+#res .verdict b{font-weight:900;color:var(--pink)}
+
+@media (max-width:760px){
+  .ov{gap:12px;padding:34px 16px 46px}
+  #res .grid{grid-template-columns:repeat(2,1fr)}
+  #vrail{display:none}
+  .row .k{width:104px;font-size:13px}
+}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="corner">SCRATCH ARCADE / TRACK 01</div>
+<div id="vrail">ジョグをまわす音ゲー</div>
+
+<!-- ================= TITLE ================= -->
+<div class="ov on" id="title">
+  <span class="stick p">PLAY THE TURNTABLE</span>
+  <h1 id="logo"><span class="b">SCRATCH</span><span class="b b2">ARCADE</span></h1>
+  <div id="kana">スクラッチ・アーケード</div>
+  <p class="lead">ジョグとクロスフェーダーで譜面を演奏する。<br>
+    要求されるのは架空のゲーム操作じゃなくて、<b>実在するスクラッチ技そのもの</b>。</p>
+  <div id="conn"><span class="stick c" id="connTxt">MIDI さがしてる</span></div>
+  <div class="btns">
+    <div class="btn go" data-go="tut"><div class="t">START</div><div class="s">30秒でスクラッチできる</div></div>
+    <div class="btn" data-go="modes"><div class="t">SELECT</div><div class="s">説明はいらない</div></div>
+    <div class="btn" data-go="setup"><div class="t">MIDI</div><div class="s">機材を覚えさせる</div></div>
+  </div>
+  <p class="lead" style="font-size:11.5px;opacity:.55">
+    キーボードでも遊べる　<b>F</b> 左ジョグ前 ／ <b>D</b> 左ジョグ後 ／ <b>J K</b> 右ジョグ ／ <b>SPACE</b> フェーダーを切る</p>
+</div>
+
+<!-- ================= MIDI ================= -->
+<div class="ov" id="setup">
+  <span class="stick">SETUP</span>
+  <h2 class="sec">つなぐ<em>。</em></h2>
+  <div class="card">
+    <div class="row"><div class="k">DEVICE</div><div class="v" id="sDev">—</div></div>
+    <div class="row"><div class="k">JOG L</div><div class="v" id="sJogL">未割当</div><div class="meter"><i id="mJogL"></i></div></div>
+    <div class="row"><div class="k">JOG R</div><div class="v" id="sJogR">未割当</div><div class="meter"><i id="mJogR"></i></div></div>
+    <div class="row"><div class="k">FADER</div><div class="v" id="sFader">未割当</div><div class="meter"><i id="mFader"></i></div></div>
+    <div id="mon"></div>
+  </div>
+  <div id="learnMsg"></div>
+  <div class="btns">
+    <div class="btn sm" data-learn="jogL"><div class="t">JOG L</div><div class="s">回して覚えさせる</div></div>
+    <div class="btn sm" data-learn="jogR"><div class="t">JOG R</div><div class="s">回して覚えさせる</div></div>
+    <div class="btn sm" data-learn="fader"><div class="t">FADER</div><div class="s">左右に振る</div></div>
+    <div class="btn sm" data-go="title"><div class="t">BACK</div><div class="s">自動で保存される</div></div>
+  </div>
+  <p class="lead" style="font-size:11.5px">既定値は Pioneer DDJ 系の<b>推定</b>で、実機で検証していない。<br>
+    反応しなければここで覚え直す。1回で端末に残る。</p>
+</div>
+
+<!-- ================= TUTORIAL ================= -->
+<div class="ov" id="tut">
+  <span class="stick p" id="tutTag">STEP 1 / 3</span>
+  <div class="big" id="tutBig">TOUCH THE JOG</div>
+  <p class="lead" id="tutSub">左のジョグホイールを、前へ擦る。</p>
+  <div class="pips"><div class="pip" id="p1"></div><div class="pip" id="p2"></div><div class="pip" id="p3"></div></div>
+  <div class="cnt" id="tutCnt"></div>
+  <div class="btns"><div class="btn sm" data-go="modes"><div class="t">SKIP</div><div class="s">もう分かってる</div></div></div>
+</div>
+
+<!-- ================= MODES ================= -->
+<div class="ov" id="modes">
+  <span class="stick c">MODE SELECT</span>
+  <h2 class="sec">なにを、まわす<em>？</em></h2>
+  <div class="btns">
+    <div class="btn go" data-mode="rhythm"><div class="t">RHYTHM</div>
+      <div class="s">まだ、まわしてる<br>150 BPM ／ 約1分35秒</div></div>
+    <div class="btn" data-mode="training"><div class="t">TRAINING</div>
+      <div class="s">技をひとつ、繰り返す<br>成功すると速くなる</div></div>
+  </div>
+  <div class="btns" id="trainPick" style="display:none">
+    <div class="btn sm" data-train="BABY"><div class="t">BABY</div><div class="s">前と後ろを交互に</div></div>
+    <div class="btn sm" data-train="FORWARD"><div class="t">FWD</div><div class="s">前に押す</div></div>
+    <div class="btn sm" data-train="BACKWARD"><div class="t">BACK</div><div class="s">手前に引く</div></div>
+    <div class="btn sm" data-train="CHIRP"><div class="t">CHIRP</div><div class="s">押して、切る</div></div>
+  </div>
+  <div class="btns">
+    <div class="btn dis"><div class="t">BATTLE</div><div class="s">PHASE 3</div></div>
+    <div class="btn dis"><div class="t">ENDLESS</div><div class="s">PHASE 2</div></div>
+    <div class="btn dis"><div class="t">FREESTYLE</div><div class="s">PHASE 6</div></div>
+  </div>
+  <span class="stick" style="margin-top:4px">SCRATCH VOICE ／ 全部その場で合成している</span>
+  <div class="btns" id="voicePick">
+    <div class="btn sm on" data-voice="AH"><div class="t">AH</div><div class="s">標準</div></div>
+    <div class="btn sm" data-voice="YEAH"><div class="t">YEAH</div><div class="s">二重母音</div></div>
+    <div class="btn sm" data-voice="HEY"><div class="t">HEY</div><div class="s">息おおめ</div></div>
+  </div>
+  <div class="btns">
+    <div class="btn sm" data-go="setup"><div class="t">MIDI</div><div class="s">&nbsp;</div></div>
+    <div class="btn sm" data-go="title"><div class="t">TOP</div><div class="s">&nbsp;</div></div>
+  </div>
+</div>
+
+<!-- ================= RESULT ================= -->
+<div class="ov" id="res">
+  <span class="stick p" id="resTag">RESULT</span>
+  <div class="rank" id="resRank">S</div>
+  <div class="grid">
+    <div class="cell"><div class="n" id="rScore">0</div><div class="l">SCORE</div></div>
+    <div class="cell"><div class="n" id="rCombo">0</div><div class="l">MAX COMBO</div></div>
+    <div class="cell"><div class="n" id="rAcc">0%</div><div class="l">ACCURACY</div></div>
+    <div class="cell"><div class="n" id="rBpm">150</div><div class="l">BPM</div></div>
+  </div>
+  <div class="grid">
+    <div class="cell"><div class="n" id="rP">0</div><div class="l">PERFECT</div></div>
+    <div class="cell"><div class="n" id="rG">0</div><div class="l">GOOD</div></div>
+    <div class="cell"><div class="n" id="rL">0</div><div class="l">WRONG</div></div>
+    <div class="cell"><div class="n" id="rM">0</div><div class="l">MISS</div></div>
+  </div>
+  <div class="verdict" id="rVerdict"></div>
+  <div class="btns">
+    <div class="btn go" data-retry="1"><div class="t">RETRY</div><div class="s">もう一回</div></div>
+    <div class="btn" data-go="modes"><div class="t">SELECT</div><div class="s">&nbsp;</div></div>
+  </div>
+</div>
+
+<div id="tick"><div class="r" id="tickR"></div></div>
+<div id="grain"></div>
+
+<script src="game.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

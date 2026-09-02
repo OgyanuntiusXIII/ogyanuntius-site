@@ -1,0 +1,2416 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>777コンボ</title>
+<meta name="description" content="777を揃えた、その次から始まる。1つだけ回り直すリールを7で止め続ける目押しゲーム。21コマ・毎分80回転、実機準拠。">
+<link rel="icon" href="/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="オギャヌンティウス十三世">
+<meta property="og:title" content="777コンボ">
+<meta property="og:description" content="777を、揃え続けろ。揃うたびに1つだけリールが回り直す。7で止め続けるだけのゲーム。">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/games/777-combo">
+<!-- og:image は ogp.jpg を置いてから書く。無いパスを先に書かない -->
+<meta name="twitter:card" content="summary_large_image">
+<style>
+/* =========================================================
+   『777コンボ』
+   素のHTML/CSS/JS 1枚。Astroのビルドを通らない（public/配下）。
+   消せば元通り。サイト本体には一切干渉しない。
+
+   画像も音源も同梱していない。
+   ・絵柄は 16x16 のドット絵を配列で持ち、その場でスプライトへ焼く
+   ・筐体・ランプ・7セグはその場で図形を描く
+   ・音は WebAudio でその場で作る（矩形波・三角波・ノイズ）
+
+   リールは実機に合わせて **21コマ / 毎分80回転（＝28コマ秒）**。
+   ドラムは円筒として投影しているので、窓の上下でコマが縮む。
+   ========================================================= */
+
+:root{
+  --bg:#0b0b0c;
+  --ink:#f4f1ea;
+  --ink-mid:#8c8c93;
+  --red:#e0301e;        /* 赤7。キキ？キサキ？と同じ赤 */
+  --gold:#ffc21a;
+  --font-jp:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP",system-ui,sans-serif;
+  --font-en:"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  overscroll-behavior:none;touch-action:manipulation;
+  font-family:var(--font-jp);
+  -webkit-text-size-adjust:100%;
+  overflow:hidden;
+  user-select:none;-webkit-user-select:none;
+}
+#stage{position:fixed;inset:0;height:100vh;height:100dvh;}
+canvas{display:block;width:100%;height:100%;touch-action:none;}
+
+/* --- 右上の音量だけDOM。数字は筐体の7セグに出す ---------------------- */
+#hud{
+  position:absolute;right:0;top:0;padding:.7rem 1rem;
+  display:flex;align-items:center;gap:.4rem;
+}
+.mute{
+  width:1.7rem;height:1.7rem;padding:0;border:none;border-radius:.25rem;
+  background:rgba(255,255,255,.08);color:var(--ink);
+  font-size:.85rem;line-height:1;cursor:pointer;
+}
+.mute.off{color:#4a4a50;background:rgba(255,255,255,.04);}
+#hud input[type=range]{
+  -webkit-appearance:none;appearance:none;width:74px;height:5px;border-radius:3px;
+  background:#2a2a2e;outline:none;
+}
+#hud input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:11px;height:11px;border-radius:50%;
+  background:var(--gold);cursor:pointer;
+}
+#hud input[type=range]::-moz-range-thumb{
+  width:11px;height:11px;border:none;border-radius:50%;background:var(--gold);cursor:pointer;
+}
+
+/* --- 覆い（タイトル / 結果） --------------------------------------- */
+#veil{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:.9rem;
+  background:rgba(11,11,12,.95);text-align:center;padding:1.3rem;
+  transition:background .45s;overflow:auto;
+}
+#veil.hidden{display:none;}
+/* ミス直後だけは「無音のまま数字だけ」。筐体をうっすら残す */
+#veil.bare{background:rgba(11,11,12,.74);}
+#veil h1{
+  font-family:var(--font-en);font-weight:700;letter-spacing:-.02em;
+  font-size:clamp(3.2rem,15vw,7rem);line-height:.88;margin:0;
+  color:var(--red);text-shadow:0 0 34px rgba(224,48,30,.5);
+}
+#veil h1 span{display:block;font-family:var(--font-jp);font-size:.22em;letter-spacing:.5em;
+  color:var(--ink);text-shadow:none;margin-top:.6em;padding-left:.5em;}
+#veil p{margin:0;font-size:.95rem;line-height:1.9;color:var(--ink-mid);}
+#veil p strong{color:var(--ink);font-weight:600;}
+.big{
+  font-family:var(--font-en);font-weight:700;letter-spacing:-.04em;
+  font-size:clamp(4rem,21vw,9.5rem);line-height:.9;
+  font-variant-numeric:tabular-nums;
+  animation:pop .5s cubic-bezier(.2,1.5,.4,1);
+}
+.big small{font-size:.2em;font-weight:400;letter-spacing:.2em;color:var(--ink-mid);margin-left:.4em;}
+@keyframes pop{from{transform:scale(.86);opacity:0}to{transform:scale(1);opacity:1}}
+.fade{animation:fade .5s both;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.rule{
+  font-size:.9rem;line-height:2;color:var(--ink-mid);max-width:26rem;
+  border-top:1px solid #2b2b2f;border-bottom:1px solid #2b2b2f;padding:.9rem 0;
+}
+.rule b{color:var(--ink);font-weight:600;}
+.rule .seven{color:var(--red);font-weight:700;font-family:var(--font-en);}
+.hint{font-size:.82rem;line-height:1.9;color:#6e6e76;max-width:26rem;margin:0;}
+.hint b{color:var(--ink-mid);font-weight:600;}
+.keys{font-size:.82rem;color:#6e6e76;line-height:1.9;}
+.keys kbd{
+  font-family:var(--font-en);font-size:.9em;background:#232326;border:1px solid #3c3c42;
+  border-bottom-width:2px;border-radius:.25rem;padding:.1em .45em;color:var(--ink);
+}
+.row{display:flex;gap:.7rem;flex-wrap:wrap;justify-content:center;align-items:center;}
+#veil button:not(.mute), #veil .btn-x{
+  font-family:var(--font-jp);font-size:1rem;font-weight:600;
+  padding:.72rem 1.7rem;border:none;border-radius:999px;cursor:pointer;
+  background:var(--red);color:#fff;text-decoration:none;line-height:1;
+}
+#veil .btn-x{background:#1a1a1d;color:var(--ink);border:1px solid #3c3c42;}
+#veil button.link{
+  background:none;color:var(--ink-mid);border:none;font-size:.85rem;
+  text-decoration:underline;padding:.3rem;font-weight:400;
+}
+/* ランキング（この端末に残っているだけ。サーバーへは送らない） */
+.rank{
+  font-family:var(--font-en);font-size:.9rem;color:var(--ink-mid);
+  line-height:1.9;letter-spacing:.04em;
+}
+.rank b{color:var(--gold);font-weight:700;}
+
+#note{
+  position:absolute;left:0;top:0;padding:.85rem 1rem;
+  font-size:.75rem;color:#55555c;line-height:1.6;pointer-events:none;
+}
+#note a{color:#7d7d85;pointer-events:auto;text-decoration:none;}
+#note a:hover{color:var(--ink-mid);text-decoration:underline;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="hud">
+    <button class="mute" id="muteBtn" title="音">♪</button>
+    <input id="volRange" type="range" min="0" max="100" step="1" value="85" aria-label="音量">
+  </div>
+
+  <div id="veil">
+    <h1>777<span>コンボ</span></h1>
+    <p><strong>777を、揃え続けろ。</strong></p>
+    <div class="rule">
+      <span class="seven">777</span> を揃えよう。<br>
+      揃うたびに、<b>リールが1つ回る</b>。<b>7で止めよう</b>。
+    </div>
+    <p class="hint">
+      リールは <b>21コマ、毎分80回転</b>。<b>最大5コマ滑る</b>。<br>
+      <b>5秒以内に止めなければ、アウト。</b>1コンボごとに0.1秒短くなる。<br>
+      7の1つ手前は <b>BAR</b>。最初は<b>BARを狙う</b>のがオススメ。
+    </p>
+    <div class="row"><button id="startBtn">はじめる</button></div>
+    <div class="keys">
+      左 <kbd>F</kbd><kbd>A</kbd><kbd>←</kbd> ／
+      中 <kbd>G</kbd><kbd>S</kbd><kbd>↓</kbd> ／
+      右 <kbd>H</kbd><kbd>D</kbd><kbd>→</kbd><br>
+      スマホは<b>画面の左・中・右</b>を押す
+    </div>
+  </div>
+
+  <div id="note">
+    <a href="/">← オギャヌンティウス十三世</a>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   1. 絵柄 — 16x16 のドット絵
+   影とフチは機械で付ける（上が空なら明るく／下が空なら暗く／外周に黒フチ）。
+   手で3階調を打たなくても、ドット絵の見た目になる。
+   ========================================================================= */
+
+const PAL = {
+  R:"#e0301e",  // 赤7
+  Y:"#f5c518",  // ベル
+  G:"#2f8f43",  // 葉・軸
+  P:"#8a3fb0",  // ブドウ
+  W:"#f7f3ea",  // 白
+  K:"#17131b",  // 黒（BAR）
+  B:"#2f7fd2",  // 青（リプレイ）
+  O:"#e8703a",  // だいだい（ピエロの帽子）
+};
+const OUTLINE = "#14101a";
+
+const DOTS = {
+  seven:[
+    "................",
+    "..RRRRRRRRRRRR..",
+    "..RRRRRRRRRRRR..",
+    "..RRRRRRRRRRRR..",
+    "..RRRRRRRRRRRR..",
+    "...........RRR..",
+    "..........RRR...",
+    ".........RRR....",
+    "........RRRR....",
+    ".......RRRR.....",
+    "......RRRR......",
+    ".....RRRR.......",
+    ".....RRR........",
+    "....RRRR........",
+    "....RRR.........",
+    "................",
+  ],
+  bar:[
+    "................",
+    "................",
+    "................",
+    "................",
+    "KKKKKKKKKKKKKKKK",
+    "KKKKKKKKKKKKKKKK",
+    "KKWWKKKWKKWWKKKK",
+    "KKWKWKWKWKWKWKKK",
+    "KKWWKKWWWKWWKKKK",
+    "KKWKWKWKWKWKWKKK",
+    "KKWWKKWKWKWKWKKK",
+    "KKKKKKKKKKKKKKKK",
+    "KKKKKKKKKKKKKKKK",
+    "................",
+    "................",
+    "................",
+  ],
+  bell:[
+    "................",
+    ".......YY.......",
+    "......YYYY......",
+    ".....YYYYYY.....",
+    ".....YYYYYY.....",
+    "....YYYYYYYY....",
+    "....YYYYYYYY....",
+    "...YYYYYYYYYY...",
+    "...YYYYYYYYYY...",
+    "..YYYYYYYYYYYY..",
+    "..YYYYYYYYYYYY..",
+    ".YYYYYYYYYYYYYY.",
+    "YYYYYYYYYYYYYYYY",
+    "................",
+    "......YYYY......",
+    "................",
+  ],
+  cherry:[
+    "................",
+    "................",
+    ".......GG.......",
+    "......GG.G......",
+    ".....GG...G.....",
+    "....GG.....G....",
+    "...GG.......G...",
+    "..RRRR....RRRR..",
+    ".RRRRRR..RRRRRR.",
+    ".RRRRRR..RRRRRR.",
+    ".RRRRRR..RRRRRR.",
+    "..RRRR....RRRR..",
+    "................",
+    "................",
+    "................",
+    "................",
+  ],
+  grape:[
+    "................",
+    ".......GG.......",
+    "......GG........",
+    ".PPPP.PPPP.PPPP.",
+    ".PPPP.PPPP.PPPP.",
+    ".PPPP.PPPP.PPPP.",
+    "................",
+    "...PPPP.PPPP....",
+    "...PPPP.PPPP....",
+    "...PPPP.PPPP....",
+    "................",
+    "......PPPP......",
+    "......PPPP......",
+    "......PPPP......",
+    "................",
+    "................",
+  ],
+  replay:[
+    "................",
+    "................",
+    ".....BBBBBB.....",
+    "...BBBBBBBBBB...",
+    "..BBB......BBB..",
+    "..BB........BB..",
+    ".BB..........BB.",
+    ".BB..........BB.",
+    ".BB..........BB.",
+    "..BB........BB..",
+    "..BBB......BBB..",
+    "...BBBBBBBBBB...",
+    ".....BBBBBB.....",
+    "................",
+    "................",
+    "................",
+  ],
+  pierrot:[
+    "................",
+    "......OOOO......",
+    ".....OOOOOO.....",
+    "....OOOOOOOO....",
+    "...WWWWWWWWWW...",
+    "..WWWWWWWWWWWW..",
+    "..WWKKWWWWKKWW..",
+    "..WWKKWWWWKKWW..",
+    "..WWWWWRRWWWWW..",
+    "..WWWWWRRWWWWW..",
+    "..WWWKKKKKKWWW..",
+    "...WWWWWWWWWW...",
+    "....OOOOOOOO....",
+    "................",
+    "................",
+    "................",
+  ],
+};
+
+/* --- 色をいじる小道具 --------------------------------------------- */
+function hex2rgb(h){
+  return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+}
+function mix(h, to, k){
+  const a = hex2rgb(h), b = hex2rgb(to);
+  return "rgb(" + a.map((v,i) => Math.round(v + (b[i]-v)*k)).join(",") + ")";
+}
+const lighten = h => mix(h, "#ffffff", 0.40);
+const darken  = h => mix(h, "#1a1420", 0.42);
+
+/* レバー。これもドット絵。滑らかな図形は1つも使わない */
+const LEVER_DOTS = [
+  "....RRRR....",
+  "..RRRRRRRR..",
+  ".RRRRRRRRRR.",
+  ".RRRRRRRRRR.",
+  ".RRRRRRRRRR.",
+  ".RRRRRRRRRR.",
+  "..RRRRRRRR..",
+  "....RRRR....",
+  ".....SS.....",
+  ".....SS.....",
+  ".....SS.....",
+  ".....SS.....",
+  ".....SS.....",
+  ".....SS.....",
+  "....SSSS....",
+  "...SSSSSS...",
+  "..KKKKKKKK..",
+  ".KKKKKKKKKK.",
+  "KKKKKKKKKKKK",
+  "KKKKKKKKKKKK",
+];
+const LEVER_PAL = { R:"#e0301e", S:"#a8a8b0", K:"#2a2a2e" };
+
+/* --- ドット絵をスプライトへ焼く（毎フレーム打たない）---------------- */
+const SPR_PAD = 1;                     // フチのぶんの余白
+const SPR_N = 16 + SPR_PAD * 2;        // 18x18
+const SPRITES = {};                    // name -> canvas
+let LEVER_SPR = null, GLOW_SPR = null, GLOW_WIDE = null, GLOW_BAR = null;
+
+function bakeSprite(rows, px, pal){
+  const gw = rows[0].length, gh = rows.length;
+  const cv2 = document.createElement("canvas");
+  cv2.width = (gw + SPR_PAD*2) * px; cv2.height = (gh + SPR_PAD*2) * px;
+  const c = cv2.getContext("2d");
+  const P = pal || PAL;
+  const at = (x, y) => (y < 0 || y >= gh || x < 0 || x >= gw) ? "." : rows[y][x];
+
+  // ① フチ（空きマスのうち、上下左右に絵があるところ）
+  c.fillStyle = OUTLINE;
+  for (let y = -1; y <= gh; y++) for (let x = -1; x <= gw; x++){
+    if (at(x,y) !== ".") continue;
+    if (at(x-1,y) !== "." || at(x+1,y) !== "." || at(x,y-1) !== "." || at(x,y+1) !== "."){
+      c.fillRect((x+SPR_PAD)*px, (y+SPR_PAD)*px, px, px);
+    }
+  }
+  // ② 本体。上が空なら明るく、下が空なら暗く
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++){
+    const ch = at(x,y);
+    if (ch === ".") continue;
+    const base = P[ch] || "#ff00ff";
+    let col = base;
+    if (at(x, y-1) === ".") col = lighten(base);
+    else if (at(x, y+1) === ".") col = darken(base);
+    c.fillStyle = col;
+    c.fillRect((x+SPR_PAD)*px, (y+SPR_PAD)*px, px, px);
+  }
+  return cv2;
+}
+
+/** 後光。ぼかしではなく「n ドットぶん太らせた同じ形」を後ろへ敷く。
+    `grid` に升目の総数を持たせておく（絵柄より一回り大きいので、置くとき要る） */
+function bakeGlow(rows, px, col, r){
+  const gw = rows[0].length, gh = rows.length;
+  const pad = r + 1;
+  const cv2 = document.createElement("canvas");
+  cv2.width = (gw + pad*2) * px; cv2.height = (gh + pad*2) * px;
+  cv2.grid = gw + pad*2;
+  const c = cv2.getContext("2d");
+  const at = (x, y) => (y < 0 || y >= gh || x < 0 || x >= gw) ? "." : rows[y][x];
+  c.fillStyle = col;
+  for (let y = -pad; y < gh + pad; y++) for (let x = -pad; x < gw + pad; x++){
+    let near = false;
+    for (let dy = -r; dy <= r && !near; dy++) for (let dx = -r; dx <= r; dx++){
+      if (Math.abs(dx) + Math.abs(dy) > r + 1) continue;
+      if (at(x+dx, y+dy) !== "."){ near = true; break; }
+    }
+    if (near) c.fillRect((x+pad)*px, (y+pad)*px, px, px);
+  }
+  return cv2;
+}
+
+function bakeAll(px){
+  for (const k in DOTS) SPRITES[k] = bakeSprite(DOTS[k], px);
+  LEVER_SPR = bakeSprite(LEVER_DOTS, px, LEVER_PAL);
+  // 7は近い光と広い光の2枚。BARにも白い光を敷いて、目印を目立たせる
+  GLOW_SPR  = bakeGlow(DOTS.seven, px, "#ff4a2c", 2);
+  GLOW_WIDE = bakeGlow(DOTS.seven, px, "#ff2a10", 5);
+  GLOW_BAR  = bakeGlow(DOTS.bar,   px, "#dfe6ff", 2);
+}
+
+/* パネルに貼るキャラのドット絵。
+   立ち絵を機械で減色・縮小してドットに落としたもの（元絵は本人が用意）。
+   **無くても動く。**読み込みに失敗したら 777 のロゴが出るだけ。
+     chara_top.png … 上パネル（夏服の上半身）
+     chara_low.png … 下パネル（夏服の下半身。**上と同じ倍率で貼って身長を合わせる**）
+     logo.png      … 上パネルの題字 */
+let CHARA_TOP = null, CHARA_LOW = null, LOGO_IMG = null;
+function loadArt(src, set){
+  const im = new Image();
+  im.onload = () => set(im);
+  im.onerror = () => {};
+  im.src = src;
+}
+loadArt("chara_top.png", im => { CHARA_TOP = im; });
+loadArt("chara_low.png", im => { CHARA_LOW = im; });
+loadArt("logo.png",      im => { LOGO_IMG = im; });
+
+/** ドット絵を整数倍で置く。**半端な倍率で貼るとドットが潰れる**。
+    ⚠️ 枠の中へ小さく収めると「切って貼った」に見える。
+    **枠の高さより少し大きい倍率を選んで、上そろえ・はみ出しは枠で切る。**
+    絵の切れ目とパネルの縁が重なるので、断面が見えない */
+function drawArt(img, x, y, availW, availH, anchor, vAnchor){
+  if (!img) return 0;
+  let sc = Math.max(1, Math.ceil(availH / img.height * 0.92));
+  while (sc > 1 && img.width * sc > availW) sc--;
+  const w = img.width * sc, h = img.height * sc;
+  const ax = anchor === "right" ? x + availW - w : anchor === "center" ? x + (availW - w)/2 : x;
+  // 下半身は**下そろえ**。腰で切った断面が枠の上辺に隠れる
+  const ay = vAnchor === "bottom" ? y + availH - h : y;
+  ctx.drawImage(img, snap(ax), snap(ay), w, h);
+  return w;
+}
+
+/* =========================================================================
+   2. リール — 実機に合わせて21コマ。7は1つだけ
+   並びには意味がある。**7の1つ手前は BAR**。目押しの目印はこれ。
+   payline に来る順番は index が増える向き … 19 ベル → 20 BAR → 0 赤7。
+   ========================================================================= */
+
+/* **リールは左・中・右で別の並び。** 実機は3本とも配列が違う。
+   同じ配列を3本使うと、揃っていないときの絵柄まで3つ並んで、すぐ嘘に見える。
+
+   どの列も 21コマ・7は2つ（0番と、その反対側あたり）。
+   **7の1つ手前は必ず BAR。** 目押しの目印は3本とも同じにしてある（そこは親切にする）。
+   7と7の間隔は列ごとに違う（左 11/10・中 10/11・右 12/9）ので、
+   どの列が回っているかで待ち時間の呼吸も変わる */
+const STRIPS = [
+  [ // ── 左リール（7は 0 と 11）
+    "seven","grape","bell","replay","cherry","grape","bell","replay","grape","pierrot",
+    "bar","seven","grape","bell","replay","cherry","grape","bell","replay","grape","bar",
+  ],
+  [ // ── 中リール（7は 0 と 10）
+    "seven","bell","grape","cherry","replay","bell","grape","replay","pierrot","bar",
+    "seven","bell","grape","replay","cherry","bell","grape","replay","grape","bell","bar",
+  ],
+  [ // ── 右リール（7は 0 と 12）
+    "seven","replay","grape","bell","pierrot","grape","replay","cherry","bell","grape",
+    "replay","bar","seven","grape","bell","cherry","replay","grape","bell","pierrot","bar",
+  ],
+];
+const N = STRIPS[0].length;      // 21
+
+/* 列ごとの7の位置（昇順） */
+const SEVENS = STRIPS.map(st => st.reduce((a, sym, i) => (sym === "seven" ? a.concat(i) : a), []));
+
+/* **実機は7とBARだけが大きい。** ほかの絵柄は一回り小さく刷られている。
+   ここを揃えてしまうと、狙う絵柄が絵柄の海に埋もれる */
+const SYM_SCALE = { seven:1, bar:1, bell:0.72, cherry:0.72, grape:0.72, replay:0.72, pierrot:0.72 };
+
+/** 列 i の、from より先にある7を古い順に count 個 */
+function sevensAfter(i, from, count){
+  const list = SEVENS[i], out = [];
+  let lap = Math.floor(from / N) - 1;
+  let guard = 0;
+  while (out.length < count && guard++ < 200){
+    for (const q of list){
+      const c = lap * N + q;
+      if (c > from + 1e-9) out.push(c);
+    }
+    lap++;
+  }
+  out.sort((a, b) => a - b);
+  return out.slice(0, count);
+}
+/** 列 i で pos にいちばん近い7（導入で使う。出発点も含む） */
+function nearestSevenOn(i, pos){
+  let best = 0, bd = Infinity;
+  for (const q of SEVENS[i]){
+    const c = q + N * Math.round((pos - q) / N);
+    const d = Math.abs(pos - c);
+    if (d < bd){ bd = d; best = c; }
+  }
+  return best;
+}
+/** 並びの中でいちばん pos に近いもの */
+function nearestOf(list, pos){
+  let best = list[0], bd = Infinity;
+  for (const c of list){
+    const d = Math.abs(pos - c);
+    if (d < bd){ bd = d; best = c; }
+  }
+  return best;
+}
+
+/* 7が中央線を少し過ぎてから押しても掴める分（コマ）。
+   **人が見ている画面は1〜2フレーム前のもの**で、そこから指が動く。
+   ここを詰めすぎると「見えた瞬間に押したのに掴めない」になり、実機より難しくなる。
+   実機のリールも止まるとき少し戻るので、絵としても嘘にならない */
+const BACK = 1.05;
+
+/* 窓に見えるコマ数。実機は上段・中段・下段の3コマ */
+const WINDOW_KOMA = 3.45;
+
+/* =========================================================================
+   3. 難易度 — コンボ数でフェーズそのものが変わる（企画書7章）
+   ========================================================================= */
+
+/** 区間ごとの直線補間。pts は [コンボ数, 値] の昇順 */
+function curve(c, pts){
+  if (c <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++){
+    const a = pts[i-1], b = pts[i];
+    if (c <= b[0]){
+      const t = (c - a[0]) / (b[0] - a[0]);
+      return a[1] + (b[1] - a[1]) * t;
+    }
+  }
+  return pts[pts.length-1][1];
+}
+
+/* **速度はしばらく動かさない。** 実機は毎分80回転で一定（21コマ×80/60＝28コマ秒）。
+   難しくなるのは「滑りコマ数」のほう。120コンボから先は実機にはありえない速度域に入る */
+const SPEED  = [[0,28],[120,28],[160,34],[220,42],[300,52]];
+/* 滑りコマ数。実機の規定は最大4コマ。序盤だけ5コマ出し、最後はビタ押し相当まで詰まる */
+const SLIP   = [[0,5],[10,5],[30,4],[50,3],[80,2],[130,1.4],[200,1.0]];
+const LEADMS = [[0,300],[20,260],[50,150],[80,60],[100,0]];      // 予告 → 回転開始
+const INTER  = [[0,150],[30,120],[80,90],[150,70],[250,60]];     // 777完成 → 次
+/* **止めるまでの猶予は「秒」で決める。**（本人の指示・2026-09-01）
+   最初は5秒。1コンボごとに0.1秒ずつ短くなる。
+   ただし **2回転ぶんの時間より短くはしない** ——
+   1周ぶんしか無いと「7が1回通り過ぎたら終わり」になって、目押しではなく運になる。
+   速度が上がる後半は、2回転ぶんの時間そのものが縮むので、そこから先はまた短くなる */
+const LIMIT0 = 5000, LIMIT_STEP = 100;
+function limitMs(c, v){ return Math.max(LIMIT0 - LIMIT_STEP*c, 2 * N / v * 1000); }
+
+/* 予告の出しかた。
+   〜9 : 「右リールが動く！」  10〜79 : 「右！」
+   80〜99 : 予告と同時に回転（LEADMS がほぼ0）  100〜 : 予告なし */
+function cueStyle(c){ return c < 20 ? "long" : (c < 100 ? "short" : "none"); }
+
+/* 演出の段。企画書8章 */
+function tierOf(c){
+  return c >= 200 ? 7 : c >= 150 ? 6 : c >= 100 ? 5
+       : c >= 75 ? 4 : c >= 50 ? 3 : c >= 25 ? 2 : c >= 10 ? 1 : 0;
+}
+/* **節目は10コンボごと。**そのたびに段（lv = combo/10）が1つ上がり、
+   光・粒・降りもの・輪・コイン・音が全部それに乗って増える */
+function megaLevel(c){ return c > 0 && c % 10 === 0 ? Math.min(16, c / 10) : 0; }
+
+/* =========================================================================
+   4. 状態
+   ========================================================================= */
+
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const stage = document.getElementById("stage");
+const veil = document.getElementById("veil");
+
+const REEL_NAME = ["左","中","右"];
+
+const S = {
+  running:false, paused:false,
+  phase:"idle",      // idle / intro / ready / spin / snap / settle / over
+  introStarted:false,
+  combo:0,
+  active:-1, prev:-1,
+  tNext:0,
+  v:28, win:5, lead:1000, inter:380, limit:5000,
+  reels:[],
+  cue:"", cueAt:-9999, cueStyle:"long", cueKind:"long",
+  shake:0, flash:0, hit:0, peka:0, segFlash:0, wave:null,
+  coins:0, coinFx:[], payFlash:0,
+  heat:0,          // 0=沈んでいる 1=全部灯っている
+  mega:0, megaLv:0, waves:[],
+  fx:[], lampT:0, milestone:"", milestoneAt:-9999,
+  deadSym:"",
+  t:0,
+};
+for (let i = 0; i < 3; i++) S.reels.push({ pos:0, spinning:false, v:0, snap:null, stopped:false, targets:null });
+
+/* --- この端末に残す記録。サーバーへは送らない ----------------------- */
+const LS_TOP = "ogyanun.777combo.top";
+function loadTop(){
+  try {
+    const a = JSON.parse(localStorage.getItem(LS_TOP) || "[]");
+    return Array.isArray(a) ? a.filter(n => typeof n === "number") : [];
+  } catch (e){ return []; }
+}
+function pushTop(n){
+  const a = loadTop();
+  if (n > 0) a.push(n);
+  a.sort((x,y) => y - x);
+  const top = a.slice(0,3);
+  try { localStorage.setItem(LS_TOP, JSON.stringify(top)); } catch (e){}
+  return top;
+}
+function best(){ const a = loadTop(); return a.length ? a[0] : 0; }
+
+/* --- プレイ回数 ------------------------------------------------------
+   「はじめる」を押した回数＝1プレイ。サイト側の /api/plays へ送る。
+   D1が繋がるまでは204が返るだけで何も起きない（失敗しても無視する）。 */
+const PLAY_SLUG = "777-combo";
+let lastCount = 0;
+function countPlay(){
+  const now = Date.now();
+  if (now - lastCount < 3000) return;
+  lastCount = now;
+  try {
+    fetch("/api/plays?g=" + PLAY_SLUG, { method:"POST", keepalive:true }).catch(() => {});
+  } catch (e){}
+}
+
+/* =========================================================================
+   5. 音 — WebAudioでその場で作る。音源ファイルは持っていない
+   ========================================================================= */
+
+let actx = null, master = null, whir = null, whirGain = null, whirFilt = null;
+let vol = 0.85, muted = false, audioDead = false;
+
+/* 同時に鳴らせる本数の上限。
+   後半のファンファーレは1回で20本以上重なるので、上限が無いと音が割れる。
+   リミッターと二段構えにしてある（片方だけだと足りない） */
+const MAX_VOICES = 14;
+let voices = 0;
+
+function initAudio(){
+  if (actx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  actx = new AC();
+  master = actx.createGain();
+  master.gain.value = muted ? 0 : vol;
+  const lim = actx.createDynamicsCompressor();
+  lim.threshold.value = -10; lim.knee.value = 0; lim.ratio.value = 20;
+  lim.attack.value = 0.002;  lim.release.value = 0.12;
+  master.connect(lim); lim.connect(actx.destination);
+  // BGMは効果音の下に敷く
+  bgGain = actx.createGain();
+  bgGain.gain.value = 0.55;
+  bgGain.connect(master);
+}
+function applyVol(){
+  if (!master) return;
+  master.gain.cancelScheduledValues(actx.currentTime);
+  master.gain.setValueAtTime(muted || audioDead ? 0 : vol, actx.currentTime);
+}
+/** ミスした瞬間。**全部止める。** 企画書9章の「一瞬の静寂」はここ */
+function silence(){
+  audioDead = true; voices = 0;
+  stopWhir();
+  if (master){
+    master.gain.cancelScheduledValues(actx.currentTime);
+    master.gain.setValueAtTime(0, actx.currentTime);
+  }
+}
+function reviveAudio(){ audioDead = false; applyVol(); }
+
+function tone(freq, t0, dur, type, peak){
+  if (!actx || audioDead) return;
+  if (voices >= MAX_VOICES) return;
+  voices++;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.onended = () => { voices--; };
+  o.type = type || "square";
+  o.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(peak || 0.10, t0 + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(master);
+  o.start(t0); o.stop(t0 + dur + 0.02);
+}
+/* コマ音は毎秒28回鳴る。毎回バッファを作ると無駄なので1本を使い回す */
+let NOISE_BUF = null;
+function noiseBuf(){
+  if (NOISE_BUF) return NOISE_BUF;
+  const n = Math.floor(actx.sampleRate * 0.25);
+  const b = actx.createBuffer(1, n, actx.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random()*2 - 1;
+  NOISE_BUF = b;
+  return b;
+}
+/** リールがコマを1つ送るたびの機械音。**これが無いと回っている実感が出ない** */
+function sndKoma(){
+  if (!actx || audioDead || voices >= MAX_VOICES) return;
+  voices++;
+  const t = actx.currentTime;
+  const src = actx.createBufferSource();
+  src.buffer = noiseBuf(); src.loop = true;
+  const f = actx.createBiquadFilter();
+  f.type = "bandpass"; f.frequency.value = 3400; f.Q.value = 3.2;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.035, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
+  src.onended = () => { voices--; };
+  src.connect(f); f.connect(g); g.connect(master);
+  src.start(t); src.stop(t + 0.03);
+}
+
+function noise(t0, dur, peak, freq, q){
+  if (!actx || audioDead) return;
+  if (voices >= MAX_VOICES) return;
+  voices++;
+  const n = Math.floor(actx.sampleRate * dur);
+  const buf = actx.createBuffer(1, n, actx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random()*2 - 1) * (1 - i/n);
+  const src = actx.createBufferSource(); src.buffer = buf;
+  const f = actx.createBiquadFilter();
+  f.type = "bandpass"; f.frequency.value = freq || 1400; f.Q.value = q || 0.8;
+  const g = actx.createGain(); g.gain.value = peak || 0.10;
+  src.onended = () => { voices--; };
+  src.connect(f); f.connect(g); g.connect(master);
+  src.start(t0);
+}
+
+/** リールの唸り。回っている間だけ鳴らす */
+function startWhir(speed){
+  if (!actx || audioDead || whir) return;
+  whir = actx.createOscillator();
+  whir.type = "sawtooth";
+  whirFilt = actx.createBiquadFilter();
+  whirFilt.type = "lowpass"; whirFilt.frequency.value = 380;
+  whirGain = actx.createGain(); whirGain.gain.value = 0.0001;
+  whir.connect(whirFilt); whirFilt.connect(whirGain); whirGain.connect(master);
+  whir.frequency.value = 52 + speed * 2.6;
+  whir.start();
+  whirGain.gain.exponentialRampToValueAtTime(0.055, actx.currentTime + 0.05);
+}
+function stopWhir(){
+  if (!whir) return;
+  try {
+    whirGain.gain.cancelScheduledValues(actx.currentTime);
+    whirGain.gain.setValueAtTime(0.0001, actx.currentTime);
+    whir.stop(actx.currentTime + 0.02);
+  } catch (e){}
+  whir = null; whirGain = null; whirFilt = null;
+}
+
+function sndCue(){ if (!actx) return; tone(880, actx.currentTime, 0.09, "square", 0.08); }
+/** 停止音「ガコンッ」。当たる金属＋箱の胴鳴り＋落ちる低音の3枚重ね */
+function sndStop(){
+  if (!actx || audioDead) return;
+  const t = actx.currentTime;
+  noise(t, 0.035, 0.30, 3200, 2.0);          // 金属が当たる
+  noise(t + 0.008, 0.13, 0.22, 380, 0.6);    // 箱が鳴る
+  // 落ちる低音。ここが「重さ」になる
+  if (voices < MAX_VOICES){
+    voices++;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.onended = () => { voices--; };
+    o.type = "triangle";
+    o.frequency.setValueAtTime(210, t);
+    o.frequency.exponentialRampToValueAtTime(58, t + 0.10);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.30, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.18);
+  }
+}
+/** 7で止まった瞬間の「キュイン」。
+    ⚠️ **音階を12段で折り返すと、13回目で1オクターブ落ちてテンションが切れる**（実際そうなっていた）。
+    ここは **無限音階（シェパードトーン）** にしてある。
+    同じ音を4オクターブ重ね、位置に応じて上の層を絞り下の層を足すので、
+    12回で1周しても **下がったようには聞こえない。上がり続ける。** */
+const SHEPARD_OCT = 4;
+function shepardParts(c){
+  const p = ((c - 1) % 12) / 12;          // 0〜1 のあいだを半音ずつ上がる
+  const out = [];
+  for (let k = 0; k < SHEPARD_OCT; k++){
+    const x = (k + p) / SHEPARD_OCT;      // 0=下端 1=上端
+    const amp = Math.pow(Math.sin(Math.PI * x), 2);   // 端で0、中央でいちばん大きい
+    if (amp < 0.06) continue;
+    out.push({ f: 130.81 * Math.pow(2, k + p), amp });
+  }
+  return out;
+}
+function sndHit(c){
+  if (!actx || audioDead) return;
+  const t = actx.currentTime;
+  const parts = shepardParts(c);
+  // 中心の高さ。跳ね上げと立ち上がりはこれに合わせる
+  let mid = parts.length ? parts.reduce((a, b) => a.amp > b.amp ? a : b).f : 523.25;
+
+  // ① 跳ね上げ。これが脳に効く
+  if (voices < MAX_VOICES){
+    voices++;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.onended = () => { voices--; };
+    o.type = "square";
+    o.frequency.setValueAtTime(mid * 0.5, t);
+    o.frequency.exponentialRampToValueAtTime(mid * 1.5, t + 0.055);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.20, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.15);
+  }
+  // ② 無限音階の層
+  for (const q of parts) tone(q.f, t + 0.03, 0.20, "square", 0.16 * q.amp);
+  // ③ 立ち上がりの息
+  noise(t, 0.05, 0.10, 5200, 2.4);
+}
+
+/** 告知ランプの「ペカッ」。big=true で節目の大きいやつ */
+function sndPeka(big){
+  if (!actx || audioDead) return;
+  const t = actx.currentTime;
+  if (big){
+    tone(1568, t, 0.07, "square", 0.11);
+    tone(2093, t + 0.05, 0.18, "square", 0.09);
+  } else {
+    tone(2349, t, 0.045, "square", 0.055);
+  }
+}
+/** 節目のファンファーレ。段が上がるほど長く・分厚くなる */
+function sndFanfare(tier){
+  if (!actx) return;
+  const t = actx.currentTime;
+  const base = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 2093];
+  const len = Math.min(3 + tier, base.length);
+  for (let i = 0; i < len; i++){
+    tone(base[i], t + i * 0.075, 0.26, "square", 0.09);
+    if (tier >= 3) tone(base[i] / 2, t + i * 0.075, 0.26, "triangle", 0.06);
+    if (tier >= 5) tone(base[i] * 1.5, t + i * 0.075, 0.18, "square", 0.04);
+  }
+  if (tier >= 3) sndCheer();
+}
+/** 歓声。ノイズを膨らませるだけ */
+function sndCheer(){
+  if (!actx) return;
+  const t = actx.currentTime;
+  for (let i = 0; i < 5; i++) noise(t + i * 0.09, 0.40, 0.045, 700 + Math.random() * 1800);
+}
+
+/* =========================================================================
+   5.5 BGM — **音源ファイルは持たない。**その場で鳴らすチップチューン
+
+   ⚠️ 拍はリールに合わせてある。
+      7は半周ごとに来る（21コマ中2つ）。だから **1拍 = 半周** にすると、
+      **7が中央線を通る瞬間が拍に乗る。**80回転毎分なら 160BPM。
+      速度が上がると拍も上がる（220BPMで頭打ち。それ以上は聴けない）。
+
+   厚みはコンボの段で足す。キック → ハット → アルペジオ → リード。
+   **ミスした瞬間は master ごと切れるので、ここは何もしなくていい**（企画書9章の無音）。
+   ========================================================================= */
+
+let bgGain = null;
+let bgmOn = false, bgmStep = 0, bgmBar = 0, bgmNext = 0;
+
+/* Am → F → C → G。素直に上がる進行 */
+const CHORDS = [
+  { root: 110.00, notes: [220.00, 261.63, 329.63] },  // Am
+  { root:  87.31, notes: [174.61, 220.00, 261.63] },  // F
+  { root: 130.81, notes: [261.63, 329.63, 392.00] },  // C
+  { root:  98.00, notes: [196.00, 246.94, 293.66] },  // G
+];
+const P_BASS = [1,0,0,1, 0,0,1,0, 1,0,0,1, 0,0,1,0];
+const P_HAT  = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];
+const P_LEAD = [0,0,0,0, 1,0,0,1, 0,0,1,0, 0,1,0,0];
+
+/* BGMの音は**本数の上限に数えない**（拍で決まっていて暴れないため） */
+function bgTone(f, t, dur, type, peak){
+  if (!actx || audioDead || !bgGain) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(bgGain);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function bgKick(t, peak){
+  if (!actx || audioDead || !bgGain) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(44, t + 0.09);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+  o.connect(g); g.connect(bgGain);
+  o.start(t); o.stop(t + 0.15);
+}
+function bgHat(t, peak){
+  if (!actx || audioDead || !bgGain) return;
+  const src = actx.createBufferSource();
+  src.buffer = noiseBuf(); src.loop = true;
+  const f = actx.createBiquadFilter();
+  f.type = "highpass"; f.frequency.value = 7000;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(peak, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+  src.connect(f); f.connect(g); g.connect(bgGain);
+  src.start(t); src.stop(t + 0.05);
+}
+
+function bgmStart(){
+  if (!actx) return;
+  bgmOn = true; bgmStep = 0; bgmBar = 0;
+  bgmNext = actx.currentTime + 0.06;
+}
+function bgmStop(){ bgmOn = false; }
+
+/** 先読みして拍を積む。毎フレーム呼ぶ */
+function bgmTick(){
+  if (!bgmOn || !actx || audioDead) return;
+  const tier = tierOf(S.combo);
+  // **1拍＝半周。**16分の1ステップ＝1周の1/8
+  const stepDur = Math.max(0.068, (N / S.v) / 8);
+  let guard = 0;
+  while (bgmNext < actx.currentTime + 0.15 && guard++ < 64){
+    const t = bgmNext, st = bgmStep, ch = CHORDS[bgmBar];
+
+    if (tier >= 1 ? (st % 4 === 0) : (st % 8 === 0)) bgKick(t, 0.16 + tier*0.012);
+    if (P_BASS[st]) bgTone(ch.root, t, stepDur*1.7, "square", 0.085 + tier*0.004);
+    if (tier >= 2 && P_HAT[st]) bgHat(t, (tier >= 4 && st % 8 === 6) ? 0.075 : 0.038);
+    if (tier >= 3) bgTone(ch.notes[st % 3], t, stepDur*0.85, "square", 0.045);
+    if (tier >= 5 && P_LEAD[st]) bgTone(ch.notes[(st*2) % 3] * 2, t, stepDur*2.4, "triangle", 0.062);
+    if (tier >= 6 && st % 2 === 1) bgTone(ch.notes[st % 3] * 2, t, stepDur*0.6, "square", 0.030);
+
+    bgmNext += stepDur;
+    if (++bgmStep >= 16){ bgmStep = 0; bgmBar = (bgmBar + 1) % CHORDS.length; }
+  }
+}
+
+/* =========================================================================
+   6. 版面 — 筐体の寸法をここで全部決める
+   実機の縦長の面（上部パネル / リール窓 / 情報帯 / 操作段 / 受け皿）に合わせる
+   ========================================================================= */
+
+let W = 0, H = 0, L = null, sprPx = 4;
+/* 描画層（色や7セグの定数）はこの下で組み立てる。
+   最初の layout() はそれより前に走るので、そこで描かせない */
+let drawReady = false;
+let PX = 4;                     // 筐体のドット1個ぶん（layout で絵柄と揃える）
+
+function layout(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // 枠のサイズが取れない状態（読み込み直後や畳まれた枠）でも必ず版面を作る。
+  // ここで return してしまうと L が null のまま進行し、最初の成功で落ちる
+  W = stage.clientWidth || window.innerWidth || 360;
+  H = stage.clientHeight || window.innerHeight || 640;
+  // ⚠️ cv.width への代入は、同じ値でも canvas を消す。
+  //    ResizeObserver は枠が動かなくても呼ばれるので、変わったときだけ触る
+  const cw = Math.round(W * dpr), ch = Math.round(H * dpr);
+  if (cv.width !== cw || cv.height !== ch){
+    cv.width = cw; cv.height = ch;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+
+  /* 実機の前面は だいたい 幅480mm × 高さ800mm。縦横比 1.6 前後。
+     上から：ランプ帯 / 上パネル / リール窓 / 情報帯 / 操作部の台座 / 下パネル / 受け皿 */
+  // 既定の上限は520。**宣伝映像を書き出すときだけ** window.__CAB_MAX で外せる
+  //（大きい画面で筐体が間延びしないための上限なので、動画には要らない）
+  const capW = (typeof __CAB_MAX === "number" && __CAB_MAX > 0) ? __CAB_MAX : 520;
+  const cabW = Math.min(W * 0.94, capW, H * 0.545);
+  const cabH = cabW * 1.725;
+  const cab = { x: (W - cabW)/2, y: (H - cabH)/2, w: cabW, h: cabH };
+  const u = cabW;
+
+  const lampBar  = { x: cab.x + u*0.030, y: cab.y + u*0.030, w: u*0.940, h: u*0.056 };
+  const topPanel = { x: cab.x + u*0.045, y: cab.y + u*0.098, w: u*0.910, h: u*0.370 };
+
+  const bezel = { x: cab.x + u*0.072, y: cab.y + u*0.486, w: u*0.856, h: u*0.560 };
+  const bez = u*0.022;
+  const area = { x: bezel.x + bez, y: bezel.y + bez, w: bezel.w - bez*2, h: bezel.h - bez*2 };
+  const gap = u*0.024;
+  const rw = (area.w - gap*2) / 3;
+  const cell = area.h / WINDOW_KOMA;
+  const reels = [];
+  for (let i = 0; i < 3; i++) reels.push({ x: area.x + i*(rw+gap), y: area.y, w: rw, h: area.h });
+
+  // リールの左右に立つサイドランプ。実機の顔を作っているのはここ
+  const sideW = u*0.056;
+  const sides = [
+    { x: cab.x + u*0.008, y: bezel.y + u*0.03, w: sideW, h: bezel.h - u*0.06 },
+    { x: cab.x + u*0.936, y: bezel.y + u*0.03, w: sideW, h: bezel.h - u*0.06 },
+  ];
+
+  const info = { x: cab.x + u*0.060, y: cab.y + u*1.062, w: u*0.880, h: u*0.100 };
+
+  // 操作部。手前へせり出した台座。レバーの玉はここから頭を出す
+  const deck = { x: cab.x + u*0.020, y: cab.y + u*1.180, w: u*0.960, h: u*0.148 };
+  // レバーは左端。玉は台座の上へ少し飛び出す
+  const ball = { x: cab.x + u*0.090, y: deck.y + u*0.048, r: u*0.046 };
+  // **ストップボタンはリールの真下。** どれを止めるかが位置で分かる
+  const btnW = u*0.140, btnH = u*0.072;
+  const btns = reels.map(r => ({
+    x: r.x + r.w/2 - btnW/2, y: deck.y + u*0.048, w: btnW, h: btnH,
+  }));
+  const slot = { x: cab.x + u*0.876, y: deck.y + u*0.062, w: u*0.066, h: u*0.014 };
+
+  const lowPanel = { x: cab.x + u*0.045, y: cab.y + u*1.346, w: u*0.910, h: u*0.235 };
+  const tray     = { x: cab.x + u*0.030, y: cab.y + u*1.597, w: u*0.940, h: u*0.098 };
+
+  L = {
+    cab, u, lampBar, topPanel, bezel, bez, reels, cell, sides,
+    payY: area.y + area.h/2,
+    drumR: cell * N / (2*Math.PI),
+    info, deck, ball, btns, slot, lowPanel, tray,
+    lampY: lampBar.y + lampBar.h/2,
+    cueY: topPanel.y + topPanel.h*0.83,
+    pekaY: topPanel.y + topPanel.h*0.26,
+  };
+
+  // ドット絵は整数倍で焼く（そうしないとドットの幅が揃わない）
+  const px = Math.max(2, Math.floor(cell * 0.99 / SPR_N));
+  if (px !== sprPx || !SPRITES.seven){ sprPx = px; bakeAll(px); }
+  PX = Math.max(2, sprPx);            // 筐体のドットも絵柄と同じ大きさ
+
+  // canvas を作り直すと中身が消える。取り直したその場で描き直す
+  // （ループ任せにすると、枠が動いた瞬間だけ画面が飛ぶ）
+  if (drawReady) render();
+}
+layout();
+if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
+else window.addEventListener("resize", layout);
+window.addEventListener("orientationchange", layout);
+
+/* =========================================================================
+   7. 描く
+   ========================================================================= */
+
+function rrPath(x, y, w, h, r){
+  if (ctx.roundRect){ ctx.roundRect(x, y, w, h, r); return; }
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);     ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+function rr(x, y, w, h, r){ ctx.beginPath(); rrPath(x, y, w, h, r); }
+function mod(n, m){ return ((n % m) + m) % m; }
+function jpFont(){ return '"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Noto Sans JP",system-ui,sans-serif'; }
+function enFont(){ return '"Helvetica Neue",Helvetica,Arial,sans-serif'; }
+
+/* --- ドットの下地 ---------------------------------------------------
+   **筐体もランプもレバーも、絵柄と同じドットの升目に載せる。**
+   グラデーション・角丸・ぼかしは使わない。絵柄だけドットで枠が
+   ツルッとしていると、そこだけ作り物に見える（実際そうなっていた）。
+------------------------------------------------------------------- */
+function snap(v){ return Math.round(v / PX) * PX; }
+function pRect(x, y, w, h, col){
+  ctx.fillStyle = col;
+  ctx.fillRect(snap(x), snap(y), Math.max(PX, snap(w)), Math.max(PX, snap(h)));
+}
+/** ベベル付きの箱。out=true で出っ張り、false で窪み */
+function pBox(x, y, w, h, face, hi, lo, t, out){
+  const X = snap(x), Y = snap(y);
+  const Wd = Math.max(PX*4, snap(w)), Ht = Math.max(PX*4, snap(h));
+  const T = PX * (t || 1);
+  ctx.fillStyle = face; ctx.fillRect(X, Y, Wd, Ht);
+  ctx.fillStyle = out ? hi : lo;
+  ctx.fillRect(X, Y, Wd, T); ctx.fillRect(X, Y, T, Ht);
+  ctx.fillStyle = out ? lo : hi;
+  ctx.fillRect(X, Y + Ht - T, Wd, T); ctx.fillRect(X + Wd - T, Y, T, Ht);
+}
+/** ドットで描く丸 */
+function pDisk(cx, cy, r, col){
+  ctx.fillStyle = col;
+  const R = Math.max(2, Math.round(r / PX));
+  const CX = snap(cx), CY = snap(cy);
+  for (let dy = -R; dy <= R; dy++){
+    const w = Math.round(Math.sqrt(Math.max(0, R*R + R*0.6 - dy*dy)));
+    ctx.fillRect(CX - w*PX, CY + dy*PX, (w*2+1)*PX, PX);
+  }
+}
+/** ドットの三角。dir=1 で右向き、-1 で左向き */
+function pTri(x, y, size, col, dir){
+  ctx.fillStyle = col;
+  const n = Math.max(2, Math.round(size / PX));
+  const X = snap(x), Y = snap(y);
+  for (let i = 0; i < n; i++){
+    const h = (n - i)*2 - 1;
+    ctx.fillRect(X + dir*i*PX - (dir < 0 ? PX : 0), Y - Math.floor(h/2)*PX, PX, h*PX);
+  }
+}
+
+/* 筐体の色。**紫を全部抜いた。** 黒とシルバーと赤と金だけ。
+   ジャグラー系の実機は「黒い箱・銀の枠・赤7・告知ランプ」という構成 */
+const CAB = {
+  body:"#2b2d31", bodyHi:"#585d65", bodyLo:"#131418",
+  trim:"#b9bec6", trimHi:"#eef1f5", trimLo:"#6b7078",   // クロムの帯
+  inset:"#07080a", panel:"#0d0f13", panelLit:"#1d232b",
+  red:"#e0301e", redHi:"#ff7f6c", redLo:"#8c1a0f",
+  gold:"#ffc21a", goldOff:"#3a3520",
+  seg:"#ff9a2e", segBest:"#3ec8a0", off:"#33363c",
+};
+
+/* --- 7セグ表示 ------------------------------------------------------- */
+const SEG = {
+  "0":[1,1,1,1,1,1,0], "1":[0,1,1,0,0,0,0], "2":[1,1,0,1,1,0,1], "3":[1,1,1,1,0,0,1],
+  "4":[0,1,1,0,0,1,1], "5":[1,0,1,1,0,1,1], "6":[1,0,1,1,1,1,1], "7":[1,1,1,0,0,0,0],
+  "8":[1,1,1,1,1,1,1], "9":[1,1,1,1,0,1,1], " ":[0,0,0,0,0,0,0],
+};
+/* 1桁は 5×9 升。線の太さは1升。**升目で組まないと桁が潰れる**
+   （最初は実寸で置いてから丸めていて、小さい方の表示が読めなくなっていた） */
+function segUnit(h){ return Math.max(2, Math.floor(h / 9)); }
+function segWidth(h, count){ const u = segUnit(h); return count * 5 * u + (count - 1) * 2 * u; }
+/** 右詰め。消えている桁もうっすら見せる（本物の7セグはそう見える） */
+function drawSeg(rx, ry, h, digits, color, count){
+  const u = segUnit(h);
+  const X0 = snap(rx), Y0 = snap(ry);
+  const str = String(digits);
+  const pad = " ".repeat(Math.max(0, count - str.length)) + str.slice(-count);
+  const dim = "rgba(255,255,255,.05)";
+  //            a          b          c          d          e          f          g
+  const SEGRECT = [[1,0,3,1],[4,1,1,3],[4,5,1,3],[1,8,3,1],[0,5,1,3],[0,1,1,3],[1,4,3,1]];
+  for (let i = 0; i < count; i++){
+    const on = SEG[pad[i]] || SEG[" "];
+    const dx = X0 + i * 7 * u;
+    for (let k = 0; k < 7; k++){
+      const r = SEGRECT[k];
+      ctx.fillStyle = on[k] ? color : dim;
+      ctx.fillRect(dx + r[0]*u, Y0 + r[1]*u, r[2]*u, r[3]*u);
+    }
+  }
+}
+
+/* --- リール ---------------------------------------------------------
+   ドラムは円筒。窓に見えている3コマは筒の前面なので、
+   上下へ行くほどコマが縮む。ここを平らに描くと途端に紙芝居になる。
+------------------------------------------------------------------- */
+function drawStripPass(i, pos, alpha, spinning, skipHero){
+  const r = L.reels[i], R = L.drumR;
+  const spr = SPR_N * sprPx;
+  const base = Math.round(pos);
+  for (let k = -3; k <= 3; k++){
+    const p = base + k;
+    const th = (pos - p) * (2*Math.PI / N);
+    if (Math.abs(th) > 0.68) continue;             // 窓の外
+    const y = L.payY + R * Math.sin(th);
+    const sc = Math.cos(th);                       // 縦の縮み
+    const sym = STRIPS[i][mod(p, N)];
+    const hero = (sym === "seven" || sym === "bar");   // 狙う絵柄と、その目印
+    if (skipHero && hero) continue;                    // 残像を重ねない（形が潰れる）
+    const img = SPRITES[sym];
+    if (!img) continue;
+    const sk = SYM_SCALE[sym] || 1;          // 7とBAR以外は一回り小さい
+    const w = spr * sk, h = spr * sk * sc;
+    const x = r.x + (r.w - w)/2;
+    const cx = x + w/2, cy = y;
+
+    // **7は光り物として描く。**太らせた同じ形を2枚、後ろへ敷く
+    if (sym === "seven"){
+      const boost = spinning ? 1 : 0.7 + S.hit*0.8;
+      if (GLOW_WIDE){
+        const gw2 = w * (GLOW_WIDE.grid / SPR_N), gh2 = h * (GLOW_WIDE.grid / SPR_N);
+        ctx.globalAlpha = 0.26 * boost;
+        ctx.drawImage(GLOW_WIDE, cx - gw2/2, cy - gh2/2, gw2, gh2);
+      }
+      if (GLOW_SPR){
+        const gw1 = w * (GLOW_SPR.grid / SPR_N), gh1 = h * (GLOW_SPR.grid / SPR_N);
+        ctx.globalAlpha = 0.62 * boost;
+        ctx.drawImage(GLOW_SPR, cx - gw1/2, cy - gh1/2, gw1, gh1);
+      }
+    } else if (sym === "bar" && GLOW_BAR){
+      const gb = w * (GLOW_BAR.grid / SPR_N), gbh = h * (GLOW_BAR.grid / SPR_N);
+      ctx.globalAlpha = spinning ? 0.34 : 0.20;
+      ctx.drawImage(GLOW_BAR, cx - gb/2, cy - gbh/2, gb, gbh);
+    }
+    // 回っているあいだ、**7とBAR以外は影まで落とす**
+    ctx.globalAlpha = spinning ? (sym === "seven" ? 1 : sym === "bar" ? 0.94 : alpha) : 1;
+    ctx.drawImage(img, x, y - h/2, w, h);
+  }
+  ctx.globalAlpha = 1;
+}
+
+const SMEAR = 5;          // 1フレームで進む分を分けて描く＝実際の残像
+const SHADE = [0.36, 0.11, 0, 0.11, 0.36];   // 筒の陰。上から下へ5段
+
+function drawReel(i){
+  const r = L.reels[i], reel = S.reels[i];
+  const spinning = reel.spinning || !!reel.snap;
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+
+  // テープの地。ベタ塗り
+  ctx.fillStyle = "#fffdf7";
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+
+  if (spinning){
+    const travel = reel.v / 60;                    // 1フレームで進むコマ数
+    // **7とBARには残像を付けない。**ほかの絵柄は影になって流れ、
+    // 狙う7と、その1つ手前のBARだけが輪郭を保って光る。
+    // 実機で目が物理的にドラムを追えているのと同じ状態を、画面の上で作る
+    for (let s2 = SMEAR - 1; s2 >= 0; s2--){
+      drawStripPass(i, reel.pos - travel*(s2/SMEAR), 0.11, true, s2 >= 1);
+    }
+  } else {
+    drawStripPass(i, reel.pos, 1, false);
+  }
+
+  // 筒が奥へ回り込む陰。**5段だけ。**細かく刻むと縞に見える
+  for (let b = 0; b < 5; b++){
+    const a = SHADE[b];
+    if (!a) continue;
+    ctx.fillStyle = "rgba(8,8,10," + a + ")";
+    ctx.fillRect(r.x, r.y + r.h*b/5, r.w, r.h/5 + 1);
+  }
+  // ガラスの照り返し（1段だけ）
+  ctx.fillStyle = "rgba(255,255,255,.07)";
+  ctx.fillRect(r.x, r.y + r.h*0.12, r.w*0.55, r.h*0.15);
+
+  // 7で止まった瞬間、窓が一瞬白く飛ぶ
+  if (S.hit > 0.05 && !spinning && STRIPS[i][mod(Math.round(reel.pos), N)] === "seven"){
+    ctx.fillStyle = "rgba(255,240,210," + (S.hit*0.34).toFixed(3) + ")";
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+  }
+
+  ctx.restore();
+}
+
+/** 中央のライン。ここに来た絵柄が答え */
+function drawPayline(){
+  const a = L.reels[0], c = L.reels[2];
+  const x0 = a.x - L.u*0.016, x1 = c.x + c.w + L.u*0.016;
+  const col = S.hit > 0.3 ? CAB.redHi : CAB.red;
+  pRect(x0, L.payY - PX/2, x1 - x0, PX, col);
+  pTri(x0 - PX, L.payY, L.u*0.020, col, 1);
+  pTri(x1 + PX, L.payY, L.u*0.020, col, -1);
+}
+
+/* --- 筐体（ここも全部ドット）-----------------------------------------
+   実機の前面をそのまま積む。上から
+   ランプ帯 / 上パネル / リール窓（両脇にサイドランプ）/ 情報帯 /
+   操作部の台座（レバーの玉とストップボタン）/ 下パネル / 受け皿
+------------------------------------------------------------------- */
+
+/** クロムの帯。3段のベタで金属に見せる */
+function chromeBar(x, y, w, h){
+  const t = Math.max(PX, snap(h/4));
+  pRect(x, y, w, h, CAB.trim);
+  pRect(x, y, w, t, CAB.trimHi);
+  pRect(x, y + h - t, w, t, CAB.trimLo);
+}
+
+/** 機械がどれだけ灯っているか。段（コンボ）の下地に、当たった瞬間の熱を重ねる */
+function litLevel(){
+  if (S.phase === "over") return 0;
+  const tier = tierOf(S.combo);
+  return Math.max(S.heat, S.mega, Math.min(0.58, tier * 0.075));
+}
+/** 光り物を強制点灯させる瞬間か */
+function isHot(){ return S.heat > 0.30 || S.mega > 0.20; }
+
+/** **普段は沈める。**当たった瞬間だけ暗幕が消えて全部が立ち上がる。
+    ここが「緩急」の本体。リールの窓だけは半分しか落とさない（読めなくなるので） */
+function drawDim(){
+  const d = (1 - litLevel()) * 0.50;
+  if (d <= 0.01) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-W, -H, W*3, H*3);
+  for (const r of L.reels) ctx.rect(r.x, r.y, r.w, r.h);
+  ctx.clip("evenodd");
+  ctx.fillStyle = "rgba(3,3,5," + d.toFixed(3) + ")";
+  ctx.fillRect(-W, -H, W*3, H*3);
+  ctx.restore();
+  ctx.fillStyle = "rgba(3,3,5," + (d*0.46).toFixed(3) + ")";
+  for (const r of L.reels) ctx.fillRect(r.x, r.y, r.w, r.h);
+}
+
+/** 当たった瞬間に背後から出る放射。段ではなく熱で出る */
+function drawRays(){
+  const pow = Math.max(S.heat, S.mega);
+  if (pow < 0.06) return;
+  const lv = S.mega > 0.05 ? S.megaLv : 0;
+  const n = 20 + Math.min(28, lv * 2);
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.rotate(S.t / (900 - Math.min(700, lv*45)));
+  const R = Math.max(W, H) * 1.2;
+  const a = pow * (0.20 + Math.min(0.30, lv * 0.022));
+  const wide = 0.045 + Math.min(0.05, lv * 0.004);
+  for (let i = 0; i < n; i++){
+    ctx.rotate(Math.PI*2/n);
+    ctx.fillStyle = i % 2
+      ? "rgba(255,206,90," + a.toFixed(3) + ")"
+      : "rgba(255,110,40," + (a*0.65).toFixed(3) + ")";
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R, -R*wide); ctx.lineTo(R, R*wide); ctx.fill();
+  }
+  ctx.restore();
+  // 段が上がると、外周が色を変えながら明滅する
+  if (lv >= 5 && S.mega > 0.08){
+    const hue = (S.t / 4) % 360;
+    ctx.fillStyle = "hsla(" + hue + ",95%,60%," + (S.mega*0.16).toFixed(3) + ")";
+    const t2 = Math.max(PX*2, snap(L.u*0.02));
+    ctx.fillRect(0, 0, W, t2); ctx.fillRect(0, H - t2, W, t2);
+    ctx.fillRect(0, 0, t2, H); ctx.fillRect(W - t2, 0, t2, H);
+  }
+}
+
+function drawCabinet(){
+  const cab = L.cab, u = L.u, tier = S.phase === "over" ? 0 : tierOf(S.combo);
+  pBox(cab.x, cab.y, cab.w, cab.h, CAB.body, CAB.bodyHi, CAB.bodyLo, 2, true);
+  drawLampBar(tier);
+  drawTopPanel(tier);
+  chromeBar(cab.x + PX*3, L.bezel.y - PX*4, cab.w - PX*6, PX*3);
+  drawSides(tier);
+  drawBezel(tier);
+  chromeBar(cab.x + PX*3, L.info.y - PX*4, cab.w - PX*6, PX*3);
+}
+
+/** いちばん上のランプ帯 */
+function drawLampBar(tier){
+  const b = L.lampBar;
+  pBox(b.x, b.y, b.w, b.h, CAB.inset, CAB.trimHi, CAB.trimLo, 1, false);
+  const n = 11, rad = PX*2;
+  const x0 = b.x + b.w*0.055, x1 = b.x + b.w*0.945;
+  const step = Math.floor(S.lampT*Math.min(6, 2.2 + tier*0.7));
+  for (let i = 0; i < n; i++){
+    const on = isHot() || (tier >= 1 && (step + i) % 3 === 0);
+    pDisk(x0 + (x1-x0)*(i/(n-1)), b.y + b.h/2, rad, on ? (isHot() ? "#fff0a0" : CAB.gold) : CAB.goldOff);
+  }
+}
+
+/** 上パネル。液晶を模した窪み。777 と告知ランプ、予告もここに出る */
+function drawTopPanel(tier){
+  const p = L.topPanel;
+  pBox(p.x, p.y, p.w, p.h, CAB.panel, CAB.trimHi, CAB.trimLo, 2, false);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+
+  // 段が上がったら地の色が変わる。ベタ塗りで段階的に
+  if (tier >= 3 || S.heat > 0.1){
+    const k = Math.max(S.heat, tier >= 3 ? 0.45 : 0);
+    ctx.fillStyle = tier >= 6 ? "#4a1a06" : tier >= 5 ? "#331206" : "#241a1a";
+    ctx.globalAlpha = Math.min(1, 0.35 + k*0.65);
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.globalAlpha = 1;
+  }
+  // 中央から広がる段の光。ベタ塗りの輪を重ねるだけ（グラデにしない）
+  {
+    const cx = p.x + p.w/2, cy = p.y + p.h*0.56;
+    const rings = [[1.00,"rgba(255,255,255,.020)"],[0.76,"rgba(255,255,255,.028)"],
+                   [0.54,"rgba(255,255,255,.036)"],[0.34,"rgba(255,255,255,.046)"]];
+    for (const [k, col] of rings){
+      ctx.fillStyle = col;
+      ctx.fillRect(snap(cx - p.w*0.5*k), snap(cy - p.h*0.48*k), snap(p.w*k), snap(p.h*0.96*k));
+    }
+  }
+  // 走査線。**これがあると「画面」に見える**
+  ctx.fillStyle = "rgba(0,0,0,.22)";
+  for (let y = p.y; y < p.y + p.h; y += PX*2) ctx.fillRect(p.x, snap(y), p.w, PX);
+
+  // 放射（段が上がると出る）
+  if (tier >= 4){
+    const cx = p.x + p.w/2, cy = p.y + p.h*0.58;
+    const step = Math.floor(S.lampT*2.4) % 2;
+    for (let a2 = 0; a2 < 16; a2++){
+      if ((a2 + step) % 2) continue;
+      const th = a2 * Math.PI/8;
+      for (let d = p.h*0.28; d < p.w*0.60; d += PX*3){
+        pRect(cx + Math.cos(th)*d, cy + Math.sin(th)*d*0.52, PX*2, PX*2, "rgba(255,194,26,.16)");
+      }
+    }
+  }
+
+  // 告知ランプ。**点いてるか消えてるかの二値**
+  const lr = PX*5, lx = p.x + p.w/2, ly = L.pekaY;
+  const blink = Math.floor(S.lampT*2.6) % 2 === 0;
+  const lit = S.peka > 0.40 || (tier >= 5 && blink);
+  pDisk(lx, ly, lr*1.36, CAB.bodyLo);
+  pDisk(lx, ly, lr*1.14, lit ? "#c98f0a" : "#20201a");
+  pDisk(lx, ly, lr, lit ? CAB.gold : CAB.goldOff);
+  if (lit){
+    pDisk(lx, ly, lr*0.5, "#fff7d0");
+    pRect(lx - lr*2.4, ly - PX/2, lr*4.8, PX, "rgba(255,220,90,.5)");
+    pRect(lx - PX/2, ly - lr*2.4, PX, lr*4.8, "rgba(255,220,90,.5)");
+  }
+
+  // キャラの後ろに当て光。黒地に黒髪だと輪郭が沈む
+  if (CHARA_TOP){
+    const bw = p.w*0.36, bx = p.x + p.w - bw - PX*3;
+    for (let k = 0; k < 3; k++){
+      ctx.fillStyle = "rgba(255,255,255,.030)";
+      ctx.fillRect(snap(bx + k*PX*3), snap(p.y + PX*2 + k*PX*2),
+                   snap(bw - k*PX*6), snap(p.h - PX*4 - k*PX*4));
+    }
+  }
+  // キャラは右へ大きく。**リールの7を3つ並べただけのロゴはやめて**、題字を組む
+  drawArt(CHARA_TOP, p.x + p.w*0.52, p.y + PX*2, p.w*0.46, p.h - PX*2, "right");
+  // 題字。**大きく組んでからドットに落としたもの**を整数倍で貼る
+  if (LOGO_IMG){
+    let sc = Math.max(1, Math.ceil(p.h*0.46 / LOGO_IMG.height * 0.92));
+    while (sc > 1 && LOGO_IMG.width * sc > p.w*0.48) sc--;
+    const lw = LOGO_IMG.width*sc, lh = LOGO_IMG.height*sc;
+    ctx.drawImage(LOGO_IMG, snap(p.x + p.w*0.26 - lw/2), snap(p.y + p.h*0.46 - lh/2), lw, lh);
+  }
+  // 走査線をもう一度、絵の上へ
+  ctx.fillStyle = "rgba(0,0,0,.16)";
+  for (let y = p.y; y < p.y + p.h; y += PX*2) ctx.fillRect(p.x, snap(y), p.w, PX);
+  ctx.restore();
+}
+
+/** リールの両脇に立つサイドランプ */
+function drawSides(tier){
+  const step = Math.floor(S.lampT*Math.min(6, 2.2 + tier*0.7));
+  for (let k = 0; k < 2; k++){
+    const c = L.sides[k];
+    pBox(c.x, c.y, c.w, c.h, CAB.inset, CAB.trimHi, CAB.trimLo, 1, false);
+    const n = 7, rad = PX*2;
+    const y0 = c.y + c.h*0.06, y1 = c.y + c.h*0.94;
+    for (let i = 0; i < n; i++){
+      const on = isHot() || (tier >= 1 && (step + i + k*2) % 3 === 0);
+      pDisk(c.x + c.w/2, y0 + (y1-y0)*(i/(n-1)), rad, on ? (isHot() ? "#fff0a0" : CAB.gold) : CAB.goldOff);
+    }
+  }
+}
+
+/** リールを囲むクロムの枠 */
+function drawBezel(tier){
+  const b = L.bezel;
+  pBox(b.x, b.y, b.w, b.h, CAB.trim, CAB.trimHi, CAB.trimLo, 2, true);
+  const t = L.bez*0.55;
+  pBox(b.x + t, b.y + t, b.w - t*2, b.h - t*2, CAB.inset, "#8a8f98", "#3a3d44", 1, false);
+  if (tier >= 3 || isHot()){
+    const step = Math.floor(S.lampT*2.2) % 2;
+    let idx = 0;
+    for (let x = b.x + PX*2; x < b.x + b.w - PX*3; x += PX*4){
+      if ((idx++ + step) % 2) continue;
+      pRect(x, b.y + PX, PX*2, PX, isHot() ? "#fff0a0" : CAB.gold);
+      pRect(x, b.y + b.h - PX*2, PX*2, PX, isHot() ? "#fff0a0" : CAB.gold);
+    }
+  }
+}
+
+/** 情報帯。COMBO と BEST を7セグで出す */
+function drawInfo(){
+  const f = L.info;
+  pBox(f.x, f.y, f.w, f.h, CAB.inset, CAB.trimHi, CAB.trimLo, 1, false);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(f.x, f.y, f.w, f.h); ctx.clip();
+  ctx.font = "700 " + Math.round(f.h*0.22) + "px " + enFont();
+  ctx.textBaseline = "middle";
+
+  ctx.textAlign = "left"; ctx.fillStyle = "#787c86";
+  ctx.fillText("COMBO", f.x + PX*4, f.y + f.h*0.20);
+  drawSeg(f.x + PX*4, f.y + f.h*0.32, f.h*0.60, S.combo,
+          S.segFlash > 0.25 ? "#fff0c0" : CAB.seg, 4);
+
+  const smH = f.h*0.38, wSeg = segWidth(smH, 4);
+  ctx.textAlign = "right"; ctx.fillStyle = "#787c86";
+  ctx.fillText("BEST", f.x + f.w - PX*4, f.y + f.h*0.22);
+  drawSeg(f.x + f.w - PX*4 - wSeg, f.y + f.h*0.42, smH, best(), CAB.segBest, 4);
+
+  // 残り周回のランプ（実機のBETランプの位置）
+  const frac = timeLeft();
+  const lit = S.phase === "spin" ? Math.ceil(frac * 5) : 0;
+  const lr = PX*2, gap2 = PX*6;
+  const ly = f.y + f.h*0.55, lx0 = f.x + f.w*0.42;
+  for (let i = 0; i < 5; i++){
+    const on = i < lit;
+    const hot = on && lit <= 1 && (Math.floor(S.t/160) % 2 === 0);
+    pDisk(lx0 + i*gap2, ly, lr, on ? (hot ? "#ff5a2a" : CAB.gold) : CAB.goldOff);
+  }
+  ctx.restore();
+}
+
+/** 操作部の台座。手前へせり出しているので、天面は細い帯に潰れて見える */
+function drawDeck(){
+  const d = L.deck;
+  pBox(d.x, d.y, d.w, d.h, CAB.body, CAB.bodyHi, CAB.bodyLo, 2, true);
+  // 天面（手前に倒れた面）。ここが明るいと「台」に見える
+  pRect(d.x + PX*2, d.y + PX*2, d.w - PX*4, PX*3, "#6d727b");
+  pRect(d.x + PX*2, d.y + PX*5, d.w - PX*4, PX*2, "#4a4e56");
+  // 前縁のクロム
+  chromeBar(d.x + PX*2, d.y + d.h - PX*4, d.w - PX*4, PX*3);
+  // メダル投入口。地味な座に黒い口
+  const sl = L.slot;
+  pBox(sl.x - PX, sl.y - PX, sl.w + PX*2, sl.h + PX*2, "#5c616a", "#878d97", "#33373d", 1, true);
+  pRect(sl.x, sl.y, sl.w, sl.h, "#050608");
+}
+
+/** レバー。**正面から見たら球そのもの。** 手前に突き出しているので軸は見えない */
+function drawLever(){
+  const b = L.ball, r = b.r;
+  // 台座の座（軸のつけ根）。玉の後ろに少しだけ見える
+  pDisk(b.x, b.y + r*0.72, r*0.78, "#3c4048");
+  pDisk(b.x, b.y + r*0.62, r*0.62, "#9aa0aa");
+  pDisk(b.x, b.y + r*0.56, r*0.44, "#5c626c");
+  // 玉。外から内へ明るくして球に見せる。**光は左上の一点だけ**
+  pDisk(b.x, b.y, r*1.10, "#08090b");
+  pDisk(b.x, b.y, r,            "#6e1109");
+  pDisk(b.x - r*0.08, b.y - r*0.10, r*0.88, "#a81f11");
+  pDisk(b.x - r*0.16, b.y - r*0.18, r*0.62, "#d92a18");
+  pDisk(b.x - r*0.24, b.y - r*0.26, r*0.34, "#f0553d");
+  pDisk(b.x - r*0.32, b.y - r*0.34, r*0.14, "#ffcabf");
+  // 下の縁の照り返し（球の丸みはここで出る）
+  pDisk(b.x + r*0.26, b.y + r*0.42, r*0.13, "#ff7a63");
+}
+
+/** ストップボタン3つ。実機は光るレンズなので、枠と中身を分けて描く */
+function drawButtons(){
+  const frac = timeLeft();
+  for (let i = 0; i < 3; i++){
+    const b = L.btns[i];
+    const reel = S.reels[i];
+    const live = (S.phase === "spin" && S.active === i)
+              || (S.phase === "intro" && S.introStarted && (reel.spinning || reel.snap));
+    const flash = (S.phase === "spin" && live && frac < 0.22) ? (Math.floor(S.t/180) % 2 === 0) : true;
+    const dim = (S.phase === "spin" && live) ? 0.35 + frac*0.65 : 1;
+
+    // 枠（黒いリング）
+    pBox(b.x, b.y, b.w, b.h, "#0c0d10", "#4a4e56", "#000000", 1, false);
+    // レンズ
+    const pad = PX*2;
+    const face = live ? (flash ? (dim > 0.5 ? CAB.red : "#a81f11") : "#6d1409") : CAB.off;
+    const hi   = live ? CAB.redHi : "#5b606a";
+    const lo   = live ? "#4c0d05" : "#191b1f";
+    pBox(b.x + pad, b.y + pad, b.w - pad*2, b.h - pad*2, face, hi, lo, 1, true);
+    // 中の照り。**文字は入れない**（実機のストップボタンに文字は無い）
+    pRect(b.x + pad + PX*2, b.y + pad + PX*2, b.w - pad*2 - PX*4, PX*2,
+          live ? "rgba(255,255,255,.42)" : "rgba(255,255,255,.10)");
+  }
+}
+
+/** 下パネル。実機はここもバックライトの絵 */
+function drawLowPanel(tier){
+  const p = L.lowPanel;
+  pBox(p.x, p.y, p.w, p.h, CAB.panel, CAB.trimHi, CAB.trimLo, 1, false);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+  if (tier >= 3){
+    ctx.fillStyle = tier >= 6 ? "#3a1405" : "#1d1620";
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+  }
+  // 斜めの縞。ベタ塗りの帯を並べるだけ
+  for (let x = p.x - p.h; x < p.x + p.w; x += PX*8){
+    ctx.fillStyle = "rgba(255,255,255,.035)";
+    ctx.beginPath();
+    ctx.moveTo(x, p.y + p.h); ctx.lineTo(x + p.h, p.y);
+    ctx.lineTo(x + p.h + PX*4, p.y); ctx.lineTo(x + PX*4, p.y + p.h);
+    ctx.fill();
+  }
+  // **上パネルと同じ側（右）へ置く。**上が上半身、下が下半身なので、
+  // 縦にそろえると1人が筐体の後ろに立っているように見える
+  drawArt(CHARA_LOW, p.x + p.w*0.46, p.y, p.w*0.52, p.h - PX*2, "right", "bottom");
+  ctx.restore();
+}
+
+/** 受け皿 */
+function drawTray(){
+  const t = L.tray;
+  pBox(t.x, t.y, t.w, t.h, CAB.body, CAB.bodyHi, CAB.bodyLo, 2, true);
+  pRect(t.x + PX*4, t.y + PX*3, t.w - PX*8, t.h - PX*7, "#08090b");
+  for (let x = t.x + PX*8; x < t.x + t.w - PX*8; x += PX*6){
+    pRect(x, t.y + PX*4, PX, t.h - PX*9, "#15171b");
+  }
+  // 払出表示。**出た枚数はここが持つ**（コインの絵は十数枚しか出ない）
+  ctx.save();
+  ctx.beginPath(); ctx.rect(t.x, t.y, t.w, t.h); ctx.clip();
+  ctx.font = "700 " + Math.round(t.h*0.24) + "px " + enFont();
+  ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  ctx.fillStyle = "#6a6a72";
+  ctx.fillText("COIN", t.x + PX*6, t.y + t.h*0.30);
+  const sh = t.h*0.46, wSeg = segWidth(sh, 6);
+  drawSeg(t.x + t.w - PX*6 - wSeg, t.y + t.h*0.28, sh, S.coins,
+          S.payFlash > 0.25 ? "#fff0c0" : CAB.seg, 6);
+  ctx.restore();
+  chromeBar(t.x + PX*2, t.y + t.h - PX*3, t.w - PX*4, PX*2);
+}
+
+/* --- 文字 -----------------------------------------------------------
+   **日本語のフォントをそのまま出すと、そこだけツルッとして浮く。**
+   小さく描いて、半端な濃さを落として、整数倍に引き伸ばす。
+   これで手でドットを打たなくても、ドットの文字になる。
+------------------------------------------------------------------- */
+const TEXT_CACHE = new Map();
+function bakePixelText(text, cellPx, color){
+  const key = text + "|" + cellPx + "|" + color;
+  if (TEXT_CACHE.has(key)) return TEXT_CACHE.get(key);
+  const font = "700 " + cellPx + "px " + jpFont();
+  const meas = document.createElement("canvas").getContext("2d");
+  meas.font = font;
+  const w = Math.max(1, Math.ceil(meas.measureText(text).width) + 2);
+  const h = Math.max(1, Math.ceil(cellPx * 1.42));
+  const off = document.createElement("canvas");
+  off.width = w; off.height = h;
+  const c = off.getContext("2d");
+  c.font = font; c.textBaseline = "middle"; c.fillStyle = "#fff";
+  c.fillText(text, 1, Math.round(h/2));
+  // 半端な濃さを落とす（これをやらないと、拡大したときに縁がぼやける）
+  const d = c.getImageData(0, 0, w, h);
+  for (let i = 3; i < d.data.length; i += 4) d.data[i] = d.data[i] > 128 ? 255 : 0;
+  c.putImageData(d, 0, 0);
+  c.globalCompositeOperation = "source-in";
+  c.fillStyle = color; c.fillRect(0, 0, w, h);
+  if (TEXT_CACHE.size > 40) TEXT_CACHE.clear();
+  TEXT_CACHE.set(key, off);
+  return off;
+}
+/** ドットの文字を中央そろえで置く。板は呼ぶ側で敷く */
+function drawPixelText(text, cx, cy, targetH, color){
+  const cellPx = 12;
+  const img = bakePixelText(text, cellPx, color);
+  const sc = Math.max(2, Math.round(targetH / img.height));
+  const w = img.width * sc, h = img.height * sc;
+  ctx.drawImage(img, snap(cx - w/2), snap(cy - h/2), w, h);
+  return w;
+}
+
+/** 狙うリールの**窓そのものを光らせる**。実機のリール枠ランプと同じ。
+    矢印や文字を足すより、場所と結びつくぶん速く読める */
+function drawReelFrame(i){
+  const r = L.reels[i], t = PX*2;
+  // **点滅させない。**5Hzで全コントラストに明滅させていて、単に目が痛かった。
+  // ゆっくりした呼吸だけ残す（約0.8Hz・明るさの幅も狭い）。
+  // 機械そのものを沈めたぶん、この枠は太く・明るくしてよくなった
+  const k = 0.82 + 0.18 * Math.sin(S.t / 200);
+  ctx.fillStyle = "rgba(255," + Math.round(168 + 44*k) + ",56," + (0.86 + 0.14*k).toFixed(2) + ")";
+  const x = snap(r.x - PX), y = snap(r.y - PX);
+  const w = snap(r.w + PX*2), h = snap(r.h + PX*2);
+  ctx.fillRect(x, y, w, t);
+  ctx.fillRect(x, y + h - t, w, t);
+  ctx.fillRect(x, y, t, h);
+  ctx.fillRect(x + w - t, y, t, h);
+}
+
+/** 予告と案内。100コンボから先は何も出ない */
+function drawCue(){
+  // 導入：まだ止まっていないリールの枠を光らせて、下に案内
+  if (S.phase === "intro" && S.introStarted){
+    let any = false;
+    for (let i = 0; i < 3; i++){
+      const r = S.reels[i];
+      if (r.spinning || r.snap){ drawReelFrame(i); any = true; }
+    }
+    if (any){
+      const p = L.topPanel;
+      const bandH = Math.max(PX*6, snap(L.u*0.105));
+      ctx.fillStyle = "rgba(0,0,0,.70)";
+      ctx.fillRect(snap(p.x + PX), snap(L.cueY - bandH/2), snap(p.w - PX*2), bandH);
+      drawPixelText("7 で 止めろ", p.x + p.w/2, L.cueY, L.u*0.080, "#ffe07a");
+    }
+    return;
+  }
+  // 本編：予告のあいだと、回っているあいだ、その窓が光る
+  if (S.active < 0) return;
+  if (S.phase === "spin" || S.phase === "snap"){ drawReelFrame(S.active); return; }
+  if (S.phase !== "ready" || !S.cue) return;
+  const age = S.t - S.cueAt;
+  if (age < 0 || age > (S.cueKind === "long" ? 900 : 620)) return;
+  drawReelFrame(S.active);
+}
+
+/* --- コイン ---------------------------------------------------------
+   **1回止めるたびに311枚。**受け皿の口から溢れて、下へ落ちていく。
+   311枚ぜんぶ描くのは無駄なので、出るのは十数枚。数は払出表示が持つ
+------------------------------------------------------------------- */
+const COIN_PER_HIT = 311;
+
+function spawnCoins(n){
+  const t = L.tray;
+  for (let i = 0; i < n; i++){
+    S.coinFx.push({
+      x: t.x + t.w * (0.16 + Math.random()*0.68),
+      y: t.y + t.h * 0.35,
+      vx: (Math.random() - 0.5) * L.u * 0.055,
+      vy: -(0.6 + Math.random() * 1.3) * L.u * 0.016,
+      r: PX * (Math.random() < 0.35 ? 1.6 : 2.2),
+    });
+  }
+  if (S.coinFx.length > 240) S.coinFx.splice(0, S.coinFx.length - 240);
+}
+function stepCoins(dt){
+  for (let i = S.coinFx.length - 1; i >= 0; i--){
+    const c = S.coinFx[i];
+    c.x += c.vx * dt * 0.055;
+    c.y += c.vy * dt * 0.055;
+    c.vy += dt * 0.0018 * L.u * 0.10;
+    if (c.y > H + L.u*0.08 || c.x < -L.u*0.1 || c.x > W + L.u*0.1) S.coinFx.splice(i, 1);
+  }
+}
+function drawCoins(){
+  for (const c of S.coinFx){
+    pDisk(c.x, c.y, c.r * 1.15, "#3a2c06");
+    pDisk(c.x, c.y, c.r, "#c8960f");
+    pDisk(c.x, c.y - PX*0.6, c.r * 0.66, "#ffd23a");
+    pDisk(c.x - PX*0.5, c.y - PX*0.9, c.r * 0.30, "#fff4c4");
+  }
+}
+
+/* --- 粒 ------------------------------------------------------------- */
+function burst(n, tier){
+  const cx = L.cab.x + L.cab.w/2, cy = L.payY;
+  for (let i = 0; i < n; i++){
+    const a = Math.random()*Math.PI*2;
+    const sp = (0.6 + Math.random()*2.4) * (1 + tier*0.25) * L.u*0.010;
+    S.fx.push({
+      x: cx + (Math.random()-0.5)*L.cab.w*0.9,
+      y: cy + (Math.random()-0.5)*L.cell,
+      vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - L.u*0.004,
+      life:1, size: L.u*(0.008 + Math.random()*0.018),
+      hue: tier >= 5 ? Math.random()*360 : (Math.random() < 0.5 ? 44 : 6),
+    });
+  }
+  if (S.fx.length > 1100) S.fx.splice(0, S.fx.length - 1100);
+}
+/** 上から降ってくる紙吹雪。節目のときだけ出す */
+function rain(n){
+  for (let i = 0; i < n; i++){
+    S.fx.push({
+      x: Math.random() * W,
+      y: -L.u * (0.02 + Math.random() * 0.35),
+      vx: (Math.random() - 0.5) * L.u * 0.006,
+      vy: (0.3 + Math.random() * 0.9) * L.u * 0.006,
+      life: 1, lr: 2600,
+      size: L.u * (0.007 + Math.random() * 0.016),
+      hue: Math.random() < 0.5 ? 44 : (Math.random() < 0.5 ? 6 : 160),
+    });
+  }
+  if (S.fx.length > 1400) S.fx.splice(0, S.fx.length - 1400);
+}
+
+function stepFx(dt){
+  for (let i = S.fx.length - 1; i >= 0; i--){
+    const p = S.fx[i];
+    p.x += p.vx*dt*0.06; p.y += p.vy*dt*0.06;
+    p.vy += dt*0.0016*L.u*0.06;
+    p.life -= dt/900;
+    if (p.life <= 0) S.fx.splice(i, 1);
+  }
+}
+function drawFx(){
+  for (const p of S.fx){
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = "hsl(" + p.hue + ",92%,58%)";
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size*1.6);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* --- 背景 ------------------------------------------------------------ */
+function drawBackdrop(){
+  const tier = S.phase === "over" ? 0 : tierOf(S.combo);
+  ctx.fillStyle = "#0b0b0c";
+  ctx.fillRect(-30, -30, W + 60, H + 60);
+  if (tier === 0) return;
+  const cx = W/2, cy = H/2;
+  if (tier >= 3){
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W,H)*0.75);
+    const pulse = 0.5 + 0.5*Math.sin(S.t / (tier >= 6 ? 90 : 180));
+    g.addColorStop(0, "rgba(255,194,26," + (0.10 + 0.12*pulse + tier*0.018) + ")");
+    g.addColorStop(1, "rgba(11,11,12,0)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  if (tier >= 6){
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(S.t/1400);
+    const rays = 24, R = Math.max(W, H);
+    for (let i = 0; i < rays; i++){
+      ctx.rotate(Math.PI*2/rays);
+      ctx.fillStyle = i % 2 ? "rgba(255,194,26,.07)" : "rgba(224,48,30,.05)";
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R, -R*0.06); ctx.lineTo(R, R*0.06); ctx.fill();
+    }
+    ctx.restore();
+  }
+  if (tier >= 7){
+    ctx.save(); ctx.globalAlpha = 0.5;
+    for (let i = 0; i < 5; i++){
+      const ph = S.t/300 + i;
+      ctx.fillStyle = "hsla(" + ((S.t/6 + i*60) % 360) + ",95%,55%,.07)";
+      ctx.beginPath(); ctx.arc(cx, cy, (Math.sin(ph)*0.5+0.5)*Math.max(W,H)*0.6, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/** 止めた窓から広がる輪。ドットの四角を太らせていくだけ */
+function drawWave(){
+  for (let n = S.waves.length - 1; n >= 0; n--){
+    const wv = S.waves[n];
+    const base = S.t - wv.t0;
+    if (base > 700){ S.waves.splice(n, 1); continue; }
+    drawOneWave(L.reels[wv.i], base);
+  }
+}
+function drawOneWave(r, base){
+  // 2重。少し遅らせた輪が追いかける
+  for (const [delay, span, amp] of [[0, 460, 0.60], [130, 520, 0.34]]){
+    const age = base - delay;
+    if (age < 0 || age > span) continue;
+    const k = age / span;
+    const grow = k * L.u * 0.26;   // 広げすぎると、筐体の外で細い枠に見えてしまう
+    const a = (1 - k) * amp;
+    const t = Math.max(PX, snap(PX * (2.2 - k*1.2)));
+    ctx.fillStyle = "rgba(255,196,120," + a.toFixed(3) + ")";
+    const x = snap(r.x - grow), y = snap(r.y - grow);
+    const w = snap(r.w + grow*2), h = snap(r.h + grow*2);
+    ctx.fillRect(x, y, w, t);
+    ctx.fillRect(x, y + h - t, w, t);
+    ctx.fillRect(x, y, t, h);
+    ctx.fillRect(x + w - t, y, t, h);
+  }
+}
+
+/** 節目の巨大文字。**リールの上には出さない**（クリップで抜いてある） */
+function drawMilestone(){
+  if (!S.milestone) return;
+  const age = S.t - S.milestoneAt;
+  const life = 1500 + Math.min(900, S.megaLv*70);
+  if (age < 0 || age > life) return;
+  const a = Math.min(1, Math.max(0, 1 - age/life));
+  ctx.save();
+  ctx.globalAlpha = a*0.9;
+  ctx.translate(W/2, H/2);
+  const sc = 1 + (1-a)*0.9; ctx.scale(sc, sc);
+  ctx.font = "900 " + (Math.min(W,H) * (0.17 + Math.min(0.10, S.megaLv*0.008))) + "px " + enFont();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.lineWidth = Math.min(W,H)*0.008;
+  ctx.strokeStyle = "rgba(255,194,26,.9)";
+  ctx.fillStyle = "rgba(224,48,30,.85)";
+  ctx.fillText(S.milestone, 0, 0);
+  ctx.strokeText(S.milestone, 0, 0);
+  ctx.restore();
+}
+
+function render(){
+  if (!L) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+
+  // **消すのは揺れの外で。** 揺らした座標で全面を塗ると端が消え残り、
+  // そこにフラッシュが積もって画面が白く焼ける（一度そうなった）
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.save();
+  if (S.shake > 0.01){
+    const s = S.shake * L.u * 0.055;
+    ctx.translate((Math.random()-0.5)*s, (Math.random()-0.5)*s);
+  }
+
+  drawBackdrop();
+  drawRays();                 // 背後の放射（機械の下）
+
+  const tier = S.phase === "over" ? 0 : tierOf(S.combo);
+  drawCabinet();
+  for (let i = 0; i < 3; i++) drawReel(i);
+  drawPayline();
+  drawInfo();
+  drawDeck();
+  drawLever();
+  drawButtons();
+  drawLowPanel(tier);
+  drawTray();
+
+  // **ここで機械を沈める。**光り物はこの下をくぐらない
+  drawDim();
+
+  // 前に出す光。リールの窓だけは必ず抜く（企画書8章の約束）
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-W, -H, W*3, H*3);
+  for (const r of L.reels) rrPath(r.x, r.y, r.w, r.h, r.w*0.03);
+  ctx.clip("evenodd");
+  drawWave();
+  drawFx();
+  drawMilestone();
+  if (S.flash > 0.01){
+    ctx.fillStyle = "rgba(255,245,210," + (S.flash*0.55) + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.restore();
+
+  drawCoins();          // 筐体の手前を落ちていく
+  drawCue();
+
+  ctx.restore();
+}
+
+/* =========================================================================
+   8. 進行
+   ========================================================================= */
+
+function setDifficulty(){
+  const c = S.combo;
+  S.v     = curve(c, SPEED);
+  S.win   = curve(c, SLIP);      // 滑りコマ数がそのまま目押しの猶予になる
+  S.lead  = curve(c, LEADMS);
+  S.inter = curve(c, INTER);
+  S.limit = limitMs(c, S.v);
+  S.cueStyle = cueStyle(c);
+}
+
+function pickReel(){
+  if (S.prev >= 0 && Math.random() < 0.2) return S.prev;
+  const others = [0,1,2].filter(i => i !== S.prev);
+  return others[Math.floor(Math.random()*others.length)];
+}
+
+function nextRound(){
+  setDifficulty();
+  S.active = pickReel();
+  S.prev = S.active;
+  S.phase = "ready";
+  S.cueKind = S.cueStyle;
+  if (S.cueStyle === "none"){
+    S.cue = "";
+  } else {
+    S.cue = "on"; S.cueAt = S.t; sndCue();
+  }
+  S.tNext = S.t + S.lead;
+}
+
+function startSpin(){
+  const reel = S.reels[S.active];
+  // **今止まっている位置から、そのまま回り出す。**
+  // 以前はここで別の位置へ飛ばしていて、777が一瞬崩れて見えていた。
+  // 狙えるのは「今の位置より先にある7」だけ（出発点の7は掴めない）
+  // 猶予のあいだに中央線を通る7を、多めに拾っておく
+  const komaInLimit = S.v * S.limit / 1000;
+  const n = Math.ceil(komaInLimit / N * SEVENS[S.active].length) + 2;
+  reel.targets = sevensAfter(S.active, reel.pos, n);
+  reel.spinAt = S.t;
+  reel.spinning = true;
+  reel.v = S.v;
+  reel.snap = null;
+  S.phase = "spin";
+  startWhir(S.v);
+}
+
+/** 滑って止まるまでを1フレーム進める。終わったら {ok} を返す */
+function stepSnap(reel, now){
+  const sn = reel.snap;
+  const t = Math.min(1, (now - sn.t0) / sn.dur);
+  // 等速で滑って、最後にわずかに行き過ぎて戻る（実機の跳ね返り）
+  const base = sn.from + (sn.to - sn.from) * Math.min(1, t / 0.88);
+  const bump = t > 0.88 ? Math.sin((t - 0.88) / 0.12 * Math.PI) * 0.10 : 0;
+  reel.pos = base + bump;
+  if (t >= 1){ reel.pos = sn.to; reel.snap = null; return sn; }
+  return null;
+}
+
+/* =========================================================================
+   導入 — **最初の1回だけは、3つとも自分で目押しして777を作る。**
+   企画書は「777が揃った状態から始まる」だが、その777を一度自分で作らないと
+   何をしているゲームなのか体で分からない（本人の指示・2026-08-31）。
+   ここだけは急かさない。滑りは最大の5コマ、周回の上限も無い。
+   ========================================================================= */
+
+function stepIntro(now, dt){
+  // レバーを叩くまでの一拍
+  if (!S.introStarted){
+    if (now < S.tNext) return;
+    S.introStarted = true;
+    for (const r of S.reels){ r.spinning = true; r.v = S.v; r.snap = null; r.stopped = false; }
+    startWhir(S.v);
+    return;
+  }
+  for (let i = 0; i < 3; i++){
+    const r = S.reels[i];
+    if (r.spinning){
+      const before = Math.floor(r.pos);
+      r.pos += r.v * dt / 1000;
+      if (Math.floor(r.pos) !== before && i === 0) sndKoma();   // 導入は1本ぶんだけ鳴らす
+      continue;
+    }
+    if (r.snap){
+      const done = stepSnap(r, now);
+      if (done){
+        if (!done.ok){ introFail(i); return; }
+        r.stopped = true;
+        S.hit = 1;
+        sndHit(1);
+        burst(10, 0);
+      }
+    }
+  }
+  const moving = S.reels.some(r => r.spinning || r.snap);
+  if (!moving){
+    stopWhir();
+    if (S.reels.every(r => r.stopped)) introDone();
+  }
+}
+
+/** 導入で3つとも7で止まった。ここからが本編 */
+function introDone(){
+  bgmStart();                       // **最初に揃ったここから鳴り出す**
+  S.coins += COIN_PER_HIT; S.payFlash = 1; spawnCoins(34);
+  S.heat = 1; S.peka = 1; S.flash = 0.6;
+  sndPeka(true); sndFanfare(1);
+  burst(70, 1);
+  S.combo = 0;
+  setDifficulty();
+  S.phase = "settle";
+  S.tNext = S.t + 950;
+}
+
+/** 導入で外した。残りのリールもその場で止めて終わり */
+function introFail(i){
+  const dead = S.reels[i];
+  S.deadSym = STRIPS[i][mod(Math.round(dead.pos), N)];
+  S.reels.forEach((r, k) => {
+    if (r.spinning || r.snap){ r.spinning = false; r.snap = null; r.pos = missTarget(k, r.pos, S.win); }
+  });
+  gameOver();
+}
+
+/** 導入で台が止まっている位置。
+    **7の上でも、7の直前でもいけない。**7が2つになったぶん、
+    適当に選ぶと回り出した瞬間に押しただけで掴めてしまう（実際そうなっていた） */
+function introRestPos(i){
+  for (let k = 0; k < 60; k++){
+    const p0 = -(4 + Math.floor(Math.random() * 21));
+    if (STRIPS[i][mod(p0, N)] === "seven") continue;
+    const nxt = sevensAfter(i, p0, 1)[0];
+    if (nxt !== undefined && nxt - p0 >= 6) return p0;   // 次の7まで6コマ以上あける
+  }
+  return -9;
+}
+
+/** 導入での目押し。リールごとに独立して止める */
+function pressIntro(i){
+  const reel = S.reels[i];
+  if (!reel.spinning) return;
+  const target = nearestSevenOn(i, reel.pos);
+  const d = reel.pos - target;
+  const ok = d >= -S.win && d <= BACK;
+  sndStop();
+  reel.spinning = false;
+  const to = ok ? target : missTarget(i, reel.pos, S.win);
+  const dist = Math.abs(to - reel.pos);
+  reel.snap = { from: reel.pos, to, t0: S.t, dur: Math.min(260, Math.max(30, dist / reel.v * 1000)), ok };
+  if (!S.reels.some(r => r.spinning)) stopWhir();
+}
+
+/** 猶予の残り（0〜1）。情報帯のランプとボタンの灯りがこれで動く */
+function timeLeft(){
+  if (S.phase !== "spin") return 1;
+  const reel = S.reels[S.active];
+  if (!reel || !reel.spinAt) return 1;
+  return Math.max(0, Math.min(1, 1 - (S.t - reel.spinAt) / S.limit));
+}
+
+/** 外したときに止まるコマ。
+    ⚠️ **ここが実機と違っていた。**
+    今までは「次のコマ境界」で即止めていたので、当たりのときだけ長く滑り、
+    外れのときは即止まる＝**滑り幅で当たり外れが分かってしまう**。実機はそうならない。
+
+    実機は外れても同じだけ（最大4コマ）滑って、7を線から**蹴る**。
+    だから「あと1コマだった」が目に見える。あの惜しさがこの関数の役目。 */
+function missTarget(i, pos, slip){
+  const limit = pos + Math.max(1, slip);
+  let best = null;
+  for (let c = Math.ceil(pos + 0.02); c <= limit + 1e-9; c++){
+    if (STRIPS[i][mod(c, N)] !== "seven") best = c;      // 届く範囲でいちばん先
+  }
+  if (best === null){
+    let c = Math.ceil(pos + 0.02);
+    while (STRIPS[i][mod(c, N)] === "seven") c++;
+    best = c;
+  }
+  return best;
+}
+
+/** 止める。ここが全部 */
+function press(i){
+  if (S.phase === "intro"){ if (S.introStarted) pressIntro(i); return; }
+  if (S.phase !== "spin" || i !== S.active) return;
+  const reel = S.reels[S.active];
+  // 掴める7が複数あることは無いが、いちばん近いものだけ見て落とさないように全部見る
+  let hit = null;
+  for (const c of reel.targets){
+    const dd = reel.pos - c;
+    if (dd >= -S.win && dd <= BACK){
+      if (hit === null || Math.abs(dd) < Math.abs(reel.pos - hit)) hit = c;
+    }
+  }
+  const ok = hit !== null;
+  stopWhir();
+  sndStop();
+  reel.spinning = false;
+
+  const to = ok ? hit : missTarget(S.active, reel.pos, S.win);
+  const dist = Math.abs(to - reel.pos);
+  // 実機は速度を落とさずに滑って止まる。だから所要時間は距離÷速度
+  const dur = Math.min(260, Math.max(30, dist / reel.v * 1000));
+  reel.snap = { from: reel.pos, to, t0: S.t, dur, ok };
+  S.phase = "snap";
+}
+
+/** 押さないまま最後の7が通り過ぎた。リールは戻れないので次のコマで止まる＝ミス */
+function autoMiss(){
+  const reel = S.reels[S.active];
+  stopWhir();
+  sndStop();
+  reel.spinning = false;
+  const to = missTarget(S.active, reel.pos, S.win);
+  reel.snap = { from: reel.pos, to, t0: S.t,
+                dur: Math.max(30, Math.abs(to - reel.pos) / reel.v * 1000), ok:false };
+  S.phase = "snap";
+}
+
+function onSnapEnd(ok){
+  const reel = S.reels[S.active];
+  if (!ok){
+    S.deadSym = STRIPS[S.active][mod(Math.round(reel.pos), N)];
+    gameOver();
+    return;
+  }
+  // ⚠️ ここで pos を0へ戻してはいけない。7が2つあるので、
+  //    掴んだのと違う方の7へ絵柄ごと瞬間移動してしまう
+  S.combo++;
+  S.hit = 1;
+  S.segFlash = 1;                                   // 7セグが一瞬明るくなる
+  S.peka = 1;                                       // **毎回ペカる**
+  sndHit(S.combo);
+  sndPeka(false);
+  const tier = tierOf(S.combo);
+  S.heat = 1;                                       // **機械が一斉に灯る**
+  burst(40 + tier*22, tier);
+  // **毎回、筐体ごと殴る。**手応えはここで出る
+  S.shake = Math.min(1, 0.55 + tier*0.06);
+  S.flash = Math.max(S.flash, 0.26 + tier*0.04);
+  S.waves.push({ t0: S.t, i: S.active });           // 止めた窓から輪が広がる
+  if (S.waves.length > 9) S.waves.splice(0, S.waves.length - 9);
+  S.coins += COIN_PER_HIT;                          // **1回311枚**
+  S.payFlash = 1;
+  spawnCoins(14 + tier * 3);
+  const lv = megaLevel(S.combo);
+  if (lv){
+    // **10コンボごと。段が上がるたびに全部増える**
+    S.milestone = S.combo + " COMBO";
+    S.milestoneAt = S.t;
+    S.megaLv = lv;
+    S.mega = 1;
+    S.flash = Math.min(1, 0.55 + lv*0.035);
+    S.shake = 1;
+    S.peka = 1;
+    S.heat = 1;
+    burst(90 + lv*26, tier);
+    rain(38 + lv*12);
+    spawnCoins(30 + lv*7);
+    for (let k = 0; k < 3; k++) S.waves.push({ t0: S.t + k*70, i: k });
+    sndPeka(true);
+    sndFanfare(Math.min(7, 2 + Math.floor(lv/2)));
+  }
+  setDifficulty();
+  S.phase = "settle";
+  S.tNext = S.t + S.inter;
+}
+
+/* =========================================================================
+   9. 終わり — 企画書9章。**まず全部止める。静寂。そのあと数字だけ**
+   ========================================================================= */
+
+let overTimers = [];
+function clearOverTimers(){ overTimers.forEach(clearTimeout); overTimers = []; }
+
+function gameOver(){
+  S.running = false;
+  S.phase = "over";
+  bgmStop();
+  silence();
+  S.fx.length = 0;
+  S.shake = 0; S.flash = 0; S.peka = 0; S.segFlash = 0; S.waves.length = 0; S.heat = 0; S.mega = 0; S.milestone = ""; S.cue = "";
+
+  const reached = S.combo;
+  const prevBest = best();
+  const top = pushTop(reached);
+
+  clearOverTimers();
+  overTimers.push(setTimeout(() => {
+    veil.classList.remove("hidden");
+    veil.classList.add("bare");
+    veil.innerHTML = '<div class="big">' + reached + '<small>COMBO</small></div>';
+  }, 700));
+
+  overTimers.push(setTimeout(() => {
+    veil.classList.remove("bare");
+    const LF = String.fromCharCode(10);
+    const text = [
+      "『777コンボ』で " + reached + " COMBO。",
+      "777を揃え続けるだけのゲーム。",
+      "#777コンボ"
+    ].join(LF);
+    const share = "https://x.com/intent/post?text=" + encodeURIComponent(text) +
+                  "&url=" + encodeURIComponent("https://ogyanuntiusxiii.com/games/777-combo");
+    const rankRows = top.filter(n => n > 0)
+      .map((n, i) => (i+1) + "位　" + (i === 0 ? "<b>" + n + "</b>" : n) + " COMBO")
+      .join("<br>");
+    const isNew = reached > 0 && reached >= top[0] && reached > prevBest;
+
+    veil.innerHTML =
+      '<div class="big">' + reached + '<small>COMBO</small></div>' +
+      (isNew ? '<p class="fade"><strong>自己ベスト更新</strong></p>' : '') +
+      (rankRows ? '<div class="rank fade">' + rankRows + '</div>' : '') +
+      '<div class="row fade">' +
+        '<button id="againBtn">もう一回</button>' +
+        '<a class="btn-x" href="' + share + '" target="_blank" rel="noopener">Xで共有する</a>' +
+      '</div>' +
+      '<button class="link fade" id="backBtn">タイトルに戻る</button>';
+    document.getElementById("againBtn").onclick = start;
+    document.getElementById("backBtn").onclick = () => location.reload();
+  }, 1900));
+}
+
+/* =========================================================================
+   10. 開始
+   ========================================================================= */
+
+function start(){
+  clearOverTimers();
+  initAudio();
+  if (actx && actx.state === "suspended") actx.resume();
+  reviveAudio();
+  stopWhir(); voices = 0;
+  bgmStop();                        // 導入のあいだは鳴らさない
+
+  veil.classList.add("hidden");
+  veil.classList.remove("bare");
+
+  S.running = true;
+  S.paused = false;
+  S.combo = 0;
+  S.prev = -1; S.active = -1;
+  S.fx.length = 0;
+  S.shake = 0; S.flash = 0; S.hit = 0; S.peka = 0; S.segFlash = 0;
+  S.waves.length = 0; S.mega = 0; S.megaLv = 0;
+  S.coins = 0; S.coinFx.length = 0; S.payFlash = 0; S.heat = 0;
+  S.milestone = ""; S.cue = "";
+  S.deadSym = "";
+  for (const r of S.reels){ r.pos = 0; r.spinning = false; r.v = 0; r.snap = null; r.stopped = false; r.targets = null; }
+
+  countPlay();
+  setDifficulty();
+  // **まず自分で777を作る。** 適当な絵柄で止まっている台に座ったところから
+  S.reels.forEach((r, i) => { r.pos = introRestPos(i); r.targets = null; });
+  S.introStarted = false;
+  S.phase = "intro";
+  S.tNext = S.t + 620;
+}
+
+/* =========================================================================
+   11. ループ
+   ========================================================================= */
+
+let last = 0;
+function frame(now){
+  requestAnimationFrame(frame);
+  // ⚠️ 下も止める。dt が負になると下の減衰が **1より大きい係数** になり、
+  //    揺れやフラッシュが発散して画面が吹き飛ぶ
+  const dt = Math.max(0, Math.min(60, now - (last || now)));
+  last = now;
+  S.t = now;
+  S.lampT = now / 1000;
+
+  if (S.running && !S.paused){
+    if (S.phase === "intro") stepIntro(now, dt);
+
+    if (S.phase === "ready" && now >= S.tNext) startSpin();
+
+    if (S.phase === "spin"){
+      const reel = S.reels[S.active];
+      const before = Math.floor(reel.pos);
+      reel.pos += reel.v * dt / 1000;
+      if (Math.floor(reel.pos) !== before) sndKoma();
+      // 押さなければ回り続ける。**猶予の秒数を使い切ったら**そこで止まる
+      if (now - reel.spinAt > S.limit) autoMiss();
+    }
+
+    if (S.phase === "snap"){
+      const done = stepSnap(S.reels[S.active], now);
+      if (done) onSnapEnd(done.ok);
+    }
+
+    if (S.phase === "settle" && now >= S.tNext) nextRound();
+  }
+
+  const decay = (v, k) => Math.min(1, Math.max(0, v * Math.pow(k, dt/16.7)));
+  S.shake = decay(S.shake, 0.86);
+  S.flash = decay(S.flash, 0.88);
+  S.hit   = decay(S.hit,   0.90);
+  S.peka  = decay(S.peka,  0.930);
+  S.segFlash = decay(S.segFlash, 0.88);
+  S.payFlash = decay(S.payFlash, 0.90);
+  S.heat     = decay(S.heat,     0.935);
+  S.mega     = decay(S.mega,     0.984);
+  stepCoins(dt);
+  stepFx(dt);
+  bgmTick();
+
+  render();
+}
+drawReady = true;
+requestAnimationFrame(frame);
+
+/* =========================================================================
+   12. 入力 — 3つだけ
+   ========================================================================= */
+
+const KEYS = {
+  KeyF:0, KeyA:0, KeyZ:0, ArrowLeft:0, Digit1:0, Numpad1:0,
+  KeyG:1, KeyS:1, KeyX:1, ArrowDown:1, Digit2:1, Numpad2:1,
+  KeyH:2, KeyD:2, KeyC:2, ArrowRight:2, Digit3:2, Numpad3:2,
+};
+
+addEventListener("keydown", (e) => {
+  if (e.repeat) return;
+  if (e.code === "Space" || e.code === "Enter"){
+    if (!S.running && S.phase !== "snap"){
+      const btn = document.getElementById("startBtn") || document.getElementById("againBtn");
+      if (btn){ e.preventDefault(); btn.click(); }
+    }
+    return;
+  }
+  const i = KEYS[e.code];
+  if (i === undefined) return;
+  e.preventDefault();
+  press(i);
+}, { passive:false });
+
+// 触ったところの列で決める。筐体の外を触っても効くよう、画面を3等分している
+cv.addEventListener("pointerdown", (e) => {
+  if (!S.running) return;
+  const x = e.clientX;
+  press(x < W/3 ? 0 : x < W*2/3 ? 1 : 2);
+});
+
+/* --- 席を外したとき --------------------------------------------------
+   タブを離れると requestAnimationFrame が止まる。戻ってきた瞬間に
+   「回りっぱなしのリールが即座に7を通り過ぎて終わり」になると理不尽なので、
+   その回は無かったことにしてやり直す。コンボは減らさない。
+------------------------------------------------------------------- */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden){
+    if (S.running && (S.phase === "ready" || S.phase === "spin")){
+      S.paused = true; stopWhir();
+    }
+    return;
+  }
+  if (!S.paused) return;
+  S.paused = false;
+  last = 0;
+  if (bgmOn && actx) bgmNext = actx.currentTime + 0.06;   // 溜まった拍を捨てる
+  S.cue = "";
+  if (S.phase === "intro"){
+    // 導入の途中なら丸ごとやり直す（まだコンボは0なので何も失わない）
+    S.reels.forEach((r, i) => { r.pos = introRestPos(i); r.spinning = false; r.snap = null; r.stopped = false; });
+    S.introStarted = false;
+    S.tNext = performance.now() + 620;
+    return;
+  }
+  const reel = S.reels[S.active];
+  if (reel){ reel.pos = 0; reel.spinning = false; reel.snap = null; }
+  S.phase = "settle";
+  S.tNext = performance.now() + 600;
+});
+
+/* --- 音量 ------------------------------------------------------------ */
+const muteBtn = document.getElementById("muteBtn");
+const volRange = document.getElementById("volRange");
+muteBtn.onclick = () => {
+  muted = !muted;
+  muteBtn.classList.toggle("off", muted);
+  muteBtn.textContent = muted ? "×" : "♪";
+  applyVol();
+};
+volRange.oninput = () => { vol = Number(volRange.value)/100; applyVol(); };
+["pointerdown","keydown"].forEach(ev => {
+  document.getElementById("hud").addEventListener(ev, e => e.stopPropagation());
+});
+
+document.getElementById("startBtn").onclick = start;
+</script>
+</body>
+</html>

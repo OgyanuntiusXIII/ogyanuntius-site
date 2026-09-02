@@ -1,0 +1,5 @@
+# 旧URL。公開直後に /games/30-traps から /games/okoraretarakesu へ変えた（2026-09-02）。
+# 短時間でも共有されていた可能性があるので、恒久リダイレクトで拾う。
+/games/30-traps/*  /games/okoraretarakesu/:splat  301
+/games/30-traps    /games/okoraretarakesu         301
+/works/30-traps    /works/okoraretarakesu         301

@@ -1,0 +1,2084 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TYPE. CLIMB. — prototype</title>
+<meta name="description" content="単語を打つ。文字数だけ跳ぶ。巨大なキーボードの山を登る。">
+<style>
+  /* =======================================================================
+     アートディレクション：「消灯した部屋。遠くの琥珀色の灯りだけが、
+     生成りのキーキャップを照らしている。」
+
+       ・限定パレット9色。シアンは1色も使わない
+       ・発光させない。光は「当たる」だけ。灯るのはバックライトのキーだけ
+       ・遠いものは夜へ沈む＝単一光源の絵にする
+       ・フィルムグレイン／走査線／ディザ。なめらかなグラデーションを残さない
+       ・雰囲気は明朝、キーの刻印はゴシック
+     ======================================================================= */
+  :root{
+    --ink:#0b0d14;        /* 墨 */
+    --night:#101728;      /* 夜 */
+    --dust:#cec3ac;       /* 生成り（PBTキーキャップ） */
+    --dust-hi:#e6dcc7;
+    --dust-mid:#a89e8b;
+    --dust-lo:#6d6659;
+    --legend:#332f27;     /* 刻印 */
+    --amber:#b8721f;      /* 琥珀（濃） */
+    --amber-lt:#dfa45c;   /* 琥珀 */
+    --cream:#e9e1d0;      /* 文字 */
+    --mincho:"Yu Mincho","游明朝","Hiragino Mincho ProN","Noto Serif JP",serif;
+    --goth:"Yu Gothic UI","Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif;
+    --mono:ui-monospace,Consolas,"SFMono-Regular",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--cream);
+    font-family:var(--goth);-webkit-font-smoothing:antialiased;user-select:none;cursor:default}
+  canvas{display:block;position:fixed;inset:0}
+
+  /* ---- HUD：小さく、暖かく、左右で非対称に ---- */
+  .hud{position:fixed;pointer-events:none;z-index:5}
+  /* 主役は「いくつ言葉を打ったか」。画面の上、真ん中 */
+  #wordc{left:0;right:0;top:20px;text-align:center;text-shadow:0 2px 14px rgba(0,0,0,.9)}
+  #wordc .n{font:200 46px/1 var(--mono);color:var(--cream);opacity:.95;letter-spacing:.02em}
+  #wordc .l{margin-top:9px;font:400 10px/1 var(--goth);color:var(--cream);
+    opacity:.34;letter-spacing:.44em;text-indent:.44em}
+
+  #alt{left:26px;top:22px;text-shadow:0 2px 10px rgba(0,0,0,.85)}
+  #alt .big{font:200 27px/1 var(--mono);color:var(--cream);opacity:.8;letter-spacing:.01em}
+  #alt .unit{font-size:11px;opacity:.45;margin-left:2px}
+  #alt .sub{margin-top:7px;font:400 10.5px/1.5 var(--goth);color:var(--cream);
+    opacity:.34;letter-spacing:.2em}
+  #stats{right:26px;top:24px;text-align:right;
+    font:400 10.5px/2 var(--goth);color:var(--cream);opacity:.34;letter-spacing:.2em;
+    text-shadow:0 2px 10px rgba(0,0,0,.85)}
+  #stats b{font:400 11.5px var(--mono);font-weight:400;opacity:.95;margin-left:10px;letter-spacing:0}
+  #stats .hot{color:var(--amber-lt);opacity:1}
+
+  /* ---- 難所の名前。ここだけ明朝で、ゆっくり出る ---- */
+  #zone{left:0;right:0;top:31%;text-align:center;opacity:0;transition:opacity 1.1s}
+  #zone .z{font:400 31px/1 var(--mincho);color:var(--cream);letter-spacing:.52em;
+    text-indent:.52em;opacity:.94;text-shadow:0 3px 26px #000,0 0 60px rgba(0,0,0,.9)}
+  #zone .zs{margin-top:13px;font:400 9.5px/1 var(--mono);color:var(--cream);
+    opacity:.3;letter-spacing:.46em;text-indent:.46em}
+  #zone.on{opacity:1;transition:opacity .45s}
+
+  /* ---- 向かい風 ---- */
+  #gust{left:0;right:0;top:18%;text-align:center;opacity:0;transition:opacity 1s;
+    font:400 17px/1 var(--mincho);color:#f0e2c6;letter-spacing:.64em;text-indent:.64em;
+    text-shadow:0 2px 22px #000,0 0 44px rgba(184,114,31,.5)}
+  #gust.on{opacity:1;transition:opacity .14s}
+
+  /* ---- 手札 ----------------------------------------------------------
+     ・厚みで押すのではなく、**平たい刻印プレート**にした。小さくても潰れない
+     ・距離は文字ではなく **1キー＝1目盛りの帯**。地形に刻んだ目盛りと対応する
+     ・折り返さない。横一列のまま
+     -------------------------------------------------------------------- */
+  #words{position:fixed;left:50%;bottom:15px;transform:translateX(-50%);
+    display:flex;gap:7px;align-items:stretch;z-index:6;pointer-events:none;
+    max-width:calc(100vw - 24px)}
+  .w{position:relative;flex:0 0 auto;border-radius:4px;overflow:hidden;
+    padding:8px 13px 0;text-align:center;
+    background:linear-gradient(180deg,#cdc2ab 0%,#bdb29b 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.42),
+               inset 0 -1px 0 rgba(0,0,0,.1),
+               0 1px 0 #55514740, 0 7px 16px rgba(0,0,0,.42);
+    transition:background .15s,box-shadow .15s,transform .1s,opacity .2s}
+  .w .t{font:500 17px/1.3 var(--goth);color:#2e2b24;letter-spacing:.045em;white-space:nowrap}
+  .w .t .d{color:var(--amber)}
+  .w .rm{margin-top:3px;font:400 9.5px/1.4 var(--mono);color:#7a7261;
+    letter-spacing:.14em;white-space:nowrap}
+  .w .rm .d{color:var(--amber)}
+  /* 下端の帯 ＝ 何キー先か。目盛りを数えるだけで分かる */
+  .w .p{margin:7px -13px 0;padding:5px 12px 6px;background:rgba(56,51,42,.15);
+    display:flex;gap:3px;justify-content:center;align-items:center;
+    box-shadow:inset 0 1px 0 rgba(0,0,0,.07)}
+  .w .p i{width:4px;height:4px;border-radius:1px;background:#6a6354;opacity:.7}
+  .w .p i:nth-child(5n){margin-right:5px}
+  .w .p b{margin-left:6px;font:400 8.5px/1 var(--mono);color:#6a6354;opacity:.62}
+  .w.a{transform:translateY(2px);
+    background:linear-gradient(180deg,#e8dec7 0%,#d3c8b1 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55),
+               0 0 0 1px rgba(184,114,31,.38),
+               0 3px 9px rgba(0,0,0,.5), 0 0 22px rgba(184,114,31,.14)}
+  .w.a .p{background:rgba(184,114,31,.14)}
+  .w.a .p i{background:var(--amber);opacity:.85}
+  .w.dim{opacity:.4}
+  /* 新しく配られたカードだけ、一瞬だけ明るい */
+  .w.nw{animation:nw .55s ease-out}
+  @keyframes nw{0%{background:linear-gradient(180deg,#f0e7d1,#ded3bc);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 20px rgba(223,164,92,.3)}
+    100%{}}
+  /* リロールは修飾キーの見た目にして、言葉と混ざらないようにする */
+  .w.rr{background:linear-gradient(180deg,#4a4841 0%,#37352f 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 7px 16px rgba(0,0,0,.45);
+    align-self:flex-end;padding:8px 12px 9px}
+  .w.rr .t{font-size:12.5px;color:#c8c0ad;letter-spacing:.22em}
+  .w.rr .rm{color:#8b8474;margin-top:4px}
+  .w.rr.a{background:linear-gradient(180deg,#6a6455 0%,#4c4941 100%);transform:translateY(2px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 0 1px rgba(184,114,31,.4)}
+
+  /* ---- 開始画面 ---- */
+  #ov{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:30px;text-align:center;
+    background:radial-gradient(135% 105% at 62% 38%,rgba(20,27,46,.92),rgba(8,10,17,.99));
+    transition:opacity .9s}
+  #ov.off{opacity:0;pointer-events:none}
+  #ov h1{font:200 52px/1 var(--mono);letter-spacing:.26em;text-indent:.26em;
+    color:var(--cream);opacity:.94}
+  #ov h1 span{color:var(--amber-lt)}
+  #ov p{font:400 13px/2.35 var(--mincho);color:var(--cream);opacity:.6;letter-spacing:.11em}
+  #ov p b{font-weight:400;opacity:1;color:#f3ead8}
+  #ov .k{display:inline-block;color:var(--legend);border-radius:4px;padding:3px 9px;margin:0 3px;
+    font:500 11.5px/1 var(--goth);letter-spacing:.06em;
+    background:linear-gradient(180deg,#d9cfb8,#bcb19a);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 2px 0 var(--dust-lo),0 3px 5px rgba(0,0,0,.4)}
+  #ov .go{margin-top:4px;font:400 10.5px/1 var(--goth);color:var(--cream);opacity:.35;
+    letter-spacing:.5em;text-indent:.5em;animation:bl 3.4s ease-in-out infinite}
+  @keyframes bl{0%,100%{opacity:.2}50%{opacity:.55}}
+
+  /* ---- デバッグ。目立たせない ---- */
+  #dbg{position:fixed;right:18px;bottom:18px;z-index:9;display:flex;gap:6px}
+  #dbg button{pointer-events:auto;cursor:pointer;
+    font:400 10px/1 var(--goth);letter-spacing:.1em;
+    color:rgba(233,225,208,.3);background:rgba(11,13,20,.55);
+    border:1px solid rgba(233,225,208,.1);border-radius:4px;padding:6px 9px;transition:.18s}
+  #dbg button:hover{color:rgba(233,225,208,.7);border-color:rgba(233,225,208,.24)}
+  #dbg button.on{color:var(--amber-lt);border-color:rgba(223,164,92,.32)}
+
+  @media (max-width:1000px){
+    #words{gap:5px}
+    .w{padding:6px 9px 0}
+    .w .t{font-size:14px}
+    .w .rm{font-size:8.5px;letter-spacing:.1em}
+    .w .p{margin:5px -9px 0;padding:4px 8px 5px;gap:2px}
+    .w .p i{width:3px;height:3px}
+    .w.rr{padding:6px 9px 7px}
+    .w.rr .t{font-size:11px}
+  }
+  @media (max-width:820px){
+    #ov h1{font-size:32px}
+    #wordc .n{font-size:32px}
+    #alt .big{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div class="hud" id="wordc">
+  <div class="n"><span id="wordv">0</span></div>
+  <div class="l">打った言葉</div>
+</div>
+
+<div class="hud" id="alt">
+  <div class="big"><span id="altv">0</span><span class="unit"> m</span></div>
+  <div class="sub">最高到達 <span id="besv">0</span> m</div>
+</div>
+
+<div class="hud" id="stats">
+  <div>連続正解<b id="combo" class="hot">0</b></div>
+  <div>総打鍵<b id="keys">0</b></div>
+  <div>ミス<b id="miss">0</b></div>
+  <div>リロール<b id="rr">0</b></div>
+  <div>ケーブル<b id="climbs">0</b></div>
+  <div>最大落下<b id="fall">0</b> m</div>
+  <div>時間<b id="time">0:00</b></div>
+</div>
+
+<div class="hud" id="zone"><div class="z"></div><div class="zs"></div></div>
+<div class="hud" id="gust">向かい風</div>
+
+<div id="words"></div>
+
+<div id="dbg">
+  <button id="bArc" class="on">軌道 ぜんぶ</button>
+  <button id="bMiss" class="on">ミスで向かい風</button>
+  <button id="bReset">最初から</button>
+</div>
+
+<div id="ov">
+  <h1>TYPE<span>.</span> CLIMB<span>.</span></h1>
+  <p>
+    言葉を打つ。<b>その文字数だけ跳ぶ。</b><br>
+    巨大なキーボードでできた山を、ひとりで登る。<br>
+    <span class="k">かな 1 文字</span> ＝ <span class="k">キー 1 個</span> ぶん。入力はローマ字。<br>
+    打ち間違えると、向かい風に戻される。<br>
+    手札が噛み合わないときは <span class="k">リロール</span> と打つ。<br>
+    山から落ちても終わらない。川が、下流の岸まで運んでくれる。<br>
+    岸からは <span class="k">ケーブル</span> を伝って登る。今度は文字数ぶん、真上へ。
+  </p>
+  <div class="go">なにか文字キーを押す</div>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   TYPE. CLIMB. — prototype v0.1
+   企画書『仮題：TYPE. CLIMB.』のコアループだけを検証するための1枚もの。
+   検証したいのは3つ:
+     ① 「文字数＝跳躍距離」が、地形を読んで単語を選ぶ判断ゲームになるか
+     ② 打ち間違い＝落下 が「また打つ」になるか（苦行として成立するか）
+     ③ 静けさ（煽らない音と絵）が、落ちたあとの気持ちを支えられるか
+   ========================================================================= */
+
+/* ===== ① チューニング（ここだけ触れば手触りが変わる） ===================== */
+const T = {
+  UNIT:        40,   // 1文字 ＝ キー1個ぶん ＝ 40px。この等式が本作の読みやすさの核
+  REACH:       40,   // 1文字あたりの水平到達距離(px)。UNITと同値なら「n文字＝nキー先」
+  GRAV:      0.36,   // 重力(px/frame^2)。小さいほど、ふわりと軽く跳ぶ
+  ANGLE:       68,   // 射出角(度)。固定。高いほど山なりで朗らかに見える
+  MIN_LEN:      3,   // 最短単語
+  MAX_LEN:     12,   // 最長単語
+  BOUNCE:    0.66,   // 壁に当たったときの跳ね返り。軽いので、よく弾む
+  SLICK_FRIC: .985,  // Backspace滑落地帯の摩擦
+  LEE_RATE:    .80,  // 風下に受け皿を置く確率。下げるほど、ミスが麓直行になりやすい
+  PX_PER_M:    40,   // 1m = キー1個ぶん
+  // 山の下には川が流れている。落ちたら沈まず、流されて麓の岸へ戻る。
+  // 「落ちて急にチェックポイント」をやめるための仕掛け
+  RIVER_Y:     26,   // 水面の高さ（麓の岸は y=0 なので、岸は水面より少し上）
+  RIVER_V:    102,   // 深いところでの流速の上限(px/frame)。**岸へ近づくほど自然に緩む**
+  RIVER_K:   .055,   // 岸からの距離に対する流速の比。浅瀬ほど遅い
+  START_X:    520,   // 麓の岸の定位置。始まりはここ
+  CLIMB_V:    7.5,   // ケーブルを登る速さ(px/frame)。跳躍と同じく1文字＝40px登る
+  MISS_WIND: true,   // ミスしたら向かい風で押し戻される（デバッグでOFFにできる）
+  STRAY_FATAL: false,// どの言葉にも当たらないキーも罰するか。既定OFF
+                     // 罰するのは「言葉の途中で外したとき」だけにする
+  ARC_MODE:     1,   // 軌道の見せ方 0=なし / 1=頂点まで / 2=ぜんぶ
+                     // 1 が既定。**上りだけ見せて、落ちる先は自分で読ませる**
+  // 向かい風。山頂の方角＝あの子のいる方角から吹いてくる。
+  // 近づくほど強い＝難易度カーブが、そのまま物語になっている
+  GUST_BASE:  3.2,   // 麓での風速(px/frame)
+  GUST_PER_M: .058,  // 高度1mごとの増分
+  GUST_MAX:   9.6,   // 上限
+  GUST_FRAMES: 78,   // 吹いている長さ
+  SEED:  20260901
+};
+const RAD = T.ANGLE * Math.PI / 180;
+// 到達距離 range = v^2 * sin(2θ) / g  →  v = sqrt(range * g / sin2θ)
+function speedFor(len){ return Math.sqrt(T.REACH * len * T.GRAV / Math.sin(2 * RAD)); }
+
+/* ===== ② 言葉 ============================================================
+   打つのは日本語。**かな1文字＝キーキャップ1個ぶん**。表示された文字数を
+   数えれば、そのまま何キー先へ跳ぶかが分かる。入力はローマ字。
+
+   ローマ字判定は妖刀タイピング（C:\Users\owner\typing_card）の
+   tools/romaji_table.py・romaji_matcher.py をそのまま移植した。210エントリ。
+   「shi/si」「ja/jya/zya」「っ の子音重ね」「ん の n/nn」の揺れを
+   NFA（状態集合）で同時に追うので、打ち方を先に決めなくていい。
+
+   長い言葉は、かつて男の子が打っていた文そのもの、という建て付け。     */
+
+const RT = {
+  "あ":["a"],
+  "い":["i","yi"],
+  "う":["u","wu","whu"],
+  "え":["e"],
+  "お":["o"],
+  "か":["ka","ca"],
+  "き":["ki"],
+  "く":["ku","cu","qu"],
+  "け":["ke"],
+  "こ":["ko","co"],
+  "が":["ga"],
+  "ぎ":["gi"],
+  "ぐ":["gu"],
+  "げ":["ge"],
+  "ご":["go"],
+  "さ":["sa"],
+  "し":["si","shi","ci"],
+  "す":["su"],
+  "せ":["se","ce"],
+  "そ":["so"],
+  "ざ":["za"],
+  "じ":["zi","ji"],
+  "ず":["zu"],
+  "ぜ":["ze"],
+  "ぞ":["zo"],
+  "た":["ta"],
+  "ち":["ti","chi"],
+  "つ":["tu","tsu"],
+  "て":["te"],
+  "と":["to"],
+  "だ":["da"],
+  "ぢ":["di"],
+  "づ":["du"],
+  "で":["de"],
+  "ど":["do"],
+  "な":["na"],
+  "に":["ni"],
+  "ぬ":["nu"],
+  "ね":["ne"],
+  "の":["no"],
+  "は":["ha"],
+  "ひ":["hi"],
+  "ふ":["hu","fu"],
+  "へ":["he"],
+  "ほ":["ho"],
+  "ば":["ba"],
+  "び":["bi"],
+  "ぶ":["bu"],
+  "べ":["be"],
+  "ぼ":["bo"],
+  "ぱ":["pa"],
+  "ぴ":["pi"],
+  "ぷ":["pu"],
+  "ぺ":["pe"],
+  "ぽ":["po"],
+  "ま":["ma"],
+  "み":["mi"],
+  "む":["mu"],
+  "め":["me"],
+  "も":["mo"],
+  "や":["ya"],
+  "ゆ":["yu"],
+  "よ":["yo"],
+  "ら":["ra"],
+  "り":["ri"],
+  "る":["ru"],
+  "れ":["re"],
+  "ろ":["ro"],
+  "わ":["wa"],
+  "ゐ":["wi"],
+  "ゑ":["we"],
+  "を":["wo"],
+  "ん":["nn","xn","n'"],
+  "ゔ":["vu"],
+  "ぁ":["la","xa"],
+  "ぃ":["li","xi","lyi","xyi"],
+  "ぅ":["lu","xu"],
+  "ぇ":["le","xe","lye","xye"],
+  "ぉ":["lo","xo"],
+  "ゃ":["lya","xya"],
+  "ゅ":["lyu","xyu"],
+  "ょ":["lyo","xyo"],
+  "ゎ":["lwa","xwa"],
+  "っ":["ltu","xtu","ltsu","xtsu"],
+  "きゃ":["kya"],
+  "きぃ":["kyi"],
+  "きゅ":["kyu"],
+  "きぇ":["kye"],
+  "きょ":["kyo"],
+  "ぎゃ":["gya"],
+  "ぎぃ":["gyi"],
+  "ぎゅ":["gyu"],
+  "ぎぇ":["gye"],
+  "ぎょ":["gyo"],
+  "しゃ":["sya","sha"],
+  "しぃ":["syi"],
+  "しゅ":["syu","shu"],
+  "しぇ":["sye","she"],
+  "しょ":["syo","sho"],
+  "じゃ":["zya","ja","jya"],
+  "じぃ":["zyi","jyi"],
+  "じゅ":["zyu","ju","jyu"],
+  "じぇ":["zye","je","jye"],
+  "じょ":["zyo","jo","jyo"],
+  "ちゃ":["tya","cha","cya"],
+  "ちぃ":["tyi","cyi"],
+  "ちゅ":["tyu","chu","cyu"],
+  "ちぇ":["tye","che","cye"],
+  "ちょ":["tyo","cho","cyo"],
+  "ぢゃ":["dya"],
+  "ぢぃ":["dyi"],
+  "ぢゅ":["dyu"],
+  "ぢぇ":["dye"],
+  "ぢょ":["dyo"],
+  "にゃ":["nya"],
+  "にぃ":["nyi"],
+  "にゅ":["nyu"],
+  "にぇ":["nye"],
+  "にょ":["nyo"],
+  "ひゃ":["hya"],
+  "ひぃ":["hyi"],
+  "ひゅ":["hyu"],
+  "ひぇ":["hye"],
+  "ひょ":["hyo"],
+  "びゃ":["bya"],
+  "びぃ":["byi"],
+  "びゅ":["byu"],
+  "びぇ":["bye"],
+  "びょ":["byo"],
+  "ぴゃ":["pya"],
+  "ぴぃ":["pyi"],
+  "ぴゅ":["pyu"],
+  "ぴぇ":["pye"],
+  "ぴょ":["pyo"],
+  "みゃ":["mya"],
+  "みぃ":["myi"],
+  "みゅ":["myu"],
+  "みぇ":["mye"],
+  "みょ":["myo"],
+  "りゃ":["rya"],
+  "りぃ":["ryi"],
+  "りゅ":["ryu"],
+  "りぇ":["rye"],
+  "りょ":["ryo"],
+  "ふぁ":["fa","hwa"],
+  "ふぃ":["fi","fyi","hwi"],
+  "ふぇ":["fe","fye","hwe"],
+  "ふぉ":["fo","hwo"],
+  "ふゅ":["fyu"],
+  "ふょ":["fyo"],
+  "うぁ":["wha"],
+  "うぃ":["wi","whi"],
+  "うぇ":["we","whe"],
+  "うぉ":["who"],
+  "ゔぁ":["va"],
+  "ゔぃ":["vi","vyi"],
+  "ゔぇ":["ve","vye"],
+  "ゔぉ":["vo"],
+  "ゔゃ":["vya"],
+  "ゔゅ":["vyu"],
+  "ゔょ":["vyo"],
+  "てぃ":["thi"],
+  "てゃ":["tha"],
+  "てゅ":["thu"],
+  "てぇ":["the"],
+  "てょ":["tho"],
+  "でぃ":["dhi"],
+  "でゃ":["dha"],
+  "でゅ":["dhu"],
+  "でぇ":["dhe"],
+  "でょ":["dho"],
+  "とぁ":["twa"],
+  "とぃ":["twi"],
+  "とぅ":["twu"],
+  "とぇ":["twe"],
+  "とぉ":["two"],
+  "どぁ":["dwa"],
+  "どぃ":["dwi"],
+  "どぅ":["dwu"],
+  "どぇ":["dwe"],
+  "どぉ":["dwo"],
+  "くぁ":["qa","kwa"],
+  "くぃ":["qi","kwi"],
+  "くぇ":["qe","kwe"],
+  "くぉ":["qo","kwo"],
+  "ぐぁ":["gwa"],
+  "ぐぃ":["gwi"],
+  "ぐぅ":["gwu"],
+  "ぐぇ":["gwe"],
+  "ぐぉ":["gwo"],
+  "つぁ":["tsa"],
+  "つぃ":["tsi"],
+  "つぇ":["tse"],
+  "つぉ":["tso"],
+  "すぁ":["swa"],
+  "すぃ":["swi"],
+  "すぅ":["swu"],
+  "すぇ":["swe"],
+  "すぉ":["swo"],
+  "ー":["-"],
+  "、":[","],
+  "。":["."],
+  "・":["/"],
+  "　":[" "],
+  " ":[" "],
+  "！":["!"],
+  "？":["?"],
+  "「":["["],
+  "」":["]"],
+  "～":["~"],
+};
+const N_BLOCK = "ぁあぃいぅうぇえぉおなにぬねのゃやゅゆょよゎん";
+const SOKU_NG = "aeinou";
+
+// 位置 i から始まりうる (かな消費数, ローマ字候補) を全部返す
+function plainSegments(kana, i){
+  const out = [], n = kana.length;
+  if (i >= n) return out;
+  if (i + 2 <= n && RT[kana.slice(i, i + 2)]) out.push([2, RT[kana.slice(i, i + 2)]]);
+  const one = kana[i];
+  if (RT[one]){
+    let opts = RT[one];
+    if (one === "ん" && i + 1 < n && N_BLOCK.indexOf(kana[i + 1]) < 0) opts = opts.concat(["n"]);
+    out.push([1, opts]);
+  }
+  return out;
+}
+function segmentsAt(kana, i){
+  const n = kana.length;
+  if (i >= n) return [];
+  if (kana[i] !== "っ") return plainSegments(kana, i);
+  let k = 0;
+  while (i + k < n && kana[i + k] === "っ") k++;
+  const out = [];
+  const nexts = plainSegments(kana, i + k);
+  for (let s = 0; s < nexts.length; s++){
+    const L = nexts[s][0], opts = nexts[s][1], doubled = [];
+    for (let j = 0; j < opts.length; j++){
+      const r = opts[j];
+      if (r && SOKU_NG.indexOf(r[0]) < 0) doubled.push(r[0].repeat(k) + r);
+    }
+    if (doubled.length) out.push([k + L, doubled]);
+  }
+  out.push([1, RT["っ"]]);                     // っ を xtu/ltu で単独入力する打ち方
+  return out;
+}
+
+function Matcher(kana){
+  this.kana = kana;
+  this.states = ["0|"];                        // "かな確定数|打ちかけ断片"
+  this.typed = "";
+}
+Matcher.prototype.feed = function(ch){
+  const nxt = {};
+  for (let s = 0; s < this.states.length; s++){
+    const bar = this.states[s].indexOf("|");
+    const i = +this.states[s].slice(0, bar), p = this.states[s].slice(bar + 1);
+    const want = p + ch, segs = segmentsAt(this.kana, i);
+    for (let a = 0; a < segs.length; a++){
+      const L = segs[a][0], opts = segs[a][1];
+      for (let b = 0; b < opts.length; b++){
+        const r = opts[b];
+        if (r.indexOf(want) === 0) nxt[r.length === want.length ? (i + L) + "|" : i + "|" + want] = 1;
+      }
+    }
+  }
+  const keys = Object.keys(nxt);
+  if (!keys.length) return false;
+  this.states = keys; this.typed += ch;
+  return true;
+};
+Matcher.prototype.confirmed = function(){        // ハイライトしてよいかな数（安全側）
+  let m = 1e9;
+  for (let s = 0; s < this.states.length; s++) m = Math.min(m, +this.states[s].split("|")[0]);
+  return m;
+};
+Matcher.prototype.complete = function(){
+  return this.states.indexOf(this.kana.length + "|") >= 0;
+};
+// 打ち始めに使えるキー（候補の頭文字がぶつからないようにするため）
+function firstKeys(kana){
+  const set = {}, segs = segmentsAt(kana, 0);
+  for (let a = 0; a < segs.length; a++)
+    for (let b = 0; b < segs[a][1].length; b++) set[segs[a][1][b][0]] = 1;
+  return Object.keys(set);
+}
+// 残りをいちばん短い打ち方で埋めたローマ字（ヒント表示用）。打てないなら null
+function restRomaji(kana, i, p){
+  let out = "", guard = 0;
+  while (i < kana.length){
+    if (guard++ > 40) return null;
+    const segs = segmentsAt(kana, i);
+    let best = null, bestL = 0;
+    for (let a = 0; a < segs.length; a++)
+      for (let b = 0; b < segs[a][1].length; b++){
+        const r = segs[a][1][b];
+        if (r.indexOf(p) === 0 && (best === null || r.length < best.length)){ best = r; bestL = segs[a][0]; }
+      }
+    if (best === null) return null;
+    out += best.slice(p.length); i += bestL; p = "";
+  }
+  return out;
+}
+function hintFor(m){
+  let bi = 0, bp = "";
+  for (let s = 0; s < m.states.length; s++){
+    const bar = m.states[s].indexOf("|");
+    const i = +m.states[s].slice(0, bar), p = m.states[s].slice(bar + 1);
+    if (i > bi || (i === bi && p.length > bp.length)){ bi = i; bp = p; }
+  }
+  return m.typed + (restRomaji(m.kana, bi, bp) || "");
+}
+
+/* 夜・静けさ・機械・希望。長いものは、男の子が打っていた文そのもの。
+   長さは実測でバケットするので、数え間違いは無害。                        */
+const RAW_WORDS = ("ひかり よぞら しずか ことば きぼう あかり かすか しずく けはい とおく ねむり よあけ みらい いのち こころ きおく さいご はじめ むかし ゆうひ つづき となり ひとり ふたり まぶた みなと ゆらぎ わすれ おわり かたち きせつ しるし すきま ひとみ むすう めざめ やみよ よふけ らせん りゆう れきし ゆびわ かがみ さかみち てざわり てのひら ゆびさき あしおと やくそく くらやみ にじいろ ぬくもり はぐるま ふゆぞら ほしぞら まちかど みずうみ もくてき ゆきどけ るすばん ろうそく しずけさ さみしさ おだやか けしきの ぬけみち らくがき りんかく れんらく ろくおん たいよう ちいさな つめたい でんきや とびらの なみだの ひとりで ふりむく まちあかり かぜのおと よるのそら きかいたち でんげんが あたたかい いつかまた うつくしい かえりみち きこえない くりかえし こわれかけ さいごまで しろいいき そらのいろ つながって てらしてる にどとない ねむれない のこされた はなしたい ひとりごと ふりかえる ほんとうは みちしるべ むねのおく めをとじて もどれない やわらかい よるのおと わらいごえ きえかけた うごかない おぼえてる かわらない くらいみち あきらめて しんじてる ためらった なきそうな ぬくもりが せかいのはて たしかなもの とおいひかり へいきなふり まちのあかり ゆきどけみず あきらめない げんきでいて こたえはない よるがあける きみのこえが しずかなあめ とけいのおと ひかりのむこう こわれたきかい きこえないこえ あのひのことば だれかのいのり とおくのあかり ちいさなひかり なにもいえない ふたりでみたそら だれもいないまち きえかけたひかり ゆびさきのきおく よるをわたるかぜ もどれないばしょ いきているだけで きみがわらうまで さよならのかわり たしかめたかった あかりのついたまど しずかなあめのおと わすれられたきおく おちてもまたのぼる とけいのはりのおと けしきがかわるまで あかるくないみらい まっくらなかいだん きみがうったことば まだきえていないひ だれもいなくなった ひとりぶんのあしおと ことばにならないこと だれかにとどくことば かえりみちのとちゅう よあけまえのしずけさ まだいえなかったこと つぎのいちもじをうつ ことばがとどくひまで きこえていたはずのこえ もういちどはなすために うごかなくなったきかい だれもいないきょうしつ おちてもまたうてばいい そらがあかるくなるまで ひかりはまだきえていない だれかにとどけたいことば しずかなよるをこえていく いつかまたはなせるように きみのことばがのこってる だれかがいたへや しずかなあしおと きえていくひかり さいごのことば とけいがとまった あかりのないみち ゆびがおぼえてる みずうみのそこ よるがおわるまで だれのこえもない ひとつぶのひかり こわさないように わすれたふりして だれかのあしおと きえないでほしい よるをこえるために まだおわっていない きみにとどくまえに あしたもここにいる だれかがまっている もういちどあいたい まだうごけるはずだ わすれたくなかった ひかりがきえるまえに とおくできこえるおと").split(" ");
+
+const POOL = {};
+for (const w of new Set(RAW_WORDS)){
+  if (!w || w.length < T.MIN_LEN || w.length > T.MAX_LEN) continue;
+  const rj = restRomaji(w, 0, "");
+  if (rj === null){ console.warn("打てない言葉なので外した:", w); continue; }
+  // 「ん」を n 2個で打たされる語は、**正しく打っても打ち終わらない**ように見える。
+  //   まっくらなかいだん → makkuranakaidann（n 1個では発射されない）
+  //   ひとりぶんのあしおと → hitoribunnnoasioto（n が3つ並ぶ）
+  // 「みすってないのにミスってることにされる」の実体のひとつがこれ。出さない。
+  if (/nn$/.test(rj) || /nnn/.test(rj)){ console.warn("ん で誤爆するので外した:", w, rj); continue; }
+  (POOL[w.length] || (POOL[w.length] = [])).push({ kana:w, keys:firstKeys(w), romaji:rj });
+}
+// 候補は4段階の長さから1つずつ。小跳び／中跳び／大跳び／大跳躍の選択肢になる
+const BUCKETS = [[3,4],[5,6],[7,8],[9,12]];
+const BUCKET_WORDS = BUCKETS.map(r => {
+  const a = [];
+  for (let L = r[0]; L <= r[1]; L++) if (POOL[L]) a.push.apply(a, POOL[L]);
+  return a;
+});
+
+/* リロール。打てば手札を引き直せる。**代償は打鍵そのもの** —
+   途中で打ち間違えれば、他の言葉と同じように向かい風で戻される。
+   'r' は予約キー。ら行で始まる言葉は候補に出さない（衝突を作らないため） */
+const REROLL = { kana:"リロール", romaji:"riroru", opts:["riroru", "riro-ru", "rirooru"] };
+
+/* ===== ③ 乱数（シード固定：同じ山が毎回できる） ========================== */
+function mulberry32(a){ return function(){
+  a |= 0; a = a + 0x6D2B79F5 | 0;
+  let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+};}
+let rnd = mulberry32(T.SEED);
+const wrnd = mulberry32(T.SEED ^ 0x5bf03635);   // 単語用は別系列（地形を壊さないため）
+
+/* ===== ④ ゾーン定義（企画書 §6 の地形名がそのまま識別子になる）============
+   gap  : 前の足場の右端から次の左端まで（キー何個ぶん＝何文字ぶん）
+   rise : 上へ何px。負なら下る
+   w    : 足場の幅（キー何個ぶん）
+   h    : 足場の厚み。大きいものは「壁」として跳ね返す
+   side : 主ルートの手前下に安全網／罠の足場を置く確率                        */
+const ZONES = [
+  { name:"麓",                 sub:"BASE CAMP",      n: 9, gap:[2.2,3.6], rise:[ 22, 50], w:[3,5], h:[34, 34], side:.35, keys:["Q","W","E","R","T","Y","A","S","D","F","G"] },
+  { name:"Ctrl谷",             sub:"CTRL VALLEY",    n: 8, gap:[3.2,5.2], rise:[-24, 34], w:[2,4], h:[34, 96], side:.50, keys:["Ctrl","Alt","Win","Fn","Menu"] },
+  { name:"Shift段丘",          sub:"SHIFT TERRACE",  n:10, gap:[2.0,3.2], rise:[ 48, 86], w:[3,6], h:[34, 34], side:.28, keys:["Shift","Caps","Z","X","C","V","B"] },
+  { name:"Tabの細道",          sub:"TAB RIDGE",      n:11, gap:[3.0,4.8], rise:[ 18, 58], w:[1,2], h:[34,126], side:.16, keys:["Tab","Esc","~","1","2","3","4"] },
+  { name:"Backspace滑落地帯",  sub:"BACKSPACE SLIP", n: 9, gap:[2.6,4.4], rise:[ 26, 66], w:[2,3], h:[34, 34], side:.12, keys:["Bksp","Del","Ins","Home","End"], slick:true },
+  { name:"Enter絶壁",          sub:"ENTER CLIFF",    n: 9, gap:[1.4,2.6], rise:[ 92,138], w:[2,3], h:[34,152], side:.22, keys:["Enter"], glow:true },
+  { name:"Spacebar大橋",       sub:"SPACEBAR SPAN",  n: 5, gap:[4.5,7.5], rise:[-12, 36], w:[6,11],h:[34, 34], side:.10, keys:["Space"], glow:true },
+  { name:"Function Key天空域", sub:"FUNCTION SKY",   n:12, gap:[2.8,5.6], rise:[ 38, 96], w:[1,3], h:[34, 34], side:.40, keys:["F1","F4","F5","F9","F12","PrtSc","ScrLk"], glow:true }
+];
+
+/* ===== ⑤ 地形生成 ======================================================== */
+let plats = [], buckets = new Map(), levelRight = 0, summitY = 0, decor = [], stars = [];
+let banks = [], cables = [];
+const BW = 320;                                    // あたり判定の空間分割の幅
+function bucketPut(p){
+  const a = Math.floor(p.x / BW), b = Math.floor((p.x + p.w) / BW);
+  for (let i = a; i <= b; i++){ if (!buckets.has(i)) buckets.set(i, []); buckets.get(i).push(p); }
+}
+function nearby(x){ return buckets.get(Math.floor(x / BW)) || []; }
+
+function buildLevel(){
+  rnd = mulberry32(T.SEED);
+  const R  = (a,b) => a + rnd() * (b - a);
+  const Ri = (a,b) => Math.floor(R(a, b + 1));
+  plats = []; buckets = new Map(); decor = []; stars = [];
+
+  let x = 720, y = -70;   // 麓の岸の右端(600)より先から山が始まる
+  const entryPlats = [];
+  for (const z of ZONES){
+    for (let i = 0; i < z.n; i++){
+      // 各区間の入口だけは広い踊り場にする。落ちてきたときの受け皿になる
+      const w = (i === 0 ? Math.max(4, Ri(z.w[0], z.w[1])) : Ri(z.w[0], z.w[1])) * T.UNIT;
+      const h = Math.round(R(z.h[0], z.h[1]));
+      const mp = { x:Math.round(x), y:Math.round(y), w:w, h:h, zone:z,
+                   label:z.keys[Ri(0, z.keys.length - 1)], glow:!!z.glow, slick:!!z.slick, main:true };
+      plats.push(mp);
+      if (i === 0) entryPlats.push(mp);          // 区間の入口。ケーブルの行き先になる
+      // 手前下の足場：短すぎた跳躍を拾う安全網であり、跳びすぎを誘う罠でもある
+      if (rnd() < z.side){
+        const sy = Math.round(y + R(56, 158));
+        // 麓の地面(y=0)より下に置くと、地面の中に埋まって到達できない死んだ地形になる
+        if (sy < -30){
+          plats.push({ x:Math.round(x + w + R(.6, 2.4) * T.UNIT), y:sy,
+                       w:Ri(1,3) * T.UNIT, h:34, zone:z,
+                       label:z.keys[Ri(0, z.keys.length - 1)], glow:false, slick:!!z.slick, main:false });
+        }
+      }
+      // 風下（左下）の受け皿。向かい風で戻されたとき、ここが拾う。
+      // これが無いと、実測でミスの8割が麓直行になった
+      if (rnd() < T.LEE_RATE){
+        const lw = Ri(2, 4) * T.UNIT;
+        const lx = Math.round(x - R(.8, 3.2) * T.UNIT - lw);
+        const ly = Math.round(y + R(95, 225));
+        let clash = ly >= -30;             // 地面より下には置かない（埋まって使えない）
+        for (let q = 0; q < plats.length; q++){
+          const o = plats[q];
+          if (lx < o.x + o.w + 24 && lx + lw + 24 > o.x && ly < o.y + o.h + 18 && ly + 42 > o.y - 18){ clash = true; break; }
+        }
+        if (!clash) plats.push({ x:lx, y:ly, w:lw, h:34, zone:z,
+          label:z.keys[Ri(0, z.keys.length - 1)], glow:false, slick:false, main:false, lee:true });
+      }
+      x += w + R(z.gap[0], z.gap[1]) * T.UNIT;
+      y -= R(z.rise[0], z.rise[1]);
+    }
+  }
+  summitY = y;
+  levelRight = plats.reduce((m,p) => Math.max(m, p.x + p.w), 0);
+  // 陸地は麓の岸だけ。**山はそこから先、川から直接生えている。**
+  // 全幅に地面を張ると、中腹で落ちたとき右上にしか跳べないプレイヤーが
+  // 二度と登れなくなる（自動プレイで実際に詰んだ）。
+  // 岸を短くしてあるので、始めた瞬間から右手に川が見える
+
+  // 麓の地面。ここまで落ちても終わらない（企画書 §9「派手なGAME OVERは出さない」）
+  plats.unshift({ x:-1400, y:0, w:2000, h:400, zone:ZONES[0],
+                  label:"", glow:false, slick:false, main:true, floor:true });
+  // ---- 岸とケーブル ----------------------------------------------------
+  // 落ちたら川に流され、ひとつ下流の岸へ上がる。岸からは**ケーブルを伝って**
+  // 本ルートへ戻る。跳躍だけだと、水面から登り直す道が元の登りと同じ長さになり、
+  // 岸が近道にならない。ケーブルは「文字数ぶん真上へ」なので、その1点だけを解く
+  banks = []; cables = [];
+  plats[0].bank = true; plats[0].shore = true;  // 麓の地面を、そのまま岸として使う
+  banks.push(plats[0]);
+  for (let e = 1; e < entryPlats.length; e++){
+    const ep = entryPlats[e];
+    const cx = Math.round(ep.x + ep.w / 2);
+    const bw = 6 * T.UNIT;
+    const bank = { x:cx - (bw >> 1), y:0, w:bw, h:260, zone:ep.zone, label:"",
+                   bank:true, main:true, glow:false, slick:false };
+    const cable = { x:cx, top:ep.y, bottom:0, plat:ep, zone:ep.zone };
+    bank.cable = cable;
+    plats.push(bank); banks.push(bank); cables.push(cable);
+  }
+
+  fixClearance();                    // 潜り込んで嵌まる隙間を先に潰す
+  // fixClearance は本ルートの足場を持ち上げることがある。
+  // ケーブルの上端は、動いたあとの高さで取り直す
+  for (let i = 0; i < cables.length; i++) cables[i].top = cables[i].plat.y;
+  for (const p of plats) bucketPut(p);
+  pruneDeadEnds();
+
+  // 遠景：崩れたモニタ、巨大USBケーブル
+  for (let i = 0; i < 62; i++){
+    decor.push({ k: rnd() < .35 ? "mon" : "cab",
+                 x: R(-1400, levelRight + 900), y: R(summitY - 400, 240),
+                 s: R(.5, 2.2), d: R(.24, .60), r: R(-.55, .55) });
+  }
+  for (let i = 0; i < 74; i++){          // 少なくする。空を埋めない
+    stars.push({ x: rnd(), y: rnd(), a: R(.3, 1) });
+  }
+}
+
+/* ===== ⑥″ 潜り込める隔間をなくす ==================================
+   足場の底と、その下の足場（地面を含む）の天面との隙間がプレイヤーより狭いと、
+   そこへ降りた瞬間に**上下左右どこへも動けなくなる。**
+   実測：麓の「Y」は底 -16px・地面まで16px しかなく、プレイヤーは18px。
+   x=160〜1680 の16か所で完全に嵌まっていた（6文字で跳んでも移動0px）。
+   本ルートは持ち上げて隙間を作り、脇の足場は消す。                          */
+function fixClearance(){
+  const MIN_CLEAR = PH + 10;        // PH はこの節より下で宣言されるので、呼ばれた時に取る
+  for (let pass = 0; pass < 3; pass++){
+    let fixed = 0;
+    for (let i = plats.length - 1; i >= 0; i--){
+      const p = plats[i];
+      if (p.floor) continue;
+      for (let j = 0; j < plats.length; j++){
+        const q = plats[j];
+        if (q === p) continue;
+        if (p.x + p.w <= q.x || q.x + q.w <= p.x) continue;      // x が重ならない
+        const gap = q.y - (p.y + p.h);                            // p の底 → q の天面
+        if (gap < 0 || gap >= MIN_CLEAR) continue;
+        if (p.bank || q.bank) continue;                           // 岸は動かさない
+        if (p.main){ p.y = q.y - MIN_CLEAR - p.h; fixed++; }      // 持ち上げる
+        else { plats.splice(i, 1); fixed++; }                     // 脇の足場は消す
+        break;
+      }
+    }
+    if (!fixed) break;
+  }
+}
+
+/* ===== ⑥′ 出られない足場を消す ====================================
+   乗ったら最後、3〜12文字のどれで跳んでも同じ足場に戻ってくる場所が実際にあった
+   （Shift段丘の Caps・4キー幅・高度12.1m。7つの立ち位置すべてで詰み）。
+   奈落へ落ちるのは「戻される」だけなので詰みではない。**同じ足場に戻り続けるのが詰み。**
+   立ち位置を20px刻みで総当たりし、1つでも出られない位置があればその足場を消す。 */
+function escapable(p){
+  const xs = [];
+  for (let x = p.x + 16; x <= p.x + p.w - 16; x += 20) xs.push(Math.round(x));
+  if (!xs.length) xs.push(Math.round(p.x + p.w / 2));
+  for (let i = 0; i < xs.length; i++){
+    const seen = {}; seen[xs[i]] = 1;
+    const q = [xs[i]];
+    let out = false;
+    while (q.length && !out){
+      const cur = q.shift();
+      for (let L = T.MIN_LEN; L <= T.MAX_LEN; L++){
+        const r = predict(L, cur, p.y);
+        if (!r.ok || r.plat !== p){ out = true; break; }   // 別の足場 or 奈落 ＝ 出られる
+        const nx = Math.round(r.land[0] / 20) * 20;
+        if (!seen[nx]){ seen[nx] = 1; q.push(nx); }
+      }
+    }
+    if (!out) return false;
+  }
+  return true;
+}
+function pruneDeadEnds(){
+  for (let pass = 0; pass < 3; pass++){
+    let removed = 0;
+    for (let i = plats.length - 1; i >= 1; i--){
+      const p = plats[i];
+      if (p.floor || p.bank || escapable(p)) continue;
+      if (p.main){                       // 本ルートは消せない。消すと道が切れる
+        console.warn("本ルートに詰み足場:", p.zone.name, p.label, "x=" + p.x, "→ ZONES の調整が要る");
+        continue;
+      }
+      plats.splice(i, 1); removed++;
+    }
+    if (!removed) break;
+    buckets = new Map();
+    for (let i = 0; i < plats.length; i++) bucketPut(plats[i]);
+  }
+}
+
+/* ===== ⑥ プレイヤーと状態 ================================================ */
+const PW = 30, PH = 18;                            // 主人公＝キーボード本体のあたり判定
+const S = {
+  x:40, y:0, vx:0, vy:0, ground:null, air:false,
+  apex:0, best:0, maxFall:0, combo:0, bestCombo:0, keys:0, miss:0,
+  started:false, t0:0, elapsed:0, zone:null, shake:0, flash:0,
+  mat:null, active:null, queued:null, cands:[], preds:[], trail:[], puffs:[],
+  squash:0, spin:0, rr:"", fresh:[0,0,0,0], rerolls:0, words:0,
+  onCable:null, climbTo:0, climbs:0
+};
+
+const rattling = [];                      // 風に叩かれて震えているキーキャップ
+function boxHit(x, y, p){
+  return x + PW/2 > p.x && x - PW/2 < p.x + p.w && y > p.y && y - PH < p.y + p.h;
+}
+function hitAt(x, y){
+  let list = nearby(x);
+  for (let i = 0; i < list.length; i++) if (boxHit(x, y, list[i])) return list[i];
+  list = nearby(x - PW/2);                          // 分割境界をまたぐケース
+  for (let i = 0; i < list.length; i++) if (boxHit(x, y, list[i])) return list[i];
+  list = nearby(x + PW/2);
+  for (let i = 0; i < list.length; i++) if (boxHit(x, y, list[i])) return list[i];
+  return null;
+}
+
+/* ===== ⑦ 跳ぶ ============================================================ */
+function launch(len){
+  const v = speedFor(len);
+  return { vx: v * Math.cos(RAD), vy: -v * Math.sin(RAD) };
+}
+function jump(len){
+  if (climb(len)) return;                  // 岸・ケーブルの上では真上へ登る
+  const l = launch(len);
+  S.vx = l.vx; S.vy = l.vy;
+  S.air = true; S.ground = null; S.apex = S.y;
+  S.squash = -.55;                          // 跳ぶ瞬間に縦へ伸びる
+  for (let i = 0; i < 12; i++)
+    S.puffs.push({ x:S.x, y:S.y, vx:-l.vx * .12 + (Math.random() - .5), vy:.5 + Math.random(), a:1 });
+  sfx.jump(len);
+}
+
+/* ケーブルを伝う。**跳躍が「文字数ぶん右上へ」なら、ケーブルは「文字数ぶん真上へ」。**
+   同じ規則の向き違いなので、覚えることは増えない。
+   天辺まで登り切ると、そのまま区間の入口へ移る。                            */
+function cableAt(){
+  if (S.onCable) return S.onCable;
+  if (!S.air && S.ground && S.ground.cable) return S.ground.cable;
+  return null;
+}
+function climb(len){
+  const c = cableAt();
+  if (!c) return false;
+  S.onCable = c; S.ground = null; S.air = false;
+  S.x = c.x; S.vx = 0; S.vy = 0;
+  S.climbTo = Math.max(c.top, S.y - len * T.UNIT);
+  S.squash = -.4;
+  S.climbs++;
+  sfx.climbing(len);
+  return true;
+}
+function cableStep(){
+  const c = S.onCable;
+  const dy = S.climbTo - S.y;
+  if (Math.abs(dy) > .5){
+    S.y += (dy > 0 ? 1 : -1) * Math.min(Math.abs(dy), T.CLIMB_V);
+    if ((frame & 3) === 0)
+      S.puffs.push({ x:c.x + (Math.random()-.5)*10, y:S.y + 10,
+                     vx:(Math.random()-.5)*.5, vy:.5, a:.5 });
+    return;
+  }
+  S.y = S.climbTo;
+  if (S.y <= c.top + 1){                       // 天辺。ルートへ乗り移る
+    const pl = c.plat;
+    S.onCable = null; S.air = false; S.ground = pl;
+    S.x = Math.max(pl.x + 18, Math.min(c.x, pl.x + pl.w - 18));
+    S.y = pl.y; S.apex = pl.y; S.preds = null; S.squash = .45;
+    if (S.zone !== pl.zone){ S.zone = pl.zone; showZone(pl.zone); }
+    sfx.land(1);
+  }
+}
+
+/* 軌道予測：着地まで実際にシミュレートするので、壁の跳ね返りも含めて正確 */
+function predict(len, x0, y0){
+  const l = launch(len);
+  let x = x0, y = y0, vx = l.vx, vy = l.vy;
+  const pts = [[x, y]];
+  for (let f = 0; f < 300; f++){
+    vy += T.GRAV;
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(vx), Math.abs(vy)) / 4));
+    let landed = null;
+    for (let s = 0; s < steps; s++){
+      const sx = vx / steps, sy = vy / steps;
+      x += sx; if (hitAt(x, y)) { x -= sx; vx = -vx * T.BOUNCE; }
+      y += sy;
+      const p = hitAt(x, y);
+      if (p){ if (sy > 0){ y = p.y; landed = p; } else { y -= sy; vy = 0; } break; }
+    }
+    pts.push([x, y]);
+    if (landed) return { pts:pts, land:[x, y], plat:landed, ok:true };
+    if (y > 700) break;
+  }
+  return { pts:pts, land:[x, y], plat:null, ok:false };
+}
+
+/* 山から完全に外れた落下は、**川に落ちる**。沈まない。流されて麓の岸へ戻る。
+   企画書 §29「何時間もの進捗を失うこともある」／§9「派手なGAME OVERは出さない」。
+   失うものは同じでも、**戻る過程が見えているかどうかで風情がまるで違う。**     */
+const river = { on:0, t:0, bank:null, toX:0, streaks:[] };
+function enterRiver(){
+  const dropM = Math.max(0, (S.y - S.apex) / T.PX_PER_M);
+  if (dropM > S.maxFall) S.maxFall = dropM;
+  river.on = 1; river.t = 0;
+  // 流れ着く先は、**ここより下流にある最初の岸**。落ちた場所で戻る先が変わる
+  river.bank = banks[0];
+  for (let i = banks.length - 1; i >= 0; i--){
+    const b = banks[i];
+    if (b.x + b.w * .5 < S.x - 40){ river.bank = b; break; }
+  }
+  river.toX = river.bank.shore ? T.START_X : river.bank.x + river.bank.w * .5;
+  S.air = false; S.ground = null; S.onCable = null;
+  S.y = T.RIVER_Y; S.vy = -1.4; S.vx = Math.min(0, S.vx * .4);
+  S.spin = 0; S.squash = .45;
+  S.mat = null; S.active = null; S.rr = ""; S.queued = null; S.zone = null;
+  S.trail.length = 0;
+  for (let i = 0; i < 30; i++)                      // しぶき
+    S.puffs.push({ x:S.x + (Math.random()-.5)*30, y:T.RIVER_Y,
+                   vx:(Math.random()-.5)*3.4, vy:-1.2 - Math.random()*2.4, a:1 });
+  sfx.splash(Math.min(1, dropM / 60));
+  elWords.style.opacity = "0";                      // 流されている間は手札を引っ込める
+  paintWords();
+}
+/* 流れは書き割りではなく力。**深いところは速く、岸に近づくほど浅くなって緩む。**
+   だから戻される速さは、落ちた場所との距離が決める。着く先は岸の一点。      */
+function riverStep(){
+  river.t++;
+  const shore = river.bank.shore ? river.bank.x + river.bank.w
+                                 : river.bank.x + river.bank.w * .5 + 60;
+  const d = S.x - shore;
+  if (d > 0){
+    // 深いところほど速い。岸へ近づくと浅くなって、目に見えて緩む
+    const tgt = -Math.max(1.5, Math.min(T.RIVER_V, d * T.RIVER_K));
+    S.vx += (tgt - S.vx) * .12;                  // 流速に素直に追従させる。
+  } else {                                       // でないと浅瀬を勢いのまま突き抜ける
+    const dx = river.toX - S.x;                  // 岸の定位置へ寄せて止める
+    const tgt = Math.max(-22, Math.min(22, dx * .10));
+    S.vx += (tgt - S.vx) * .14;
+  }
+  S.x += S.vx;
+  // 浮力。水面へ戻ろうとしながら、波に揺られる
+  const surf = T.RIVER_Y + Math.sin(river.t * .06 + S.x * .0035) * 3.2;
+  S.vy += (surf - S.y) * .05; S.vy *= .84; S.y += S.vy;
+  if (river.t % 6 === 0)
+    S.puffs.push({ x:S.x + (Math.random()-.5)*24, y:S.y + 5,
+                   vx:S.vx * .12 - Math.random(), vy:-.25, a:.65 });
+  // 岸に乗り上げて、流れが止まったら上がる
+  if ((d < 0 && Math.abs(river.toX - S.x) < 8 && Math.abs(S.vx) < .8) || river.t > 1600) leaveRiver();
+}
+function leaveRiver(){
+  river.on = 0;
+  const b = river.bank;
+  S.x = river.toX; S.y = b.y; S.vx = 0; S.vy = 0; S.air = false;
+  S.ground = b; S.apex = b.y; S.preds = null; S.squash = .5;
+  elWords.style.opacity = "";
+  sfx.land(2);
+  S.zone = b.zone; showZone(b.zone);     // どの岸へ流れ着いたかが、失った量そのもの
+  paintWords();
+}
+function toBase(){
+  const dropM = Math.max(0, (S.y - S.apex) / T.PX_PER_M);
+  if (dropM > S.maxFall) S.maxFall = dropM;
+  S.x = T.START_X; S.y = 0; S.vx = 0; S.vy = 0;
+  S.air = false; S.ground = banks[0]; S.apex = 0; S.onCable = null;
+  S.zone = null; S.trail.length = 0; S.queued = null; S.mat = null; S.active = null;
+  camReady = false;                      // カメラは追わずに切り替える
+  sfx.land(3);                           // 音は変えない。ゲーム側は何も煽らない
+  showZone(ZONES[0]);                    // 「麓」と出ることが、全部失った合図
+  S.preds = null; S.rr = ""; paintWords();   // 手札は持ったまま。失うのは高度だけ
+}
+
+/* ===== ⑧′ 向かい風 =========================================================
+   ミスの罰は「落ちる」ではなく「押し戻される」。前から吹いてくる風で、
+   登ってきた方向へ運ばれる。風は山頂の方角＝あの子のいる方角から来るので、
+   **近づくほど強くなる。** 麓では少しよろける程度、山頂付近では山から剥がされる。 */
+const wind = { t:0, spd:0, streaks:[] };
+function gustSpeed(){
+  const alt = Math.max(0, -S.y) / T.PX_PER_M;
+  return Math.min(T.GUST_MAX, T.GUST_BASE + alt * T.GUST_PER_M);
+}
+function startGust(){
+  wind.t = T.GUST_FRAMES;
+  wind.spd = gustSpeed();
+  if (S.onCable){ S.onCable = null; S.air = true; S.apex = S.y; }   // ケーブルから振り落とされる
+  if (S.ground && !S.ground.floor){ S.ground.rattle = 26; rattling.push(S.ground); }
+  if (!S.air){                               // まず浮かされて、それから運ばれる
+    S.air = true; S.ground = null; S.apex = S.y;
+    S.vy = -1.4 - wind.spd * .13;
+  }
+  S.shake = Math.min(11, 3 + wind.spd * .75);
+  for (let i = 0; i < 70; i++) wind.streaks.push(newStreak(true));
+  showGust();
+  sfx.gust(wind.spd);
+}
+function feelStep(){
+  S.squash *= .86;
+  if (!S.air) S.spin *= .55;    // 着地したらすぐ水平へ戻す
+}
+function windStep(){
+  for (let i = rattling.length - 1; i >= 0; i--){
+    const q = rattling[i];
+    if (--q.rattle <= 0){ q.rattle = 0; rattling.splice(i, 1); }
+  }
+  if (wind.t <= 0) return;
+  wind.t--;
+  const k = wind.t / T.GUST_FRAMES;           // 吹き終わりに向かって弱まる
+  const target = -wind.spd * (.34 + .66 * k);
+  S.vx += (target - S.vx) * .085;
+}
+
+/* ===== ⑧ 物理 ============================================================ */
+function physics(){
+  feelStep();
+  if (river.on){ riverStep(); return; }     // 流されている間は他の力を受けない
+  if (S.onCable){ cableStep(); return; }    // ケーブルを掴んでいる間は落ちない
+  windStep();
+  if (!S.air){
+    // 万一どこかに嵌まっていたら、左へ滑り出す。山は右上へ登るので左が出口。
+    // 生成時に潰しているが、地形を触ったときの保険として実行時にも見る
+    if (hitAt(S.x, S.y)){
+      for (let n = 0; n < 90 && hitAt(S.x, S.y); n++) S.x -= 6;
+      if (hitAt(S.x, S.y)){ toBase(); return; }
+      S.vx = 0;
+    }
+    if (wind.t > 0){                          // 地面の上でも押し流される。踏ん張れない
+      S.x += S.vx;
+      if (S.ground && (S.x + PW/2 < S.ground.x || S.x - PW/2 > S.ground.x + S.ground.w)){
+        S.air = true; S.ground = null; S.apex = S.y; S.vy = .3;
+      }
+    } else if (S.ground && S.ground.slick && Math.abs(S.vx) > .02){  // 滑落地帯：着地しても止まらない
+      S.x += S.vx; S.vx *= T.SLICK_FRIC;
+      if (S.x + PW/2 < S.ground.x || S.x - PW/2 > S.ground.x + S.ground.w){
+        S.air = true; S.ground = null; S.apex = S.y; S.vy = .4;
+      }
+    } else if (S.ground){
+      S.vx = 0;
+      // 落下中に打ち切った単語は、風がやんでから発射する
+      if (S.queued){ const q = S.queued; S.queued = null; jump(q); }
+    }
+    return;
+  }
+  S.vy += T.GRAV;
+  if (S.y < S.apex) S.apex = S.y;
+  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(S.vx), Math.abs(S.vy)) / 4));
+  for (let s = 0; s < steps; s++){
+    const sx = S.vx / steps, sy = S.vy / steps;
+    S.x += sx;
+    if (hitAt(S.x, S.y)){
+      S.x -= sx; S.vx = -S.vx * T.BOUNCE;
+      sfx.bump(); S.shake = Math.min(7, S.shake + Math.abs(S.vx) * .5);
+    }
+    S.y += sy;
+    const p = hitAt(S.x, S.y);
+    if (p){
+      if (sy > 0) { S.y = p.y; land(p); break; }
+      else { S.y -= sy; S.vy = 0; }
+    }
+  }
+  if (S.air){
+    S.spin += S.vx * .0055;                 // ゆっくり回りながら飛ぶ
+    if (S.trail.length < 300) S.trail.push([S.x, S.y]);
+  }
+  if (S.y > T.RIVER_Y) enterRiver();
+}
+
+function land(p){
+  const dropM = Math.max(0, (S.y - S.apex) / T.PX_PER_M);
+  if (dropM > S.maxFall) S.maxFall = dropM;
+  S.air = false; S.ground = p; S.vy = 0;
+  S.vx = p.slick ? S.vx * .5 : 0;
+  S.shake = Math.min(7, dropM * .14);       // 着地は軽く。重たく響かせない
+  S.squash = Math.min(1, .45 + dropM * .02);
+  for (let i = 0; i < 14; i++)
+    S.puffs.push({ x:S.x + (Math.random() - .5) * 22, y:S.y, vx:(Math.random() - .5) * 1.6, vy:-Math.random() * .7, a:1 });
+  sfx.land(dropM);
+  if (S.zone !== p.zone && !p.floor){ S.zone = p.zone; showZone(p.zone); }
+  S.trail.length = 0;
+  S.preds = null;   // 位置が変わったので軌道は引き直す。**手札には触らない**
+}
+
+/* ===== ⑨ ミス ============================================================ */
+function slip(){
+  S.miss++; S.combo = 0; S.flash = 1; S.mat = null; S.active = null; S.rr = "";
+  sfx.miss();
+  if (T.MISS_WIND) startGust();            // 落ちるのではなく、前から吹かれて戻される
+  else S.shake = 4;
+  paintWords();
+}
+
+/* どの言葉にも当たらないキー。**「打ち間違え」ではなく「打ち損じ」。**
+   ここで落とすと、直前の言葉の余韻（n が1個余る、r に触った、指が滑った）が
+   ぜんぶ事故になる。罰するのは **言葉の途中で外したときだけ** にする。      */
+function stray(){
+  S.combo = 0; S.rr = ""; S.mat = null; S.active = null;
+  if (T.STRAY_FATAL && !S.air){ slip(); return; }
+  sfx.bump(); S.shake = 2.2;
+  paintWords();
+}
+
+/* ===== ⑩ 単語候補 ======================================================== */
+function newCandidates(slot){
+  // slot を渡すとその1枚だけ引き直す。**使わなかったカードはそのまま残る。**
+  // slot 省略なら全部引き直す（＝リロール）
+  if (slot === undefined) S.cands = [null, null, null, null];
+  const used = { r:1 };                       // r は リロール 用に予約
+  for (let i = 0; i < 4; i++)
+    if (i !== slot && S.cands[i])
+      for (let k = 0; k < S.cands[i].keys.length; k++) used[S.cands[i].keys[k]] = 1;
+
+  for (let i = 0; i < 4; i++){
+    if (slot !== undefined && i !== slot) continue;
+    const list = BUCKET_WORDS[i];
+    let w = null;
+    for (let n = 0; n < 90; n++){
+      const c = list[(wrnd() * list.length) | 0];
+      if (!c) continue;
+      let clash = false;
+      for (let k = 0; k < c.keys.length; k++) if (used[c.keys[k]]){ clash = true; break; }
+      if (!clash){ w = c; break; }
+    }
+    if (!w) w = list[(wrnd() * list.length) | 0];
+    for (let k = 0; k < w.keys.length; k++) used[w.keys[k]] = 1;
+    S.cands[i] = w;
+    S.fresh[i] = 1;
+  }
+  S.mat = null; S.active = null; S.rr = "";
+  S.preds = null;                    // 着地したフレームで作り直す（地上でだけ要る）
+  buildWords();
+}
+function ensurePreds(){
+  if (S.preds || S.air || river.on || S.onCable) return;
+  S.preds = S.cands.map(w => predict(w.kana.length, S.x, S.y));   // 候補は文字列ではなくオブジェクト
+}
+
+/* ===== ⑪ 入力 — プレイヤーができるのはこれだけ ============================
+   打つのはローマ字。判定は Matcher（NFA）に任せるので、
+   「shi でも si でも」「ん を n でも nn でも」通る。                        */
+addEventListener("keydown", function(e){
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // キーを押しっぱなしにしたときの自動リピートを弾く。
+  // これを通すと、指が乗っているだけで同じ字が連打され、
+  // 言葉の途中で外したことになって落ちる（＝打ってないのにミス）
+  if (e.repeat) return;
+  // 日本語IMEが変換に食っているキーは、ゲーム側では無かったことにする
+  if (e.isComposing) return;
+  if (e.key.length !== 1) return;
+  const c = e.key.toLowerCase();
+  if (!(c >= "a" && c <= "z") && c !== "-") return;
+  e.preventDefault();
+
+  if (!S.started){
+    S.started = true; S.t0 = performance.now();
+    document.getElementById("ov").classList.add("off");
+    try { startAudio(); } catch (err) {}   // 音が死んでも入力は死なせない
+  }
+  if (river.on) return;                     // 流されている間は打っても進まない
+  S.keys++;
+  sfx.key(c);
+
+  // --- リロール（'r' は予約キーなので、言葉と取り違えようがない）---
+  if (!S.mat && (S.rr !== "" || c === "r")){
+    const want = S.rr + c;
+    let ok = false;
+    for (let i = 0; i < REROLL.opts.length; i++) if (REROLL.opts[i].indexOf(want) === 0) ok = true;
+    if (ok){
+      S.rr = want; S.combo++;
+      if (S.combo > S.bestCombo) S.bestCombo = S.combo;
+      if (REROLL.opts.indexOf(want) >= 0){        // 打ち切った → 手札を全部引き直す
+        S.rr = ""; S.rerolls++;
+        sfx.reroll(); newCandidates();
+      } else paintWords();
+      return;
+    }
+    // 続かない → リロールをやめて、このキーを言葉として読み直す（下へ落ちる）。
+    // r をうっかり触っただけで、次の1打が事故になるのを防ぐ
+    S.rr = "";
+  }
+
+  if (!S.mat){
+    const hit = S.cands.find(w => w && w.keys.indexOf(c) >= 0);
+    if (!hit){ stray(); return; }
+    S.mat = new Matcher(hit.kana); S.active = hit;
+    if (!S.mat.feed(c)){ S.mat = null; S.active = null; if (!S.air) slip(); return; }
+  } else if (!S.mat.feed(c)){
+    if (S.air){ S.combo = 0; S.mat = null; S.active = null; sfx.miss(); paintWords(); }
+    else slip();
+    return;
+  }
+  S.combo++;
+  if (S.combo > S.bestCombo) S.bestCombo = S.combo;
+
+  if (S.mat.complete()){                          // 打ち切った → かなの数だけ跳ぶ
+    const len = S.active.kana.length, slot = S.cands.indexOf(S.active);
+    S.words++;                                    // これが本作の主役の数字
+    S.mat = null; S.active = null;
+    newCandidates(slot);                          // **打ち終わった瞬間に、その1枚だけ替わる。**
+                                                  // 着地では触らない（落下中に手札が動くと読めない）
+    if (S.air) S.queued = len;                    // 落下中のぶんは着地と同時に発射
+    else jump(len);
+    return;
+  }
+  paintWords();
+});
+
+/* ===== ⑫ 音 — 企画書 §9。煽らない。落ちても「コトッ」で終わる ============= */
+let AC = null, MASTER = null, NOISE = null;
+const sfx = {
+  key: function(){}, miss: function(){}, jump: function(){},
+  land: function(){}, bump: function(){}, gust: function(){}, reroll: function(){},
+  splash: function(){}, climbing: function(){}
+};
+function startAudio(){
+  if (AC) return;
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  MASTER = AC.createGain(); MASTER.gain.value = .85; MASTER.connect(AC.destination);
+
+  const n = AC.sampleRate * 1.2 | 0;
+  NOISE = AC.createBuffer(1, n, AC.sampleRate);
+  const d = NOISE.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+
+  function noise(){ const s = AC.createBufferSource(); s.buffer = NOISE; s.loop = true; return s; }
+  function env(g, a, dec){
+    const gn = AC.createGain(), t = AC.currentTime;
+    gn.gain.setValueAtTime(0.0001, t);
+    gn.gain.exponentialRampToValueAtTime(Math.max(.0002, g), t + a);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t + a + dec);
+    gn.connect(MASTER);
+    return gn;
+  }
+  function stop(node, t){ node.stop(AC.currentTime + t); }
+
+  sfx.key = function(c){
+    const s = noise(), bp = AC.createBiquadFilter();
+    bp.type = "bandpass"; bp.Q.value = 1.4;
+    bp.frequency.value = 1200 + (c.charCodeAt(0) % 12) * 130;
+    const g = env(.09, .002, .045);
+    s.connect(bp); bp.connect(g); s.start(); stop(s, .09);
+    const o = AC.createOscillator(); o.type = "triangle";
+    o.frequency.value = 520 + (c.charCodeAt(0) % 9) * 24;
+    const g2 = env(.035, .002, .035);
+    o.connect(g2); o.start(); stop(o, .06);
+  };
+  sfx.miss = function(){
+    const o = AC.createOscillator(), lp = AC.createBiquadFilter();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(150, AC.currentTime);
+    o.frequency.exponentialRampToValueAtTime(64, AC.currentTime + .3);
+    lp.type = "lowpass"; lp.frequency.value = 420;
+    const g = env(.15, .006, .3);
+    o.connect(lp); lp.connect(g); o.start(); stop(o, .4);
+  };
+  sfx.jump = function(len){
+    const s = noise(), hp = AC.createBiquadFilter();
+    hp.type = "bandpass"; hp.Q.value = .8;
+    hp.frequency.setValueAtTime(300, AC.currentTime);
+    hp.frequency.exponentialRampToValueAtTime(300 + len * 190, AC.currentTime + .22);
+    const g = env(.05, .03, .22);
+    s.connect(hp); hp.connect(g); s.start(); stop(s, .3);
+  };
+  // 何十分ぶん落ちても、静かに「コトッ」と乗るだけ。音量は上げない
+  sfx.land = function(drop){
+    const vol = Math.min(.18, .055 + drop * .005);
+    const o = AC.createOscillator(); o.type = "triangle";
+    o.frequency.setValueAtTime(330, AC.currentTime);
+    o.frequency.exponentialRampToValueAtTime(196, AC.currentTime + .1);
+    const g = env(vol, .003, .1);
+    o.connect(g); o.start(); stop(o, .2);
+    const s = noise(), lp = AC.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 1500;
+    const g2 = env(vol * .55, .002, .05);
+    s.connect(lp); lp.connect(g2); s.start(); stop(s, .1);
+  };
+  // 向かい風。強くても音量は上げない。ゲーム側は最後まで煽らない
+  sfx.gust = function(spd){
+    const s = noise(), bp = AC.createBiquadFilter(), t = AC.currentTime;
+    bp.type = "bandpass"; bp.Q.value = .55;
+    bp.frequency.setValueAtTime(170, t);
+    bp.frequency.exponentialRampToValueAtTime(700 + spd * 95, t + .32);
+    bp.frequency.exponentialRampToValueAtTime(150, t + 1.5);
+    const g = env(Math.min(.15, .055 + spd * .011), .1, 1.5);
+    s.connect(bp); bp.connect(g); s.start(); stop(s, 1.8);
+    const o = AC.createOscillator(), lp2 = AC.createBiquadFilter();
+    o.type = "sine"; o.frequency.value = 58;
+    lp2.type = "lowpass"; lp2.frequency.value = 200;
+    const g2 = env(.05, .18, 1.1);
+    o.connect(lp2); lp2.connect(g2); o.start(); stop(o, 1.4);
+  };
+  // 手札を引き直す音。乾いた2連打
+  sfx.reroll = function(){
+    [0, .07].forEach(function(dt, i){
+      const sN = noise(), bp = AC.createBiquadFilter(), t = AC.currentTime + dt;
+      bp.type = "bandpass"; bp.Q.value = 1.1; bp.frequency.value = 900 + i * 420;
+      const gn = AC.createGain();
+      gn.gain.setValueAtTime(0.0001, t);
+      gn.gain.exponentialRampToValueAtTime(.075, t + .004);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t + .075);
+      sN.connect(bp); bp.connect(gn); gn.connect(MASTER);
+      sN.start(t); sN.stop(t + .12);
+    });
+  };
+  // 着水。落ちた高さで少しだけ大きくなるが、上限は低いまま
+  sfx.splash = function(power){
+    const t = AC.currentTime;
+    const sN = noise(), lp = AC.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(2600, t);
+    lp.frequency.exponentialRampToValueAtTime(320, t + .55);
+    const g = env(Math.min(.17, .07 + power * .1), .01, .6);
+    sN.connect(lp); lp.connect(g); sN.start(t); sN.stop(t + .8);
+    const o = AC.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(58, t + .35);
+    const g2 = env(.07, .008, .4);
+    o.connect(g2); o.start(t); o.stop(t + .55);
+  };
+  // ケーブルを手繰る音。短い金属質のきしみ
+  sfx.climbing = function(len){
+    const t = AC.currentTime;
+    for (let i = 0; i < Math.min(4, Math.ceil(len / 3)); i++){
+      const o = AC.createOscillator(), bp = AC.createBiquadFilter(), tt = t + i * .085;
+      o.type = "triangle"; o.frequency.setValueAtTime(320 + i * 40, tt);
+      o.frequency.exponentialRampToValueAtTime(190 + i * 30, tt + .1);
+      bp.type = "bandpass"; bp.Q.value = 2.2; bp.frequency.value = 900;
+      const g = AC.createGain();
+      g.gain.setValueAtTime(0.0001, tt);
+      g.gain.exponentialRampToValueAtTime(.05, tt + .004);
+      g.gain.exponentialRampToValueAtTime(0.0001, tt + .12);
+      o.connect(bp); bp.connect(g); g.connect(MASTER);
+      o.start(tt); o.stop(tt + .16);
+    }
+  };
+  sfx.bump = function(){
+    const o = AC.createOscillator(); o.type = "sine"; o.frequency.value = 95;
+    const g = env(.07, .003, .09);
+    o.connect(g); o.start(); stop(o, .14);
+  };
+
+  // 環境音：ゆっくり動くパッド ＋ たまに落ちる小さな音。完全には暗くしない
+  // 音の失敗でゲーム入力を巻き添えにしない
+  ["key","miss","jump","land","bump","gust","reroll","splash","climbing"].forEach(function(n){
+    const f = sfx[n]; sfx[n] = function(a){ try { f(a); } catch (e) {} };
+  });
+
+  const pad = AC.createGain(); pad.gain.value = .04; pad.connect(MASTER);
+  const lp = AC.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 380; lp.Q.value = 2;
+  lp.connect(pad);
+  [55, 82.5, 110.3].forEach(function(f, i){
+    const o = AC.createOscillator();
+    o.type = i === 2 ? "sine" : "sawtooth";
+    o.frequency.value = f * (1 + (i - 1) * .0035);
+    const g = AC.createGain(); g.gain.value = i === 2 ? .5 : .28;
+    o.connect(g); g.connect(lp); o.start();
+  });
+  const lfo = AC.createOscillator(); lfo.frequency.value = .045;
+  const lg = AC.createGain(); lg.gain.value = 190;
+  lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+
+  const SCALE = [220, 246.9, 293.7, 329.6, 392, 440, 587.3];
+  (function pluck(){
+    setTimeout(function(){
+      if (!AC) return;
+      const o = AC.createOscillator(); o.type = "triangle";
+      o.frequency.value = SCALE[(Math.random() * SCALE.length) | 0] * (Math.random() < .3 ? 2 : 1);
+      const g = AC.createGain(), t = AC.currentTime;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(.035, t + .02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+      o.connect(g); g.connect(MASTER); o.start(); o.stop(t + 2.4);
+      pluck();
+    }, 3200 + Math.random() * 6500);
+  })();
+}
+
+/* ===== ⑬ 描画 ============================================================ */
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.width = W + "px"; cv.style.height = H + "px";
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+addEventListener("resize", resize);
+
+function rr(x, y, w, h, r){
+  if (w <= 0 || h <= 0) { ctx.beginPath(); return; }
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+let camX = 0, camY = 0, frame = 0, camReady = false;
+
+/* ===== 色 — 9色だけ。シアンは1色も使わない ============================== */
+const C = {
+  ink:     [ 11, 13, 20],
+  night:   [ 16, 23, 40],
+  nightHi: [ 27, 35, 56],
+  dust:    [206,195,172],   // 生成り（PBTキーキャップ）
+  dustHi:  [230,220,199],
+  dustMid: [168,158,139],
+  dustLo:  [109,102, 89],
+  legend:  [ 51, 47, 39],
+  amber:   [223,164, 92],
+  amberHi: [246,221,176],
+  cream:   [233,225,208]
+};
+function rgb(c, a){ return a === undefined ? "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")"
+                                           : "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; }
+function lerp(a, b, t){
+  return [a[0] + (b[0] - a[0]) * t | 0, a[1] + (b[1] - a[1]) * t | 0, a[2] + (b[2] - a[2]) * t | 0];
+}
+
+/* ===== 質感 — グレイン／走査線／ディザ ==================================
+   なめらかなグラデーションを画面に残さないための3枚。
+   これが無いと、どれだけ色を選んでも「きれいに出力された絵」に見える。   */
+let grainPat = null, scanPat = null, ditherPat = null;
+function buildPatterns(){
+  const g = document.createElement("canvas"); g.width = g.height = 128;
+  const gc = g.getContext("2d"), im = gc.createImageData(128, 128);
+  for (let i = 0; i < im.data.length; i += 4){
+    const v = 104 + Math.random() * 104;
+    im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255;
+  }
+  gc.putImageData(im, 0, 0);
+  grainPat = ctx.createPattern(g, "repeat");
+
+  const sc = document.createElement("canvas"); sc.width = 1; sc.height = 3;
+  const sx = sc.getContext("2d");
+  sx.fillStyle = "#000"; sx.fillRect(0, 0, 1, 1);
+  scanPat = ctx.createPattern(sc, "repeat");
+
+  // 4x4 ベイヤー。空の帯の境目をざらつかせる
+  const M = [0,8,2,10, 12,4,14,6, 3,11,1,9, 15,7,13,5];
+  const d = document.createElement("canvas"); d.width = d.height = 4;
+  const dc = d.getContext("2d"), di = dc.createImageData(4, 4);
+  for (let i = 0; i < 16; i++){
+    const v = M[i] * 17;
+    di.data[i * 4] = di.data[i * 4 + 1] = di.data[i * 4 + 2] = v; di.data[i * 4 + 3] = 255;
+  }
+  dc.putImageData(di, 0, 0);
+  ditherPat = ctx.createPattern(d, "repeat");
+}
+
+/* ===== 空 — なめらかに塗らない。18段の帯にしてディザで割る ============== */
+function drawSky(){
+  const alt = Math.max(0, -S.y) / T.PX_PER_M;
+  const t = Math.min(1, alt / 760);
+  const top = lerp(C.night, C.ink, .55 + t * .4);
+  const bot = lerp(C.nightHi, C.night, t * .55);
+  const N = 18, bh = Math.ceil(H / N) + 2;
+  for (let i = 0; i < N; i++){
+    const f = i / (N - 1);
+    ctx.fillStyle = rgb(lerp(top, bot, f * f * .75 + f * .25));
+    ctx.fillRect(0, Math.floor(H * i / N) - 1, W, bh);
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = "overlay"; ctx.globalAlpha = .1;
+  ctx.fillStyle = ditherPat; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  // 星。瞬かせない。数は少なく
+  for (let i = 0; i < stars.length; i++){
+    const s = stars[i];
+    const sy = ((s.y * H * 1.5 - camY * .05) % (H * 1.5) + H * 1.5) % (H * 1.5) - H * .25;
+    let sxp = (s.x * W * 1.4 - camX * .018) % (W * 1.4);
+    if (sxp < 0) sxp += W * 1.4;
+    sxp -= W * .2;
+    ctx.fillStyle = rgb(C.cream, s.a * (.14 + t * .3));
+    ctx.fillRect(sxp | 0, sy | 0, 1, 1);
+  }
+
+  // ずっと先、右の高いところの琥珀。向かい風はそこから吹いてくる。
+  // 何なのかは言わない。登るほど、風が来るほど、少しだけ強く見える
+  const gl = .045 + t * .075 + (wind.t > 0 ? .11 * (wind.t / T.GUST_FRAMES) : 0);
+  const src = ctx.createRadialGradient(W + 40, H * .15, 6, W + 40, H * .15, Math.max(W, H) * .95);
+  src.addColorStop(0,  rgb(C.amberHi, gl));
+  src.addColorStop(.3, rgb(C.amber, gl * .34));
+  src.addColorStop(1,  rgb(C.amber, 0));
+  ctx.fillStyle = src; ctx.fillRect(0, 0, W, H);
+
+  // 地平線に残る街。ナトリウム灯の色だけが残っている
+  const hy = H - 64 - camY * .12;
+  if (hy > -220 && hy < H + 60){
+    const a = .16 * (1 - t);
+    const gg = ctx.createLinearGradient(0, hy - 130, 0, hy + 34);
+    gg.addColorStop(0, rgb(C.amber, 0));
+    gg.addColorStop(1, rgb(C.amber, a));
+    ctx.fillStyle = gg; ctx.fillRect(0, hy - 130, W, 164);
+    ctx.fillStyle = rgb(C.ink, .95);
+    let bx = -((camX * .12) % 300) - 300, k = 0;
+    while (bx < W + 300){
+      const bh2 = 24 + ((k * 37) % 11) * 10, bw = 20 + ((k * 53) % 7) * 8;
+      ctx.fillRect(bx | 0, (hy - bh2) | 0, bw, bh2 + 70);
+      if ((k * 17) % 6 === 0){
+        ctx.fillStyle = rgb(C.amber, .28 * (1 - t));
+        ctx.fillRect((bx + bw * .4) | 0, (hy - bh2 + 8) | 0, 2, 3);
+        ctx.fillStyle = rgb(C.ink, .95);
+      }
+      bx += bw + 14 + ((k * 29) % 5) * 10; k++;
+    }
+  }
+}
+
+/* ===== 遠景 — 光らせない。ただの影 ====================================== */
+function drawDecor(){
+  for (let i = 0; i < decor.length; i++){
+    const o = decor[i];
+    const x = (o.x - camX * o.d), y = (o.y - camY * o.d);
+    if (x < -400 || x > W + 400 || y < -400 || y > H + 400) continue;
+    ctx.save(); ctx.translate(x | 0, y | 0); ctx.rotate(o.r * .3); ctx.scale(o.s, o.s);
+    ctx.fillStyle = rgb(C.ink, .5 + o.d * .35);
+    if (o.k === "mon"){
+      rr(-34, -26, 68, 48, 3); ctx.fill();
+      ctx.fillRect(-8, 22, 16, 9); ctx.fillRect(-20, 30, 40, 5);
+    } else {
+      ctx.strokeStyle = rgb(C.ink, .5 + o.d * .35);
+      ctx.lineWidth = 10; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(-90, 0);
+      ctx.bezierCurveTo(-30, -58, 30, 58, 90, -10);
+      ctx.stroke();
+      rr(86, -18, 22, 16, 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/* ===== キーキャップ ======================================================
+   生成りのPBT。マット。自分では光らない。
+   **プレイヤーから遠いものは夜へ沈む** ＝ 単一光源の絵にするための減衰。 */
+/* ===== 川 ================================================================
+   山の下をずっと流れている。右（山頂の方角）から左（麓）へ。
+   落ちた者を運んで帰るのは、この流れの仕事。                                */
+function drawRiver(){
+  const y = T.RIVER_Y - camY;
+  if (y > H + 60) return;                       // 水面が画面より下
+  const bot = Math.max(H + 60, y + 400);
+  const g = ctx.createLinearGradient(0, y, 0, y + 220);
+  g.addColorStop(0,   rgb(C.nightHi));
+  g.addColorStop(.18, rgb(C.night));
+  g.addColorStop(1,   rgb(C.ink));
+  ctx.fillStyle = g; ctx.fillRect(0, y, W, bot - y);
+
+  // 水面。琥珀がうっすら乗る
+  ctx.fillStyle = rgb(C.amberHi, .13); ctx.fillRect(0, y | 0, W, 1);
+  ctx.fillStyle = rgb(C.dustHi, .05);  ctx.fillRect(0, (y + 1) | 0, W, 1);
+
+  // 流れ。右から左へ
+  if (!river.streaks.length)
+    for (let i = 0; i < 90; i++)
+      river.streaks.push({ x: Math.random() * 2600, d: Math.random() * 190,
+                           len: 20 + Math.random() * 150, a: .04 + Math.random() * .12,
+                           v: .5 + Math.random() * 1.3 });
+  ctx.lineWidth = 1;
+  for (let i = 0; i < river.streaks.length; i++){
+    const st = river.streaks[i];
+    let sx = ((st.x - camX * .55 - frame * st.v * 1.5) % 2600 + 2600) % 2600 - 400;
+    const sy = (y + 6 + st.d) | 0;
+    if (sy > bot || sx > W + 200) continue;
+    const fade = Math.max(0, 1 - st.d / 190);
+    ctx.strokeStyle = rgb(C.dustHi, st.a * fade);
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + st.len, sy); ctx.stroke();
+  }
+
+  // 主人公の灯りが水面に落ちる。揺れているので、線がわずかにずれる
+  const px = S.x - camX, py = S.y - camY;
+  if (py < y + 60 && px > -160 && px < W + 160){
+    const rg = ctx.createLinearGradient(0, y, 0, y + 96);
+    rg.addColorStop(0, rgb(C.amberHi, .17));
+    rg.addColorStop(1, rgb(C.amber, 0));
+    ctx.fillStyle = rg; ctx.fillRect(px - 24, y, 48, 96);
+    for (let i = 0; i < 4; i++){
+      const yy = (y + 8 + i * 17) | 0;
+      const wob = Math.sin(frame * .05 + i * 1.7) * (5 + i * 3);
+      ctx.fillStyle = rgb(C.amberHi, .17 - i * .035);
+      ctx.fillRect((px - 13 + wob) | 0, yy, 26 - i * 4, 1);
+    }
+  }
+
+  // 遠くの琥珀が水面に落としている光の帯
+  const rf = ctx.createLinearGradient(W * .72, 0, W, 0);
+  rf.addColorStop(0, rgb(C.amber, 0));
+  rf.addColorStop(1, rgb(C.amber, .07));
+  ctx.fillStyle = rf; ctx.fillRect(W * .72, y, W * .28, Math.min(200, bot - y));
+}
+
+/* ===== ケーブル ==========================================================
+   岸から区間の入口まで、まっすぐ架かっている巨大なUSBケーブル。
+   跳躍が「文字数ぶん右上へ」なら、こちらは「文字数ぶん真上へ」。          */
+function drawCables(){
+  for (let i = 0; i < cables.length; i++){
+    const c = cables[i];
+    const x = (c.x - camX) | 0;
+    if (x < -60 || x > W + 60) continue;
+    const y0 = c.bottom - camY, y1 = c.top - camY;
+    if (y0 < -80 || y1 > H + 80) continue;
+    const near = Math.max(.25, Math.min(1, 1.2 - Math.abs(c.x - S.x) / 900));
+
+    ctx.strokeStyle = rgb(C.ink, .92); ctx.lineWidth = 9; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+    ctx.strokeStyle = rgb(lerp(C.night, C.dustMid, near * .55), .8); ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+    ctx.strokeStyle = rgb(lerp(C.night, C.dustHi, near), .35); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - 2, y0); ctx.lineTo(x - 2, y1); ctx.stroke();
+
+    // 40pxごとの節。**1文字＝節ひとつ。**登る量が目で数えられる
+    const step = T.UNIT;
+    const from = Math.max(y1, -40), to = Math.min(y0, H + 40);
+    for (let yy = Math.ceil((c.top) / step) * step; yy <= c.bottom; yy += step){
+      const sy = (yy - camY) | 0;
+      if (sy < from - 4 || sy > to + 4) continue;
+      ctx.fillStyle = rgb(lerp(C.night, C.dustLo, near), .75);
+      ctx.fillRect(x - 4, sy, 8, 2);
+    }
+    // 端子。ケーブルの上端は入口の足場へ差さっている
+    ctx.fillStyle = rgb(lerp(C.night, C.dustMid, near));
+    rr(x - 7, y1 - 4, 14, 16, 2); ctx.fill();
+  }
+}
+
+function drawPlat(p){
+  let x = p.x - camX, y = p.y - camY, w = p.w, h = p.h;
+  if (x > W + 120 || x + w < -120 || y > H + 160 || y + h < -160) return;
+  let hit = 0;
+  if (p.rattle){                          // 風に叩かれて横に震える
+    hit = p.rattle / 26;
+    x -= Math.sin(p.rattle * .9) * hit * 5;
+  }
+  if (p.floor){
+    const nx = Math.max(x, -30);
+    w = Math.min(x + w, W + 30) - nx; x = nx;
+    if (w <= 0) return;                 // 麓より右にいるときは地面が画面外
+    drawGround(x, y, w, h);
+    return;
+  }
+  if (p.bank){ drawGround(x, y, w, h); return; }   // 中腹の岸も、陸地として描く
+
+  const d = Math.hypot((p.x + p.w / 2) - S.x, (p.y - S.y) * 1.3);
+  const lit = Math.max(.22, Math.min(1, 1.25 - (d - 170) / 880));
+  // 近いキーは灯りを浴びて暖かく、遠いキーは夜（青）へ沈む。
+  // 暖かい近景／冷たい遠景 が、そのまま奥行きになる
+  const near = Math.max(0, (lit - .68) / .32);
+
+  // バックライトのキーだけ、下から琥珀が滲む
+  if (p.glow){
+    const gr = ctx.createRadialGradient(x + w / 2, y + h * .55, 3, x + w / 2, y + h * .55, Math.max(w, 140));
+    gr.addColorStop(0, rgb(C.amber, .15));
+    gr.addColorStop(1, rgb(C.amber, 0));
+    ctx.fillStyle = gr; ctx.fillRect(x - 140, y - 110, w + 280, h + 230);
+  }
+
+  const warm = (p.glow ? .2 : 0) + near * .2;
+  const face = lerp(C.night, lerp(C.dust, C.amberHi, warm), lit);
+  const side = lerp(C.ink,   C.dustMid, lit * .62);
+  const foot = lerp(C.ink,   C.dustLo,  lit * .26);
+
+  // 側面（マット・下へ落ちる）
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, rgb(side)); g.addColorStop(.12, rgb(side)); g.addColorStop(1, rgb(foot));
+  rr(x, y, w, h, 4); ctx.fillStyle = g; ctx.fill();
+
+  // 天面（実際に乗る面）
+  const top = Math.min(11, h - 2);
+  rr(x + 2, y, w - 4, top, 3); ctx.fillStyle = rgb(face); ctx.fill();
+
+  // 灯りが当たる稜線
+  ctx.strokeStyle = rgb(lerp(C.night, C.dustHi, lit), .5); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x + 4, y + .5); ctx.lineTo(x + w - 4, y + .5); ctx.stroke();
+
+  // 1キーごとの目盛り。「n キー先」を目で数えられるようにする刻み
+  if (!p.floor && w > T.UNIT * 1.4 && h >= 20){
+    ctx.strokeStyle = rgb(lerp(C.night, C.dustLo, lit), .55); ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let gx = T.UNIT; gx < w - 3; gx += T.UNIT){
+      ctx.moveTo((x + gx) | 0, y + 2); ctx.lineTo((x + gx) | 0, y + top);
+    }
+    ctx.stroke();
+  }
+
+  // 刻印。遠いほど読めなくなる
+  if (!p.floor && w >= 34 && h >= 20){
+    ctx.fillStyle = hit ? rgb([150, 82, 62], .55 * lit + .2)
+                        : (p.glow ? rgb(C.amber, .3 + lit * .55)
+                                  : rgb(C.legend, lit * .82));
+    ctx.font = "500 " + Math.min(12, Math.max(8, w / 5.4)) + "px " +
+               '"Yu Gothic UI","Yu Gothic","Hiragino Sans",sans-serif';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(p.label, (x + w / 2) | 0, (y + 21) | 0);
+  }
+}
+
+/* ===== 麓の地面 ==========================================================
+   ここをキーキャップと同じに塗ると、画面の下半分が灰色の板になる。
+   地面はほぼ暗闇にして、**プレイヤーの足もとにだけ灯りの溜まり**を作る。 */
+function drawGround(x, y, w, h){
+  const px = S.x - camX;
+  ctx.fillStyle = rgb(C.ink, .96);
+  ctx.fillRect(x, y, w, h);
+
+  // 足もとの灯り（横に広がる溜まり）
+  const pool = ctx.createLinearGradient(px - 430, 0, px + 430, 0);
+  pool.addColorStop(0,   rgb(C.amber, 0));
+  pool.addColorStop(.5,  rgb(C.amber, S.air ? .05 : .1));
+  pool.addColorStop(1,   rgb(C.amber, 0));
+  ctx.fillStyle = pool; ctx.fillRect(x, y, w, 120);
+  const fade = ctx.createLinearGradient(0, y, 0, y + 150);
+  fade.addColorStop(0, rgb(C.ink, 0));
+  fade.addColorStop(1, rgb(C.ink, .9));
+  ctx.fillStyle = fade; ctx.fillRect(x, y, w, 150);
+
+  // 地面のふち。灯りが当たっているところだけ見える
+  const edge = ctx.createLinearGradient(px - 520, 0, px + 520, 0);
+  edge.addColorStop(0,  rgb(C.dustMid, .04));
+  edge.addColorStop(.5, rgb(C.dustHi, .5));
+  edge.addColorStop(1,  rgb(C.dustMid, .04));
+  ctx.fillStyle = edge; ctx.fillRect(x, y, w, 1.5);
+
+  // 地面に散らばったキーキャップの影。麓が「壊れた機械の底」だと分かる程度に
+  const step = 190;
+  const start = Math.floor((camX - 200) / step) * step;
+  for (let wx = start; wx < camX + W + 200; wx += step){
+    const r = ((wx / step) | 0) * 2654435761 % 1000 / 1000;
+    const sx = wx - camX + r * 90, sw = 26 + r * 40, sh = 7 + r * 6;
+    const dd = Math.abs(sx - px);
+    const a = Math.max(0, .3 - dd / 1400);
+    if (a <= .01) continue;
+    ctx.fillStyle = rgb(C.dustLo, a);
+    rr(sx, y + 14 + r * 46, sw, sh, 2); ctx.fill();
+  }
+}
+
+/* ===== 軌道 ============================================================== */
+function drawArcs(){
+  // ケーブルの上では、跳ぶ先ではなく**どこまで登れるか**を出す
+  const c = cableAt();
+  if (c && !S.air && !river.on){
+    if (!T.ARC_MODE) return;
+    const x = (c.x - camX) | 0;
+    for (let i = 0; i < S.cands.length; i++){
+      const w = S.cands[i];
+      if (!w) continue;
+      const act = S.active === w;
+      const ty = Math.max(c.top, S.y - w.kana.length * T.UNIT);
+      const sy = (ty - camY) | 0;
+      const col = act ? C.amber : C.cream;
+      ctx.strokeStyle = rgb(col, act ? .85 : .22);
+      ctx.lineWidth = act ? 2 : 1;
+      ctx.beginPath(); ctx.moveTo(x - 15, sy); ctx.lineTo(x + 15, sy); ctx.stroke();
+      ctx.font = (act ? "500 13px " : "400 11px ") + 'ui-monospace,Consolas,monospace';
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillStyle = rgb(col, act ? .95 : .45);
+      ctx.fillText(String(w.kana.length), x + 21, sy);
+    }
+    return;
+  }
+  if (!T.ARC_MODE || S.air || river.on || !S.preds) return;   // 流されている間は出さない
+  for (let i = 0; i < S.preds.length; i++){
+    const pr = S.preds[i], act = S.cands[i] === S.active;
+    const col = act ? C.amber : (pr.ok ? C.cream : [158, 96, 78]);
+    const a   = act ? .8      : (pr.ok ? .17     : .16);
+    if (T.ARC_MODE === 2){                       // ぜんぶ見せる
+      ctx.setLineDash([1.5, 6]); ctx.lineWidth = act ? 1.6 : 1;
+      ctx.strokeStyle = rgb(col, a);
+      ctx.beginPath();
+      for (let k = 0; k < pr.pts.length; k += 2){
+        const px = pr.pts[k][0] - camX, py = pr.pts[k][1] - camY;
+        k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = rgb(col, act ? .9 : a + .18);
+      ctx.beginPath(); ctx.arc(pr.land[0] - camX, pr.land[1] - camY, act ? 4 : 2.4, 0, 6.284); ctx.fill();
+      ctx.font = (act ? "500 13px " : "400 11px ") + 'ui-monospace,Consolas,monospace';
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = rgb(col, act ? .95 : .5);
+      ctx.fillText(String(S.cands[i].kana.length), pr.land[0] - camX, pr.land[1] - camY - 13);
+    } else {                                      // 頂点まで＝上りだけ。落ちる先は読ませる
+      let top = 0;
+      for (let k = 1; k < pr.pts.length; k++) if (pr.pts[k][1] < pr.pts[top][1]) top = k;
+      const end = Math.max(2, Math.round(top * 1.1));
+      for (let k = 0; k <= end && k < pr.pts.length; k += 2){
+        const f = 1 - k / end;
+        const aa = a * (act ? 1 : .95) * Math.pow(Math.max(0, f), .75);
+        if (aa < .015) continue;
+        ctx.fillStyle = rgb(col, aa);
+        const px = pr.pts[k][0] - camX, py = pr.pts[k][1] - camY;
+        const r2 = act ? 1.7 : 1.2;
+        ctx.fillRect(px - r2, py - r2, r2 * 2, r2 * 2);
+      }
+      // **どの軌道がどのカードか。**弧の先に、かなの数を置いて突き合わせる
+      const e2 = Math.min(end, pr.pts.length - 1);
+      const nx = pr.pts[e2][0] - camX, ny = pr.pts[e2][1] - camY;
+      ctx.font = (act ? "500 13px " : "400 11px ") + 'ui-monospace,Consolas,monospace';
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = rgb(col, act ? .95 : .5);
+      ctx.fillText(String(S.cands[i].kana.length), nx, ny - 11);
+    }
+  }
+}
+
+/* ===== 主人公 — 生成りのキーボード。下に琥珀の灯りを抱えている ========== */
+function drawPlayer(){
+  const x = S.x - camX, y = S.y - camY;
+  ctx.save();
+  ctx.translate(x, y - PH / 2);
+  if (S.air) ctx.rotate(Math.max(-.5, Math.min(.5, Math.atan2(S.vy, Math.max(2, S.vx)) * .3)) + S.spin);
+  else if (Math.abs(S.spin) > .002) ctx.rotate(S.spin);
+  ctx.scale(1 + S.squash * .3, 1 - S.squash * .34);
+
+  // 自分が持っている灯り。まわりのキーキャップを照らしているのはこれ
+  const gr = ctx.createRadialGradient(0, 2, 2, 0, 2, 58);
+  gr.addColorStop(0,  rgb(C.amberHi, .2));
+  gr.addColorStop(.35, rgb(C.amber, .075));
+  gr.addColorStop(1,  rgb(C.amber, 0));
+  ctx.fillStyle = gr; ctx.fillRect(-62, -62, 124, 124);
+
+  const g = ctx.createLinearGradient(0, -PH / 2, 0, PH / 2);
+  g.addColorStop(0, rgb(C.dustHi)); g.addColorStop(.5, rgb(C.dust)); g.addColorStop(1, rgb(C.dustLo));
+  rr(-PW / 2, -PH / 2, PW, PH, 4); ctx.fillStyle = g; ctx.fill();
+
+  ctx.fillStyle = rgb(C.legend, .78);
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 7; c++)
+      ctx.fillRect(-PW / 2 + 3.4 + c * 3.5, -PH / 2 + 3.6 + r * 3.8, 2.2, 2.2);
+  ctx.fillStyle = rgb(C.amber, .95);                     // Enter だけ光っている
+  ctx.fillRect(PW / 2 - 6.5, -PH / 2 + 3.6, 3.4, 2.2);
+  ctx.restore();
+}
+
+/* ===== 向かい風 — あの琥珀の方角から来る。だから線も暖かい ============== */
+function newStreak(burst){
+  return { x: burst ? W * (.4 + Math.random() * .9) : W + Math.random() * 220,
+           y: Math.random() * H,
+           len: 26 + Math.random() * 170,
+           v: .55 + Math.random() * 1.15,
+           a: .12 + Math.random() * .4 };
+}
+function drawWind(){
+  const k = Math.max(0, wind.t / T.GUST_FRAMES);
+  if (wind.t > 0){
+    const g = ctx.createLinearGradient(W, 0, W * .3, 0);
+    g.addColorStop(0, rgb(C.amberHi, .13 * k));
+    g.addColorStop(1, rgb(C.amberHi, 0));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    if ((frame & 1) === 0) for (let i = 0; i < 5; i++) wind.streaks.push(newStreak(false));
+  }
+  ctx.lineCap = "butt"; ctx.lineWidth = 1;
+  for (let i = wind.streaks.length - 1; i >= 0; i--){
+    const st = wind.streaks[i];
+    st.x -= wind.spd * st.v * (.45 + .55 * k) * 2.3;
+    st.a -= .0075;
+    if (st.a <= 0 || st.x + st.len < -60){ wind.streaks.splice(i, 1); continue; }
+    ctx.strokeStyle = rgb(C.amberHi, st.a * .8);
+    ctx.beginPath(); ctx.moveTo(st.x, st.y | 0); ctx.lineTo(st.x + st.len, st.y | 0); ctx.stroke();
+  }
+}
+
+function drawFx(){
+  for (let i = S.trail.length - 1; i >= 0; i--){
+    const t = S.trail[i], a = i / S.trail.length;
+    ctx.fillStyle = rgb(C.amberHi, a * .1);
+    ctx.fillRect((t[0] - camX - 1) | 0, (t[1] - camY - 10) | 0, 2, 2);
+  }
+  for (let i = S.puffs.length - 1; i >= 0; i--){
+    const p = S.puffs[i];
+    p.x += p.vx; p.y += p.vy; p.vy += .035; p.a -= .026;
+    if (p.a <= 0){ S.puffs.splice(i, 1); continue; }
+    ctx.fillStyle = rgb(C.dust, p.a * .34);
+    ctx.fillRect((p.x - camX) | 0, (p.y - camY - 2) | 0, 2, 2);
+  }
+}
+
+function draw(){
+  const tx = S.x - W * .34, ty = S.y - H * .60;
+  if (!camReady){ camX = tx; camY = ty; camReady = true; }
+  const k = river.on ? .2 : (S.air && S.vy > 12 ? .16 : .085);
+  camX += (tx - camX) * k; camY += (ty - camY) * k;
+
+  let sx = 0, sy = 0;
+  if (S.shake > .05){
+    sx = (Math.random() - .5) * S.shake; sy = (Math.random() - .5) * S.shake;
+    S.shake *= .86;
+  }
+  ctx.save(); ctx.translate(sx, sy);
+
+  try {
+    drawSky();
+    drawDecor();
+    drawRiver();
+    drawCables();
+    for (let i = 0; i < plats.length; i++) drawPlat(plats[i]);
+    drawArcs();
+    drawFx();
+    drawPlayer();
+    drawWind();
+  } finally {
+    ctx.restore();          // 途中で throw しても save/restore を釣り合わせる
+  }
+
+  if (S.flash > .01){                       // ミスの合図も赤くしない。琥珀が強くなるだけ
+    ctx.fillStyle = rgb(C.amberHi, S.flash * .1);
+    ctx.fillRect(0, 0, W, H);
+    S.flash *= .9;
+  }
+
+  // ---- 焼き込み。ここで「出力された絵」から「写っている絵」へ寄せる ----
+  const v = ctx.createRadialGradient(W * .5, H * .44, Math.min(W, H) * .32,
+                                     W * .5, H * .52, Math.max(W, H) * .8);
+  v.addColorStop(0,  "rgba(0,0,0,0)");
+  v.addColorStop(.6, rgb(C.ink, .3));
+  v.addColorStop(1,  rgb(C.ink, .8));
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.globalAlpha = .05;                    // 走査線
+  ctx.fillStyle = scanPat; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = .13;                    // フィルムグレイン（4フレームごとに動く）
+  ctx.globalCompositeOperation = "overlay";
+  ctx.translate(((frame >> 2) * 7) % 11 - 5, ((frame >> 2) * 5) % 13 - 6);
+  ctx.fillStyle = grainPat; ctx.fillRect(-18, -18, W + 36, H + 36);
+  ctx.restore();
+}
+
+/* ===== ⑭ HUD ============================================================= */
+const $ = function(id){ return document.getElementById(id); };
+const elWords = $("words"), elZone = $("zone");
+let zoneTimer = 0;
+
+let cardEls = [];
+function buildWords(){
+  let html = "";
+  for (let i = 0; i < S.cands.length; i++){
+    const w = S.cands[i];
+    if (!w) continue;
+    let pips = "";
+    for (let k = 0; k < w.kana.length; k++) pips += "<i></i>";
+    html += '<div class="w' + (S.fresh[i] ? " nw" : "") + '">' +
+              '<div class="t"></div><div class="rm"></div>' +
+              '<div class="p">' + pips + "<b>" + w.kana.length + "</b></div>" +
+            "</div>";
+    S.fresh[i] = 0;
+  }
+  html += '<div class="w rr"><div class="t">' + REROLL.kana + '</div>' +
+          '<div class="rm"></div></div>';
+  elWords.innerHTML = html;
+  cardEls = elWords.querySelectorAll(".w");
+  paintWords();
+}
+function paintWords(){
+  const busy = !!S.active || S.rr !== "";
+  for (let i = 0; i < S.cands.length; i++){
+    const w = S.cands[i], el = cardEls[i];
+    if (!w || !el) continue;
+    const isA = S.active === w;
+    const done  = isA && S.mat ? S.mat.confirmed() : 0;      // 確定したかな
+    const rj    = isA && S.mat ? hintFor(S.mat) : w.romaji;  // ローマ字の見本
+    const typed = isA && S.mat ? S.mat.typed.length : 0;
+    el.className = "w" + (isA ? " a" : "") + (busy && !isA ? " dim" : "");
+    el.children[0].innerHTML = '<span class="d">' + w.kana.slice(0, done) + "</span>" + w.kana.slice(done);
+    el.children[1].innerHTML = '<span class="d">' + rj.slice(0, typed) + "</span>" + rj.slice(typed);
+  }
+  const rrEl = cardEls[cardEls.length - 1];
+  if (rrEl){
+    const on = S.rr !== "";
+    rrEl.className = "w rr" + (on ? " a" : "") + (busy && !on ? " dim" : "");
+    rrEl.children[1].innerHTML = '<span class="d">' + REROLL.romaji.slice(0, S.rr.length) + "</span>" +
+                                 REROLL.romaji.slice(S.rr.length);
+  }
+}
+let gustTimer = 0;
+function showGust(){
+  const el = document.getElementById("gust");
+  el.classList.add("on");
+  clearTimeout(gustTimer);
+  gustTimer = setTimeout(function(){ el.classList.remove("on"); }, 1100);
+}
+function showZone(z){
+  elZone.querySelector(".z").textContent = z.name;
+  elZone.querySelector(".zs").textContent = z.sub;
+  elZone.classList.add("on");
+  clearTimeout(zoneTimer);
+  zoneTimer = setTimeout(function(){ elZone.classList.remove("on"); }, 2600);
+}
+function updateHud(){
+  const alt = Math.max(0, -S.y) / T.PX_PER_M;
+  if (alt > S.best) S.best = alt;
+  $("altv").textContent = alt.toFixed(1);
+  $("besv").textContent = S.best.toFixed(1);
+  $("combo").textContent = S.combo;
+  $("wordv").textContent = S.words;
+  $("keys").textContent = S.keys;
+  $("miss").textContent = S.miss;
+  $("rr").textContent = S.rerolls;
+  $("climbs").textContent = S.climbs;
+  $("fall").textContent = S.maxFall.toFixed(1);
+  if (S.started){
+    S.elapsed = (performance.now() - S.t0) / 1000;
+    const m = Math.floor(S.elapsed / 60), s = Math.floor(S.elapsed % 60);
+    $("time").textContent = m + ":" + (s < 10 ? "0" : "") + s;
+  }
+}
+
+/* ===== ⑮ デバッグ（プレイ中はキーボードしか使わない。ここだけマウス） ===== */
+const ARC_LABEL = ["軌道 なし", "軌道 半分", "軌道 ぜんぶ"];
+$("bArc").onclick = function(){
+  T.ARC_MODE = (T.ARC_MODE + 1) % 3;
+  this.textContent = ARC_LABEL[T.ARC_MODE];
+  this.classList.toggle("on", T.ARC_MODE > 0);
+  this.blur();
+};
+$("bArc").textContent = ARC_LABEL[T.ARC_MODE];
+$("bArc").classList.toggle("on", T.ARC_MODE > 0);
+$("bMiss").onclick = function(){
+  T.MISS_WIND = !T.MISS_WIND; this.classList.toggle("on", T.MISS_WIND); this.blur();
+};
+$("bReset").onclick = function(){ reset(); this.blur(); };
+
+/* ===== ⑯ 起動 ============================================================ */
+function reset(){
+  buildLevel();
+  S.x = T.START_X; S.y = 0; S.vx = 0; S.vy = 0;
+  S.air = false; S.ground = banks[0]; S.apex = 0; S.onCable = null;
+  S.best = 0; S.maxFall = 0; S.combo = 0; S.bestCombo = 0; S.keys = 0; S.miss = 0; S.words = 0;
+  S.zone = null; S.mat = null; S.active = null; S.queued = null; S.rr = ""; S.rerolls = 0;
+  S.words = 0; S.onCable = null; S.climbTo = 0; S.climbs = 0;
+  S.trail.length = 0; S.puffs.length = 0;
+  rattling.length = 0; wind.t = 0; wind.streaks.length = 0;
+  river.on = 0; river.t = 0; elWords.style.opacity = "";
+  S.t0 = performance.now();
+  camReady = false;
+  newCandidates();
+}
+
+resize();
+buildPatterns();
+reset();
+// 物理は 60Hz 固定で回す。可変にすると、144Hz や 240Hz のモニタで
+// そのぶん速く落ちて速く飛ぶ（実測：このプレビューは238fps出ていて4倍速だった）
+const STEP = 1000 / 60;
+let acc = 0, prevT = 0;
+(function loop(ts){
+  requestAnimationFrame(loop);   // 先に次フレームを予約しておく。
+                                 // 描画で1回コケてもループごと死なせないため
+  if (!prevT) prevT = ts;
+  acc += Math.min(120, ts - prevT);   // タブ復帰時にまとめて進めない
+  prevT = ts;
+  let n = 0;
+  while (acc >= STEP && n++ < 5){ frame++; physics(); acc -= STEP; }
+  ensurePreds();
+  updateHud();
+  draw();
+})(0);
+</script>
+</body>
+</html>

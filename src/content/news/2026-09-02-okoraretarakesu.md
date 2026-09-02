@@ -2,5 +2,5 @@
 title: ブラウザゲーム「30 TRAPS」を公開
 date: 2026-09-02
 kind: release
-ref: 30-traps
+ref: okoraretarakesu
 ---

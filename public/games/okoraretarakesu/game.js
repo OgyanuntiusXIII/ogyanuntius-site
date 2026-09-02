@@ -1217,7 +1217,7 @@
   /* ---------------- 再生数 ----------------
      釣り画像を実際に押した数。サイト共通の /api/plays を使う。
      D1 が繋がっていないと 204 が返るので、そのときは**何も出さない**（無い数字を作らない）。 */
-  var PLAY_SLUG = '30-traps';
+  var PLAY_SLUG = 'okoraretarakesu';
   function showPlays(n) {
     var el = $('#playCount');
     if (!el || typeof n !== 'number') return;

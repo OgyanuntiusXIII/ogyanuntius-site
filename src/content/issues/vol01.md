@@ -44,7 +44,7 @@ headlines:
     slot: side
     catch: 論点を揃えてから殴れ
     no: 6
-  - ref: 30-traps
+  - ref: okoraretarakesu
     collection: works
     slot: side
     badge: NEW

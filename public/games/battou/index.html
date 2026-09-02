@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>抜刀 — 手触りプロトタイプ</title>
+<meta name="description" content="抜け。斬れ。納めろ。マウスで日本刀を抜き、納める。">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#07070a;color:#b6b0a4;
+    font-family:"Yu Gothic UI","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;user-select:none;cursor:none}
+  canvas{display:block;position:fixed;inset:0}
+
+  #ov{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:22px;text-align:center;cursor:default;
+    background:radial-gradient(120% 90% at 50% 45%,rgba(16,14,14,.94),rgba(5,5,7,.98));
+    transition:opacity .5s}
+  #ov.off{opacity:0;pointer-events:none}
+  #ov h1{font:200 66px/1 "Yu Mincho","Hiragino Mincho ProN",serif;letter-spacing:.42em;
+    color:#efe6d6;text-indent:.42em;text-shadow:0 0 44px rgba(196,58,44,.28)}
+  #ov .tag{font:300 13px/1 "Yu Mincho",serif;letter-spacing:.6em;color:#8a7f70;text-indent:.6em}
+  #ov p{font-size:13px;line-height:2.05;color:#7d746a;letter-spacing:.05em}
+  #ov b{color:#cfc4b2;font-weight:500}
+  .k{color:#e8dcc6;border:1px solid #40382f;border-radius:5px;padding:2px 8px;
+    font:500 12px/1 ui-monospace,Consolas,monospace;background:#15120f}
+  #swords{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:2px}
+  .sw{width:186px;padding:14px 15px 15px;border-radius:10px;cursor:pointer;
+    background:linear-gradient(#151310,#0d0b09);border:1px solid #2b2620;text-align:left;
+    transition:border-color .14s,transform .14s,box-shadow .14s}
+  .sw:hover{border-color:#8a5a3a;transform:translateY(-4px);
+    box-shadow:0 12px 28px rgba(0,0,0,.6),0 0 26px rgba(180,90,50,.14)}
+  .sw h2{font:400 21px/1 "Yu Mincho",serif;letter-spacing:.2em;color:#e6dbc8;margin-bottom:9px}
+  .sw .d{font:400 11px/1.85 ui-monospace,Consolas,monospace;color:#7a7166}
+  .sw .d i{font-style:normal;color:#c0a37e}
+  #ov .go{font-size:11px;color:#6a6259;letter-spacing:.3em;animation:bl 2.6s ease-in-out infinite}
+  @keyframes bl{0%,100%{opacity:.3}50%{opacity:.95}}
+  @media (max-width:760px){#ov h1{font-size:40px}.sw{width:150px}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="ov">
+  <div>
+    <h1>抜刀</h1>
+    <div class="tag">抜け。斬れ。納めろ。</div>
+  </div>
+  <p>
+    <span class="k">SPACE長押し</span> 居合構え　→　<b>「斬」</b>が出たら<br>
+    <span class="k">左ドラッグ</span> で <b>鞘の線に沿って右へ一気に</b>引き抜く<br><br>
+    抜いたら<b>マウス＝切先</b>。<span class="k">右クリック</span>は納刀中の鞘受け<br>
+    斬ったら<b>切先を鯉口へ戻して、鞘の線に沿って押し込む</b> → カチン
+  </p>
+  <div id="swords"></div>
+  <div class="go">刀を選べ</div>
+</div>
+
+<script>
+/* =========================================================================
+   抜刀 — 手触りプロトタイプ v0.1
+   企画書『抜刀』のうち、面白さを決める核だけを実装したもの。
+   ここで検証するのは 3 つだけ:
+     ① 鞘の線をなぞって抜く のは気持ちいいか
+     ② 「斬」→ 抜刀 の反応計測は成立するか
+     ③ 納刀（角度合わせ→押し込み→カチン）は快感か、それともただの苦行か
+   ローグライト・5面・強化・マップは意図的に入れていない。
+   ③が「苦行」なら、その上に何を積んでも無駄なので。
+   ========================================================================= */
+
+/* ===== ① チューニング（ここだけ触れば手触りが変わる）===================== */
+const T = {
+  /* 刀 3 本。企画書 §11-12 のトレードオフをそのまま数値にした */
+  swords: [
+    { id:'kodachi', name:'小太刀', L:150, iai:26, cut:6,  wait:[2.0,4.0],
+      lat:32, mouthR:38, ang:58, ready:0.30,
+      d:['抜刀距離 <i>150</i>','許容幅 <i>広い</i>','待機 <i>2.0–4.0s</i>','居合 <i>26</i>'] },
+    { id:'uchi',    name:'打刀',   L:215, iai:42, cut:8, wait:[3.0,7.0],
+      lat:23, mouthR:28, ang:46, ready:0.38,
+      d:['抜刀距離 <i>215</i>','許容幅 <i>並</i>','待機 <i>3.0–7.0s</i>','居合 <i>42</i>'] },
+    { id:'nodachi', name:'野太刀', L:305, iai:78, cut:11, wait:[4.0,9.0],
+      lat:17, mouthR:22, ang:34, ready:0.50,
+      d:['抜刀距離 <i>305</i>','許容幅 <i>狭い</i>','待機 <i>4.0–9.0s</i>','居合 <i>78</i>'] },
+  ],
+
+  /* 反応段階（「斬」表示から抜き切るまでの秒）→ 倍率。企画書 §3 */
+  react: [
+    { t:0.22, n:'神速', m:3.0, c:'#ffd9a0' },
+    { t:0.38, n:'疾',   m:2.2, c:'#ffb872' },
+    { t:0.60, n:'常',   m:1.5, c:'#d8ccb4' },
+    { t:0.95, n:'鈍',   m:1.0, c:'#8f8878' },
+    { t:99,   n:'遅',   m:0.6, c:'#6c665c' },
+  ],
+  straightBonus:[0.85,1.30],   // 抜刀軌道のブレ→倍率（真っ直ぐなほど上）
+  earlyPenalty:0.45,           // 「斬」より先に抜いた場合の倍率
+  earlyStun:0.55,              // 早抜きの硬直（秒）
+
+  reachMul:1.65, reachAdd:70,  // 居合の間合い = L*reachMul + reachAdd
+  cutSpeed:900,                // 通常斬撃が成立する切先速度(px/s)
+  cutReach:1.0,
+  cutCool:0.30,                // 通常斬撃の間隔(秒)。ここを縮めると「居合を撃つ理由」が消える
+
+  guardArcSheath:62,           // 納刀ガードの角度許容（甘い）
+  guardPointDist:112,          // 受け点の距離
+  guardBladeR:48,              // 抜刀ガード：刃が受け点に寄る距離
+  guardCross:[38,142],         // 抜刀ガード：攻撃線と刃のなす角
+
+  sheatheAssist:0.10,          // 鯉口の近くで刃が鞘へ向く速さ(rad/frame)。0で完全手動
+  sheatheAssistR:3.2,           // その効果範囲（鞘口判定の何倍か）
+
+  playerHP:100,
+  guardStagger:0.75,           // ガード成功→敵の硬直（後の先の窓）
+
+  /* 敵。企画書 §17 の課題別 */
+  enemies: [
+    { n:'足軽', hp:100, dmg:14, tel:0.85, rec:1.15, ma:250, col:'#8e8375', feint:0 },
+    { n:'疾風', hp:70,  dmg:16, tel:0.46, rec:0.55, ma:225, col:'#7fa0a8', feint:0 },
+    { n:'幻',   hp:85,  dmg:17, tel:0.80, rec:0.90, ma:245, col:'#a08ab0', feint:.55 },
+    { n:'巌',   hp:230, dmg:26, tel:1.20, rec:1.45, ma:275, col:'#a8825f', feint:0 },
+  ],
+};
+
+/* ===== ② 座標系 — 1280x720 の仮想空間にレターボックス ==================== */
+const VW=1280, VH=720, GY=560;
+const cv=document.getElementById('cv'), g=cv.getContext('2d');
+let sc=1, ox=0, oy=0;
+function layout(){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  cv.width=innerWidth*dpr; cv.height=innerHeight*dpr;
+  cv.style.width=innerWidth+'px'; cv.style.height=innerHeight+'px';
+  sc=Math.min(innerWidth/VW, innerHeight/VH);
+  ox=(innerWidth-VW*sc)/2; oy=(innerHeight-VH*sc)/2;
+  g.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize',layout); layout();
+
+const PX=340, PY=430;                 // プレイヤー中心
+const M={x:382,y:452};                // 鯉口（鞘の口）
+const DA=172*Math.PI/180;             // 鞘の向き（口→鐺）。左やや下
+const dx=Math.cos(DA), dy=Math.sin(DA);
+const ux=-dx, uy=-dy;                 // 抜く向き（右やや上）
+
+const V=(x,y)=>({x,y});
+const dot=(ax,ay,bx,by)=>ax*bx+ay*by;
+const crs=(ax,ay,bx,by)=>ax*by-ay*bx;
+const len=(x,y)=>Math.hypot(x,y);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+function angDiff(a,b){let d=(a-b)%(Math.PI*2); if(d>Math.PI)d-=Math.PI*2; if(d<-Math.PI)d+=Math.PI*2; return d;}
+function segDist(ax,ay,bx,by,px,py){
+  const vx=bx-ax, vy=by-ay, l2=vx*vx+vy*vy;
+  const t=l2?clamp((( px-ax)*vx+(py-ay)*vy)/l2,0,1):0;
+  return Math.hypot(px-(ax+vx*t), py-(ay+vy*t));
+}
+
+/* ===== ③ 音 — 素材なし。全部その場で合成 ================================ */
+let AC=null;
+function ac(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); return AC; }
+let NB=null;
+function noise(){
+  const a=ac(); if(NB) return NB;
+  NB=a.createBuffer(1,a.sampleRate,a.sampleRate);
+  const d=NB.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  return NB;
+}
+function tone(f,dur,type,vol,f2){
+  const a=ac(), o=a.createOscillator(), gn=a.createGain(), t=a.currentTime;
+  o.type=type||'sine'; o.frequency.setValueAtTime(f,t);
+  if(f2) o.frequency.exponentialRampToValueAtTime(Math.max(f2,1),t+dur);
+  gn.gain.setValueAtTime(0,t);
+  gn.gain.linearRampToValueAtTime(vol,t+0.004);
+  gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(gn).connect(a.destination); o.start(t); o.stop(t+dur+.02);
+}
+function nz(dur,vol,type,f,q,f2){
+  const a=ac(), s=a.createBufferSource(), bp=a.createBiquadFilter(), gn=a.createGain(), t=a.currentTime;
+  s.buffer=noise(); s.loop=true;
+  bp.type=type||'bandpass'; bp.frequency.setValueAtTime(f,t); bp.Q.value=q||1;
+  if(f2) bp.frequency.exponentialRampToValueAtTime(Math.max(f2,20),t+dur);
+  gn.gain.setValueAtTime(0,t);
+  gn.gain.linearRampToValueAtTime(vol,t+0.006);
+  gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  s.connect(bp).connect(gn).connect(a.destination); s.start(t); s.stop(t+dur+.02);
+}
+const S={
+  chin:  ()=>{tone(2100,.09,'triangle',.10); tone(3150,.06,'sine',.05);},
+  draw:  ()=>{nz(.26,.16,'bandpass',900,1.1,4600);},
+  zan:   ()=>{tone(150,.10,'square',.13,90); tone(1650,.07,'sine',.10);},
+  iai:   ()=>{nz(.30,.30,'highpass',1700,.7,3400); tone(84,.30,'sine',.30,42);},
+  cut:   ()=>{nz(.10,.13,'bandpass',2500,1.4,1300);},
+  guard: ()=>{tone(2550,.34,'sine',.16,2400); tone(3450,.24,'sine',.09); nz(.07,.10,'highpass',3800,1);},
+  katsu: ()=>{nz(.055,.20,'bandpass',760,3.2); tone(430,.05,'square',.07);},
+  su:    ()=>{nz(.085,.045,'lowpass',1150,.7);},
+  kachin:()=>{tone(3050,.055,'square',.13); tone(4250,.045,'sine',.09);
+              setTimeout(()=>{tone(2380,.42,'sine',.085,2340); tone(1580,.30,'sine',.04);},22);},
+  hurt:  ()=>{nz(.20,.26,'lowpass',420,.9); tone(72,.22,'sine',.22,40);},
+  down:  ()=>{tone(190,.55,'sawtooth',.13,42); nz(.35,.13,'lowpass',700,.8);},
+  step:  ()=>{nz(.05,.035,'lowpass',300,1);},
+};
+
+/* ===== ④ 入力 ============================================================ */
+const mouse={x:M.x,y:M.y,px:M.x,py:M.y,vx:0,vy:0,L:false,R:false};
+function toV(e){
+  const r=cv.getBoundingClientRect();
+  return { x:(e.clientX-r.left-ox)/sc, y:(e.clientY-r.top-oy)/sc };
+}
+addEventListener('mousemove',e=>{const p=toV(e); mouse.x=p.x; mouse.y=p.y;});
+addEventListener('mousedown',e=>{ if(e.button===0)mouse.L=true; if(e.button===2)mouse.R=true; });
+addEventListener('mouseup',  e=>{ if(e.button===0)mouse.L=false; if(e.button===2)mouse.R=false; });
+addEventListener('contextmenu',e=>e.preventDefault());
+const keys={};
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();}
+  if(e.code==='KeyG'&&!keys[e.code]) st.guide=!st.guide;
+  if(e.code==='KeyR'&&!keys[e.code]&&st.over) start(st.sword);
+  keys[e.code]=true;
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false; mouse.L=mouse.R=false;});
+
+/* ===== ⑤ 刀の状態機械 ====================================================
+   SHEATHED  納刀。切先は鐺(E)、柄は鯉口(M)
+   DRAWING   抜刀中。刀は鞘の軸に沿って平行移動。s=0→L
+   DRAWN     抜刀済。マウス＝切先、柄がロープのように遅れて付いてくる
+   SHEATHING 納刀中。刀は軸にロック。切先が M→E へ沈む
+   ========================================================================= */
+const st={};
+function start(swIdx){
+  const S0=T.swords[swIdx];
+  Object.assign(st,{
+    sword:swIdx, sw:S0, L:S0.L,
+    mode:'SHEATHED',
+    s:0, grabX:0, grabY:0, drawErr:0, drawN:0, bind:0,
+    tipX:M.x+dx*S0.L, tipY:M.y+dy*S0.L,
+    hiltX:M.x, hiltY:M.y,
+    q:0, sheStep:0,
+    iai:false, iaiT:0, iaiWait:0, zan:false, zanAt:0, early:false,
+    hp:T.playerHP, stun:0, over:false, win:false,
+    kills:0, wave:0, enemy:null,
+    trail:[], flash:0, shake:0, slash:null,
+    msg:null, msgT:0, log:[], best:null,
+    guide:st.guide!==undefined?st.guide:true,
+    t:0,
+  });
+  spawn();
+  document.getElementById('ov').classList.add('off');
+}
+
+/* 鞘の座標 */
+function E(){ return {x:M.x+dx*st.L, y:M.y+dy*st.L}; }
+
+/* ===== ⑥ 敵 ============================================================== */
+function spawn(){
+  const def=T.enemies[st.wave%T.enemies.length];
+  const hp=def.hp*(1+Math.floor(st.wave/T.enemies.length)*0.35);
+  st.enemy={ def, hp, max:hp, x:1180, y:PY,
+    state:'walk', t:0, tel:0, phi:0, kind:0, feinted:false, stagger:0, dead:0, hitFlash:0 };
+}
+const ATT=[ {n:'中段',phi:0}, {n:'上段',phi:-0.95}, {n:'下段',phi:0.72} ];
+
+function enemyUpdate(dt){
+  const e=st.enemy; if(!e) return;
+  if(e.dead>0){ e.dead-=dt; if(e.dead<=0){ st.wave++; st.kills++; spawn(); } return; }
+  e.hitFlash=Math.max(0,e.hitFlash-dt*4);
+  if(e.stagger>0){ e.stagger-=dt; return; }
+  e.t+=dt;
+  const d=e.x-PX;
+  if(e.state==='walk'){
+    if(d>e.def.ma){ e.x-=78*dt; if(Math.random()<dt*7)S.step(); }
+    else { e.state='ready'; e.t=0; }
+  } else if(e.state==='ready'){
+    if(e.t> .25+Math.random()*.5){
+      e.state='tel'; e.t=0; e.kind=(Math.random()*3)|0; e.phi=ATT[e.kind].phi; e.feinted=false;
+      e.tel=e.def.tel*(0.85+Math.random()*0.3);
+    }
+  } else if(e.state==='tel'){
+    /* フェイント敵：予兆の途中で角度を変える（企画書 §17） */
+    if(e.def.feint && !e.feinted && e.t> e.tel*e.def.feint){
+      e.feinted=true; e.kind=(e.kind+1+((Math.random()*2)|0))%3; e.phi=ATT[e.kind].phi;
+    }
+    if(e.t>=e.tel){ resolveAttack(); e.state='rec'; e.t=0; }
+  } else if(e.state==='rec'){
+    if(e.t>e.def.rec){ e.state='walk'; e.t=0; }
+  }
+}
+
+/* 攻撃の着弾判定 = ガードの成否 */
+function resolveAttack(){
+  const e=st.enemy;
+  const gx=PX+Math.cos(e.phi)*T.guardPointDist, gy=PY+Math.sin(e.phi)*T.guardPointDist;
+  let ok=false, how='';
+  if(st.mode==='SHEATHED'){
+    /* 鞘で受ける。角度だけ。甘い（企画書 §9） */
+    if(mouse.R){
+      const a=Math.atan2(mouse.y-PY, mouse.x-PX);
+      if(Math.abs(angDiff(a,e.phi))<T.guardArcSheath*Math.PI/180){ ok=true; how='鞘受け'; }
+    }
+  } else if(st.mode==='DRAWN'){
+    /* 刀で受ける。位置 + 角度。倍しんどい */
+    const near=segDist(st.hiltX,st.hiltY,st.tipX,st.tipY,gx,gy)<T.guardBladeR;
+    const ba=Math.atan2(st.tipY-st.hiltY, st.tipX-st.hiltX);
+    let cr=Math.abs(angDiff(ba,e.phi))*180/Math.PI;
+    if(near && cr>T.guardCross[0] && cr<T.guardCross[1]){ ok=true; how='刃受け'; }
+  }
+  /* DRAWING / SHEATHING 中はガード不可 = 納刀は隙 */
+  if(ok){
+    S.guard(); e.stagger=T.guardStagger; st.flash=Math.max(st.flash,.35); st.shake=6;
+    say(how,'#cfe0ff');
+  } else {
+    st.hp-=e.def.dmg; S.hurt(); st.shake=13; st.flash=Math.max(st.flash,.55);
+    if(st.mode==='SHEATHING'){ popOut(); say('納刀を崩された','#e0866c'); }
+    else say('被弾 -'+e.def.dmg,'#e0866c');
+    if(st.hp<=0){ st.hp=0; st.over=true; S.down(); }
+  }
+}
+
+/* ===== ⑦ ダメージ ======================================================== */
+function damage(v,tag,col){
+  const e=st.enemy; if(!e||e.dead>0) return;
+  e.hp-=v; e.hitFlash=1; st.shake=Math.min(18,4+v*.11);
+  if(e.hp<=0){ e.dead=.55; S.down(); }
+  say(tag+' '+Math.round(v),col||'#ffd9a0');
+}
+function say(t,c){ st.msg=t; st.msgC=c||'#d8ccb4'; st.msgT=1.15; }
+
+function tierOf(rt){ for(const r of T.react) if(rt<=r.t) return r; return T.react[T.react.length-1]; }
+
+/* 居合／抜き付けの発火 */
+function fireDraw(){
+  const e=st.enemy;
+  const reach = st.L*T.reachMul + T.reachAdd;
+  const inRange = e && e.dead<=0 && (e.x-PX)<reach;
+  st.slash={t:0, reach};
+  S.draw();
+
+  if(st.iai && st.zan && !st.early){
+    const rt=(st.t-st.zanAt);
+    const tier=tierOf(rt);
+    const err=st.drawN? st.drawErr/st.drawN : 0;           // 平均横ブレ(px)
+    const sb=lerp(T.straightBonus[1],T.straightBonus[0], clamp(err/st.sw.lat,0,1));
+    const dmg=st.sw.iai*tier.m*sb;
+    st.log.unshift({n:tier.n,rt,m:tier.m,sb,d:dmg,c:tier.c}); st.log=st.log.slice(0,5);
+    if(!st.best||rt<st.best) st.best=rt;
+    st.flash=.85;
+    if(inRange){ S.iai(); damage(dmg, tier.n+' 居合 ×'+(tier.m*sb).toFixed(2), tier.c); }
+    else say('空振り（間合い外）','#7d746a');
+  } else {
+    const p = st.early?T.earlyPenalty:1;
+    if(st.early) st.stun=T.earlyStun;
+    if(inRange){ S.cut(); damage(st.sw.iai*0.30*p, st.early?'早抜き 抜き付け':'抜き付け', st.early?'#c9603f':'#b9b0a0'); }
+    else if(st.early) say('早抜き','#c9603f');
+  }
+  st.iai=false; st.zan=false; st.early=false;
+}
+
+/* 納刀が崩れて刀が飛び出す */
+function popOut(){
+  st.mode='DRAWN'; S.katsu();
+  const t=E(); const q=st.q;
+  st.tipX=M.x+dx*st.L*q; st.tipY=M.y+dy*st.L*q;
+  st.hiltX=st.tipX-dx*st.L; st.hiltY=st.tipY-dy*st.L;
+  st.q=0; st.sheStep=0;
+}
+
+/* ===== ⑧ 更新 ============================================================ */
+function update(dt){
+  st.t+=dt;
+  mouse.vx=(mouse.x-mouse.px)/dt; mouse.vy=(mouse.y-mouse.py)/dt;
+  mouse.px=mouse.x; mouse.py=mouse.y;
+  st.flash=Math.max(0,st.flash-dt*2.4);
+  st.shake=Math.max(0,st.shake-dt*36);
+  st.msgT=Math.max(0,st.msgT-dt);
+  if(st.slash){ st.slash.t+=dt; if(st.slash.t>.24) st.slash=null; }
+  if(st.stun>0){ st.stun-=dt; }
+  if(st.over) return;
+  enemyUpdate(dt);
+
+  /* --- 居合構え（企画書 §4）--- */
+  const canIai = st.mode==='SHEATHED' && st.stun<=0;
+  if(keys['Space'] && canIai){
+    if(!st.iai){
+      st.iai=true; st.zan=false; st.iaiT=0;
+      st.iaiWait=lerp(st.sw.wait[0], st.sw.wait[1], Math.random());
+      S.chin();
+    }
+    st.iaiT+=dt;
+    if(!st.zan && st.iaiT>=st.iaiWait){ st.zan=true; st.zanAt=st.t; S.zan(); st.flash=.3; }
+  } else if(st.iai && (!keys['Space'] || st.mode!=='SHEATHED')){
+    if(st.mode==='SHEATHED'){ st.iai=false; st.zan=false; }
+  }
+
+  const e0=E();
+
+  /* --- SHEATHED : 抜刀開始 --- */
+  if(st.mode==='SHEATHED'){
+    st.tipX=e0.x; st.tipY=e0.y; st.hiltX=M.x; st.hiltY=M.y;
+    if(mouse.L && st.stun<=0){
+      st.mode='DRAWING'; st.s=0; st.grabX=mouse.x; st.grabY=mouse.y;
+      st.drawErr=0; st.drawN=0; st.bind=0;
+      st.early = st.iai && !st.zan;      // 「斬」より先に抜いた
+      if(!st.iai) st.early=false;
+    }
+  }
+
+  /* --- DRAWING : 鞘の軸に沿って引く --- */
+  else if(st.mode==='DRAWING'){
+    const rx=mouse.x-st.grabX, ry=mouse.y-st.grabY;
+    const along=dot(rx,ry,ux,uy);
+    const lat=Math.abs(crs(rx,ry,ux,uy));
+    st.drawErr+=lat; st.drawN++;
+    const cap = lat>st.sw.lat ? st.s : clamp(along,0,st.L);   // 軸を外れると進まない
+    if(lat>st.sw.lat){
+      st.bind-=dt; if(st.bind<=0){ S.katsu(); st.bind=.22; }
+    }
+    st.s=Math.max(st.s, cap);
+    const sx=ux*st.s, sy=uy*st.s;
+    st.hiltX=M.x+sx; st.hiltY=M.y+sy;
+    st.tipX=e0.x+sx;  st.tipY=e0.y+sy;
+    if(st.s>=st.L-5){
+      /* 抜け切った。ここから マウス＝切先 へ制御が移る */
+      st.mode='DRAWN';
+      st.tipX=mouse.x; st.tipY=mouse.y;
+      st.hiltX=st.tipX+dx*st.L; st.hiltY=st.tipY+dy*st.L;
+      fireDraw();
+    } else if(!mouse.L){
+      st.mode='SHEATHED'; st.s=0; S.su();
+    }
+  }
+
+  /* --- DRAWN : マウスが切先。柄はロープで遅れて付いてくる --- */
+  else if(st.mode==='DRAWN'){
+    const ptx=st.tipX, pty=st.tipY, phx=st.hiltX, phy=st.hiltY;
+    st.tipX=mouse.x; st.tipY=mouse.y;
+    let hx=st.hiltX-st.tipX, hy=st.hiltY-st.tipY;
+    let hl=len(hx,hy)||1;
+    st.hiltX=st.tipX+hx/hl*st.L; st.hiltY=st.tipY+hy/hl*st.L;
+
+    /* 手首 — 鯉口に近いほど、刃が鞘の向きへ収まろうとする。
+       完全な手動だと真後ろ向きから振り戻すのに画面幅ぶんの弧が要る（実測） */
+    const nr=1-clamp(len(st.tipX-M.x,st.tipY-M.y)/(st.sw.mouthR*T.sheatheAssistR),0,1);
+    if(nr>0 && T.sheatheAssist>0){
+      const ba=Math.atan2(st.hiltY-st.tipY, st.hiltX-st.tipX);
+      const na=ba+clamp(angDiff(Math.atan2(uy,ux),ba),-1,1)*nr*T.sheatheAssist;
+      st.hiltX=st.tipX+Math.cos(na)*st.L; st.hiltY=st.tipY+Math.sin(na)*st.L;
+    }
+
+    st.trail.push({x:st.tipX,y:st.tipY,hx:st.hiltX,hy:st.hiltY});
+    if(st.trail.length>11) st.trail.shift();
+
+    /* 通常斬撃：刃が敵を横切り、かつ切先が速い（企画書 §8） */
+    const e=st.enemy, spd=len(mouse.vx,mouse.vy);
+    if(e && e.dead<=0){
+      const d=segDist(st.hiltX,st.hiltY,st.tipX,st.tipY,e.x,e.y-24);
+      if(d<44*T.cutReach && spd>T.cutSpeed && !st.cutLatch && st.t-(st.cutAt||-9)>T.cutCool){
+        st.cutLatch=true; st.cutAt=st.t; S.cut();
+        damage(st.sw.cut*(0.75+clamp(spd/2600,0,.65)),'斬','#cfc4b2');
+      }
+      if(d>70) st.cutLatch=false;
+    }
+
+    /* 納刀の入口：切先が鯉口に来て、刃の向きが鞘に合っているか（企画書 §10） */
+    const md=len(st.tipX-M.x, st.tipY-M.y);
+    const ba=Math.atan2(st.tipY-st.hiltY, st.tipX-st.hiltX);
+    const off=Math.abs(angDiff(ba,DA))*180/Math.PI;
+    st.mouthNear = md<st.sw.mouthR*2.4;
+    st.mouthOk   = md<st.sw.mouthR && off<st.sw.ang;
+    if(st.mouthOk){
+      st.mode='SHEATHING'; st.q=0; st.sheStep=0; S.chin();
+    } else if(md<st.sw.mouthR && off>=st.sw.ang){
+      if((st.bind-=dt)<=0){ S.katsu(); st.bind=.30; st.shake=3; }
+    }
+  }
+
+  /* --- SHEATHING : 軸にロック。押し込む --- */
+  else if(st.mode==='SHEATHING'){
+    const rx=mouse.x-M.x, ry=mouse.y-M.y;
+    const along=dot(rx,ry,dx,dy);
+    const lat=Math.abs(crs(rx,ry,dx,dy));
+    if(lat>st.sw.mouthR*1.15){ popOut(); st.shake=4; }
+    else {
+      st.q=clamp(along/st.L,0,1);
+      st.tipX=M.x+dx*st.L*st.q; st.tipY=M.y+dy*st.L*st.q;
+      st.hiltX=st.tipX-dx*st.L; st.hiltY=st.tipY-dy*st.L;
+      const step=Math.floor(st.q*8);
+      if(step>st.sheStep){ st.sheStep=step; S.su(); }
+      if(st.q>=0.995){
+        st.mode='SHEATHED'; st.q=0; st.trail.length=0;
+        S.kachin(); st.flash=.42; say('カチン','#ffe6b0');
+      }
+    }
+  }
+}
+
+/* ===== ⑨ 描画 ============================================================ */
+function draw(){
+  g.save();
+  g.setTransform(1,0,0,1,0,0);
+  g.clearRect(0,0,cv.width,cv.height);
+  const dpr=Math.min(devicePixelRatio||1,2);
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.fillStyle='#07070a'; g.fillRect(0,0,innerWidth,innerHeight);
+
+  const shx=(Math.random()-.5)*st.shake, shy=(Math.random()-.5)*st.shake;
+  g.translate(ox+shx,oy+shy); g.scale(sc,sc);
+  g.beginPath(); g.rect(0,0,VW,VH); g.clip();
+
+  /* 背景 */
+  const bg=g.createLinearGradient(0,0,0,VH);
+  bg.addColorStop(0,'#0d0c11'); bg.addColorStop(.62,'#121016'); bg.addColorStop(1,'#08070a');
+  g.fillStyle=bg; g.fillRect(0,0,VW,VH);
+  g.fillStyle='rgba(214,196,160,.045)'; g.beginPath(); g.arc(1010,150,86,0,7); g.fill();
+  g.strokeStyle='rgba(150,138,120,.16)'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(0,GY); g.lineTo(VW,GY); g.stroke();
+  g.fillStyle='rgba(0,0,0,.35)'; g.fillRect(0,GY,VW,VH-GY);
+
+  /* 居合構え中の空気 */
+  if(st.iai){
+    const v=g.createRadialGradient(PX+120,PY,60,PX+120,PY,720);
+    v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,'+(st.zan?.30:.52)+')');
+    g.fillStyle=v; g.fillRect(0,0,VW,VH);
+  }
+
+  drawEnemy();
+  drawPlayer();
+  drawSword();
+  if(st.slash) drawSlash();
+
+  /* 「斬」 */
+  if(st.zan){
+    const a=clamp(1-(st.t-st.zanAt)*1.1,0,1);
+    g.save();
+    g.globalAlpha=.28*a+.72;
+    g.font='300 210px "Yu Mincho","Hiragino Mincho ProN",serif';
+    g.textAlign='center'; g.textBaseline='middle';
+    g.fillStyle='rgba(214,58,44,'+(0.16+0.2*a)+')';
+    g.fillText('斬',VW/2+2,VH/2-42);
+    g.fillStyle='#f2e6d2'; g.shadowColor='rgba(220,70,50,.9)'; g.shadowBlur=44+60*a;
+    g.fillText('斬',VW/2,VH/2-44);
+    g.restore();
+  }
+
+  hud();
+  g.restore();
+
+  if(st.flash>0){
+    g.save(); g.setTransform(dpr,0,0,dpr,0,0);
+    g.fillStyle='rgba(255,244,226,'+(st.flash*.20)+')';
+    g.fillRect(0,0,innerWidth,innerHeight); g.restore();
+  }
+}
+
+function drawPlayer(){
+  const crouch=st.iai?10:0;
+  g.strokeStyle='#d9cfbd'; g.lineCap='round'; g.lineWidth=7;
+  g.beginPath();
+  g.moveTo(PX,PY-52+crouch); g.lineTo(PX-4,PY+42+crouch*.4);   // 胴
+  g.moveTo(PX-4,PY+42+crouch*.4); g.lineTo(PX-24,GY);           // 後ろ足
+  g.moveTo(PX-4,PY+42+crouch*.4); g.lineTo(PX+34,GY);           // 前足
+  g.stroke();
+  g.lineWidth=5;
+  g.beginPath();
+  g.moveTo(PX+2,PY-34+crouch);
+  g.lineTo(st.mode==='SHEATHED'?M.x-10:clamp(st.hiltX,PX-40,PX+300), st.mode==='SHEATHED'?M.y-8:clamp(st.hiltY,PY-160,GY));
+  g.stroke();
+  g.fillStyle='#e6dcc9'; g.beginPath(); g.arc(PX+2,PY-64+crouch,13,0,7); g.fill();
+  /* HPバー */
+  g.fillStyle='rgba(255,255,255,.10)'; g.fillRect(PX-46,GY+22,120,5);
+  g.fillStyle='#c8b48c'; g.fillRect(PX-46,GY+22,120*(st.hp/T.playerHP),5);
+}
+
+function drawSheath(){
+  const e=E();
+  const bind = st.mode==='DRAWING' && st.bind>0;
+  g.lineCap='round';
+  g.strokeStyle='#241f1b'; g.lineWidth=15;
+  g.beginPath(); g.moveTo(M.x,M.y); g.lineTo(e.x,e.y); g.stroke();
+  g.strokeStyle='#3a322a'; g.lineWidth=11;
+  g.beginPath(); g.moveTo(M.x,M.y); g.lineTo(e.x,e.y); g.stroke();
+  /* 鯉口 */
+  g.strokeStyle=bind?'#d1553a':(st.mouthOk?'#ffe0a0':'#7d6f5c'); g.lineWidth=3;
+  g.beginPath(); g.arc(M.x,M.y,7,0,7); g.stroke();
+  /* 納刀の判定円（抜刀中だけ出す） */
+  if(st.mode==='DRAWN'){
+    const ba=Math.atan2(st.tipY-st.hiltY,st.tipX-st.hiltX);
+    const okA=Math.abs(angDiff(ba,DA))*180/Math.PI < st.sw.ang;
+    g.setLineDash([4,6]);
+    g.strokeStyle=st.mouthNear?'rgba(255,220,150,.5)':'rgba(180,168,148,.20)';
+    g.lineWidth=1.5;
+    g.beginPath(); g.arc(M.x,M.y,st.sw.mouthR,0,7); g.stroke();
+    /* 納刀の型：刃をこの線に重ねる → 鯉口へ押し込める */
+    g.setLineDash([6,8]); g.lineDashOffset=st.t*30;
+    g.strokeStyle=okA?'rgba(255,222,158,.55)':'rgba(150,140,124,.16)';
+    g.lineWidth=okA?2.2:1.4;
+    g.beginPath(); g.moveTo(M.x,M.y); g.lineTo(M.x+ux*st.L,M.y+uy*st.L); g.stroke();
+    g.setLineDash([]);
+    if(st.mouthNear){
+      g.font='400 12px ui-monospace,monospace'; g.textAlign='center';
+      g.fillStyle=okA?'#ffdc9e':'#c9705a';
+      g.fillText(okA?'入る':'刃の向きが違う', M.x+ux*90-14, M.y+uy*90+26);
+    }
+  }
+}
+
+function drawSword(){
+  drawSheath();
+  const mode=st.mode;
+  if(mode==='SHEATHED'){
+    /* 柄だけ出ている */
+    g.strokeStyle='#20242c'; g.lineWidth=9; g.lineCap='round';
+    g.beginPath(); g.moveTo(M.x,M.y); g.lineTo(M.x+ux*46,M.y+uy*46); g.stroke();
+    tsuba(M.x,M.y);
+    return;
+  }
+  /* 残像 */
+  if(mode==='DRAWN'){
+    for(let i=0;i<st.trail.length;i++){
+      const p=st.trail[i], a=(i/st.trail.length)*0.26;
+      g.strokeStyle='rgba(190,214,236,'+a+')'; g.lineWidth=2+i*.35; g.lineCap='round';
+      g.beginPath(); g.moveTo(p.hx,p.hy); g.lineTo(p.x,p.y); g.stroke();
+    }
+  }
+  /* 刀身 */
+  const hx=st.hiltX, hy=st.hiltY, tx=st.tipX, ty=st.tipY;
+  g.lineCap='round';
+  g.strokeStyle='rgba(200,224,255,.16)'; g.lineWidth=9;
+  g.beginPath(); g.moveTo(hx,hy); g.lineTo(tx,ty); g.stroke();
+  g.strokeStyle='#e8f0fa'; g.lineWidth=3.4;
+  g.beginPath(); g.moveTo(hx,hy); g.lineTo(tx,ty); g.stroke();
+  g.strokeStyle='rgba(255,255,255,.85)'; g.lineWidth=1.1;
+  g.beginPath(); g.moveTo(hx,hy); g.lineTo(tx,ty); g.stroke();
+  /* 柄 */
+  const bx=(hx-tx)/st.L, by=(hy-ty)/st.L;
+  g.strokeStyle='#20242c'; g.lineWidth=9;
+  g.beginPath(); g.moveTo(hx,hy); g.lineTo(hx+bx*46,hy+by*46); g.stroke();
+  tsuba(hx,hy);
+  /* 手（＝マウス）と柄のズレを見せる。ズレ＝軸外れ */
+  if(mode==='DRAWING'||mode==='SHEATHING'){
+    const off=len(mouse.x-hx, mouse.y-hy);
+    g.strokeStyle='rgba(230,120,80,'+clamp(off/90,0,.6)+')'; g.lineWidth=1.5;
+    g.setLineDash([3,4]);
+    g.beginPath(); g.moveTo(hx,hy); g.lineTo(mouse.x,mouse.y); g.stroke(); g.setLineDash([]);
+  }
+}
+function tsuba(x,y){
+  g.save(); g.translate(x,y); g.rotate(Math.atan2(uy,ux));
+  g.fillStyle='#3c3a34'; g.fillRect(-2.5,-11,5,22); g.restore();
+}
+
+function drawEnemy(){
+  const e=st.enemy; if(!e) return;
+  const dead=e.dead>0, a=dead?clamp(e.dead/.55,0,1):1;
+  g.save(); g.globalAlpha=a;
+  if(dead) g.translate(0,(1-a)*30);
+  const c=e.hitFlash>0?'#fff3e0':e.def.col;
+  g.strokeStyle=c; g.lineCap='round'; g.lineWidth=7;
+  const lean=e.state==='tel'?-8:0;
+  g.beginPath();
+  g.moveTo(e.x+lean,e.y-52); g.lineTo(e.x+4,e.y+42);
+  g.moveTo(e.x+4,e.y+42); g.lineTo(e.x+26,GY);
+  g.moveTo(e.x+4,e.y+42); g.lineTo(e.x-26,GY);
+  g.stroke();
+  g.fillStyle=c; g.beginPath(); g.arc(e.x+lean,e.y-64,13,0,7); g.fill();
+  /* 武器 */
+  const wa=e.state==='tel'? e.phi+Math.PI + (e.t/e.tel)*0.5 : e.phi+Math.PI+0.5;
+  g.strokeStyle='rgba(220,210,196,.55)'; g.lineWidth=3;
+  g.beginPath(); g.moveTo(e.x-6,e.y-30);
+  g.lineTo(e.x-6+Math.cos(wa)*-70, e.y-30+Math.sin(wa)*-70); g.stroke();
+  /* HP */
+  g.fillStyle='rgba(255,255,255,.10)'; g.fillRect(e.x-48,e.y-104,96,4);
+  g.fillStyle=e.def.col; g.fillRect(e.x-48,e.y-104,96*clamp(e.hp/e.max,0,1),4);
+  g.font='400 11px ui-monospace,monospace'; g.textAlign='center'; g.fillStyle='#6f675d';
+  g.fillText(e.def.n+(e.stagger>0?'  崩れ':''), e.x, e.y-114);
+  g.restore();
+
+  /* 予兆 → 受け点（企画書 §9。どこに刃を置くかを見せる） */
+  if(e.state==='tel'&&!dead){
+    const p=clamp(e.t/e.tel,0,1);
+    const gx=PX+Math.cos(e.phi)*T.guardPointDist, gy=PY+Math.sin(e.phi)*T.guardPointDist;
+    g.strokeStyle='rgba(214,74,52,'+(0.20+0.45*p)+')'; g.lineWidth=1.5;
+    g.setLineDash([7,7]); g.lineDashOffset=-st.t*40;
+    g.beginPath(); g.moveTo(e.x-6,e.y-30); g.lineTo(gx,gy); g.stroke(); g.setLineDash([]);
+    g.strokeStyle='rgba(230,90,64,'+(0.35+0.5*p)+')'; g.lineWidth=2;
+    g.beginPath(); g.arc(gx,gy,10+26*(1-p),0,7); g.stroke();
+    g.beginPath(); g.arc(gx,gy,9,0,7); g.stroke();
+    g.font='400 11px ui-monospace,monospace'; g.textAlign='center';
+    g.fillStyle='rgba(230,120,96,.8)'; g.fillText(ATT[e.kind].n,gx,gy-22);
+  }
+}
+
+function drawSlash(){
+  const s=st.slash, a=1-s.t/.24;
+  g.save();
+  g.strokeStyle='rgba(255,248,232,'+(a*.9)+')'; g.lineWidth=3+10*a; g.lineCap='round';
+  g.beginPath();
+  g.moveTo(M.x-30, M.y+34);
+  g.quadraticCurveTo(PX+s.reach*.55, PY-70, PX+s.reach, PY-118);
+  g.stroke();
+  g.strokeStyle='rgba(180,220,255,'+(a*.35)+')'; g.lineWidth=1.5;
+  g.stroke();
+  g.restore();
+}
+
+/* ===== ⑩ HUD ============================================================= */
+function hud(){
+  g.textAlign='left'; g.textBaseline='alphabetic';
+
+  /* 状態 */
+  const modeJ={SHEATHED:'納刀',DRAWING:'抜刀中',DRAWN:'抜刀',SHEATHING:'納刀中'}[st.mode];
+  g.font='300 30px "Yu Mincho",serif';
+  g.fillStyle=st.mode==='SHEATHED'?'#e8dcc0':'#8fb8d8';
+  g.fillText(modeJ,26,50);
+  g.font='400 11px ui-monospace,monospace'; g.fillStyle='#5f584e';
+  g.fillText(st.mode==='SHEATHED'?'居合 可 / 鞘受け 可':'居合 不可 / 刃で受けろ',26,70);
+
+  /* 居合ゲージ */
+  if(st.iai&&!st.zan){
+    const w=210, p=clamp(st.iaiT/st.sw.wait[1],0,1);
+    const lo=st.sw.wait[0]/st.sw.wait[1];
+    g.fillStyle='rgba(255,255,255,.07)'; g.fillRect(26,86,w,7);
+    g.fillStyle='rgba(255,255,255,.05)'; g.fillRect(26+w*lo,86,w*(1-lo),7);
+    g.fillStyle='#8a6f4a'; g.fillRect(26,86,w*p,7);
+    g.strokeStyle='rgba(255,220,160,.45)'; g.lineWidth=1;
+    g.beginPath(); g.moveTo(26+w*lo,84); g.lineTo(26+w*lo,95); g.stroke();
+    g.font='400 10px ui-monospace,monospace'; g.fillStyle='#6d6355';
+    g.fillText('斬 待機 '+st.sw.wait[0].toFixed(1)+'–'+st.sw.wait[1].toFixed(1)+'s',26,108);
+  }
+
+  /* 右上 */
+  g.textAlign='right';
+  g.font='400 12px ui-monospace,monospace'; g.fillStyle='#5f584e';
+  g.fillText(st.sw.name+'   撃破 '+st.kills+(st.best?('   最速 '+st.best.toFixed(3)+'s'):''),VW-26,40);
+  /* 直近の居合ログ */
+  g.font='400 11px ui-monospace,monospace';
+  st.log.forEach((l,i)=>{
+    g.fillStyle=i===0?l.c:'rgba(140,132,120,.5)';
+    g.fillText(l.n+'  '+l.rt.toFixed(3)+'s  ×'+(l.m*l.sb).toFixed(2)+'  → '+Math.round(l.d),VW-26,64+i*17);
+  });
+
+  /* 中央メッセージ */
+  if(st.msgT>0){
+    g.textAlign='center';
+    g.globalAlpha=clamp(st.msgT/0.5,0,1);
+    g.font='300 30px "Yu Mincho",serif'; g.fillStyle=st.msgC;
+    g.fillText(st.msg,VW/2,190);
+    g.globalAlpha=1;
+  }
+
+  /* 抜刀の介錯線（G で消せる） */
+  if(st.guide && (st.mode==='SHEATHED'||st.mode==='DRAWING')){
+    const bx=st.mode==='DRAWING'?st.grabX:mouse.x, by=st.mode==='DRAWING'?st.grabY:mouse.y;
+    g.setLineDash([5,8]); g.lineDashOffset=-st.t*26;
+    g.strokeStyle='rgba(200,180,140,.22)'; g.lineWidth=1.4;
+    g.beginPath(); g.moveTo(bx,by); g.lineTo(bx+ux*st.L,by+uy*st.L); g.stroke();
+    g.setLineDash([]);
+    /* 許容幅 */
+    g.strokeStyle='rgba(200,180,140,.10)';
+    for(const s2 of[-1,1]){
+      g.beginPath();
+      g.moveTo(bx-uy*st.sw.lat*s2, by+ux*st.sw.lat*s2);
+      g.lineTo(bx+ux*st.L-uy*st.sw.lat*s2, by+uy*st.L+ux*st.sw.lat*s2);
+      g.stroke();
+    }
+  }
+
+  /* カーソル */
+  g.strokeStyle=st.mode==='DRAWN'?'rgba(232,240,250,.9)':'rgba(200,186,160,.75)';
+  g.lineWidth=1.2;
+  g.beginPath(); g.arc(mouse.x,mouse.y,st.mode==='DRAWN'?3:6,0,7); g.stroke();
+  if(st.mode!=='DRAWN'){
+    g.beginPath();
+    g.moveTo(mouse.x-11,mouse.y); g.lineTo(mouse.x-6,mouse.y);
+    g.moveTo(mouse.x+6,mouse.y);  g.lineTo(mouse.x+11,mouse.y);
+    g.stroke();
+  }
+
+  /* 足元の操作ヒント */
+  g.textAlign='center'; g.font='400 11px ui-monospace,monospace'; g.fillStyle='#4b453d';
+  const hint = st.mode==='SHEATHED' ? 'SPACE 長押しで居合構え  /  右クリックで鞘受け  /  左ドラッグで抜刀'
+             : st.mode==='DRAWN'    ? '切先を鯉口へ戻し、鞘の線に沿って押し込め（角度が合わないと入らない）'
+             : st.mode==='DRAWING'  ? '鞘の線から外れるな'
+             : '押し込み '+Math.round(st.q*100)+'%';
+  g.fillText(hint,VW/2,VH-24);
+  g.fillText('G 介錯線  /  R 再挑戦',VW/2,VH-8);
+
+  /* 死亡 */
+  if(st.over){
+    g.fillStyle='rgba(6,5,7,.72)'; g.fillRect(0,0,VW,VH);
+    g.textAlign='center';
+    g.font='200 72px "Yu Mincho",serif'; g.fillStyle='#d8cbb4';
+    g.fillText('斬 死',VW/2,VH/2-10);
+    g.font='400 13px ui-monospace,monospace'; g.fillStyle='#7d746a';
+    g.fillText('撃破 '+st.kills+'　最速 '+(st.best?st.best.toFixed(3)+'s':'—'),VW/2,VH/2+30);
+    g.fillText('R で再挑戦',VW/2,VH/2+56);
+  }
+}
+
+/* ===== ⑪ 起動 ============================================================ */
+const swWrap=document.getElementById('swords');
+T.swords.forEach((s,i)=>{
+  const b=document.createElement('div'); b.className='sw';
+  b.innerHTML='<h2>'+s.name+'</h2><div class="d">'+s.d.join('<br>')+'</div>';
+  b.onclick=()=>{ ac(); start(i); };
+  swWrap.appendChild(b);
+});
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,1/20); last=now;
+  if(st.mode) update(dt);
+  if(st.mode) draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

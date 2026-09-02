@@ -3,7 +3,7 @@
 「30回釣られたあと、自分が釣られていた時間を見せつけられるサイト」。
 **Rickroll はオチではなく1層目**という企画。元ネタは Vault の `Clippings/技術で釣るサイト案.md`。
 
-素の HTML / CSS / JS 1セット。ビルド不要。`public/games/30-traps/index.html` を開けば動く。
+素の HTML / CSS / JS 1セット。ビルド不要。`public/games/okoraretarakesu/index.html` を開けば動く。
 
 ---
 

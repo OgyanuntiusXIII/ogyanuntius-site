@@ -17,7 +17,7 @@
  */
 
 // 勝手なキーで書き込まれないよう、数える対象は先に決めておく
-const GAMES = new Set(["parry-aria-bpm", "kiki-kisaki", "kokoro-misoshiru", "777-combo", "30-traps"]);
+const GAMES = new Set(["parry-aria-bpm", "kiki-kisaki", "kokoro-misoshiru", "777-combo", "okoraretarakesu"]);
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
