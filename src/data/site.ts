@@ -13,8 +13,14 @@ export const SITE = {
   creatorDescription: 'オギャヌン／オギャヌンティウスとも呼ばれる、大阪でゲーム、アプリ、TRPGシナリオ、動画、そのほか名前のついていないものを作っているクリエイター。',
   /** 本番URL。Cloudflare Pages の custom domain（2026-08-27 有効化） */
   origin: 'https://ogyanuntiusxiii.com',
-  /** SNS共通のOGP。**SVGは X も Facebook も描画しない**ので JPEG にする */
-  ogImage: '/images/ogp/default.jpg',
+  /**
+   * SNS共通のOGP。**SVGは X も Facebook も描画しない**ので JPEG にする。
+   *
+   * **差し替えるときはファイル名も変えること。** X は og:image を URL 単位で
+   * 数日キャッシュするので、同名で上書きすると古い絵がしばらく出続ける。
+   * （2026-09-01 `default.jpg` から差し替え。旧ファイルは git に残っている）
+   */
+  ogImage: '/images/ogp/default-koyomi.jpg',
   /** Person 構造化データで「同じ作者」として結ぶ公式アカウント */
   sameAs: [
     'https://x.com/ogyanuntiusxiii',
@@ -71,13 +77,41 @@ export const CREDITS = {
 } as const;
 
 /**
- * 連絡先。**Xのみ**（本人・2026-08-27）。
- * メールアドレスは平文で載せるとスパムに拾われるため、載せない判断をした。
+ * 連絡先。**二段構え**（本人・2026-09-01。旧：Xのみ / 2026-08-27）。
+ *
+ * | 用途 | 窓口 |
+ * |---|---|
+ * | お問い合わせ（感想・不具合・権利・仕事） | **`/contact` のフォーム**。こちらが主 |
+ * | 軽い連絡・交流 | X |
+ *
+ * ⚠️ **メールアドレスは平文で載せない。** このリポジトリは public なので履歴からも読める。
+ *    フォームにしたのは、その制約を保ったまま「Xを持っていない人」から受け取るため。
  */
 export const CONTACT = {
+  /** 主窓口。フォーム（`src/pages/contact.astro` → `functions/api/contact.js`） */
+  form: '/contact',
+  /** 個人情報の扱い。フォームがある以上、置かないという選択は取れない */
+  privacy: '/privacy',
   x: 'https://x.com/ogyanuntiusxiii',
   xHandle: '@ogyanuntiusxiii',
 } as const;
+
+/**
+ * お問い合わせの種別。
+ *
+ * ⚠️ **`functions/api/contact.js` の `TOPICS` と対にする。**
+ *    片方だけ足すと、その種別は保存時に `other` へ倒れる（捨てはしない）。
+ *
+ * 「権利関係について」は消さないこと。二次創作を出している以上、
+ * **連絡できる窓口が明示されている**こと自体が中身になる。
+ */
+export const CONTACT_TOPICS = [
+  { key: 'feedback', label: '感想・応援', note: '匿名で構いません。' },
+  { key: 'bug', label: '不具合報告', note: '作品名と動作環境があると直しやすいです。' },
+  { key: 'rights', label: '権利関係について', note: '二次創作物の取り扱い・削除依頼など。' },
+  { key: 'work', label: 'お仕事・コラボの相談', note: '返信先のメールアドレスをください。' },
+  { key: 'other', label: 'その他', note: '' },
+] as const;
 
 /**
  * 隠しページ（P.000）を突破した人にだけ出る、最後のオチ。
