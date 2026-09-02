@@ -45,8 +45,13 @@ headlines:
     collection: works
     slot: side
     catch: 論点を揃えてから殴れ
-    badge: NEW
     no: 6
+  - ref: 30-traps
+    collection: works
+    slot: side
+    catch: 怒られたら消す
+    badge: NEW
+    no: 7
   - ref: /about
     collection: page
     catch: WHO IS OGYANUNTIUS XIII?

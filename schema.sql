@@ -50,3 +50,19 @@ CREATE TABLE IF NOT EXISTS contact_rate (
   at INTEGER NOT NULL,
   n  INTEGER NOT NULL DEFAULT 0
 );
+
+-- 30 TRAPS に釣られた人の合計時間。行は '30-traps' の1つだけ。
+-- ⚠️ **自己申告の数字。** タイムはブラウザが測って送ってくるので水増ししうる。
+--    1回の上限（3時間）と1日の回数（20回）は functions/api/traptime.js 側で絞っている。
+CREATE TABLE IF NOT EXISTS trap_time (
+  k    TEXT PRIMARY KEY,
+  ms   INTEGER NOT NULL DEFAULT 0,   -- 合計ミリ秒
+  runs INTEGER NOT NULL DEFAULT 0    -- 到達した回数
+);
+
+-- 連投を止める鍵。**IPは保存しない**（日付を混ぜたハッシュ）
+CREATE TABLE IF NOT EXISTS trap_rate (
+  k  TEXT PRIMARY KEY,
+  at INTEGER NOT NULL,
+  n  INTEGER NOT NULL DEFAULT 0
+);

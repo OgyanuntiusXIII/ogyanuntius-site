@@ -4,10 +4,10 @@ catch: CoCシナリオ『雨降る最後の時間に』
 category: scenario
 date: 2026-08-19
 status: published
-priceType: donation
+priceType: free
 thumbnail: /images/scenarios/amefuru-thumb.webp
 heroImage: /images/scenarios/amefuru-hero.webp
-description: クトゥルフ神話TRPG（新クトゥルフ神話TRPG）シナリオ。無料DL版と支援版がある。
+description: クトゥルフ神話TRPG（新クトゥルフ神話TRPG）シナリオ。無料でダウンロードできる。
 youtubeId: 6aAX2ugxQPA
 links:
   - label: BOOTH
@@ -32,4 +32,4 @@ tags: [CoC, クトゥルフ神話TRPG, タイマン]
 | ロスト率 | 低 |
 | エンディング | 4種類 |
 | 時間制限 | あり（1時間半） |
-| 頒布 | 無料DL版 ／ 支援版 ¥100 |
+| 頒布 | 無料DL |
