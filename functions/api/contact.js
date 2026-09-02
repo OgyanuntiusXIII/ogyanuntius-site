@@ -115,13 +115,22 @@ async function ops(env, note) {
  * 届いたことだけを知らせる。**本文は送らない**（外部サービスへ本文を預けない）。
  * `CONTACT_WEBHOOK` が設定されていなければ何も起きない。Discord のWebhook形式。
  */
+/**
+ * シークレットの**形だけ**を言う。**値は出さない。**
+ * 先頭12文字は "https://disc" までしか映らないので、秘密の部分（IDとトークン）は含まれない。
+ */
+function shapeOf(v) {
+  const s = String(v == null ? "" : v);
+  return "typeof=" + typeof v + " len=" + s.length + " head=" + JSON.stringify(s.slice(0, 12));
+}
+
 async function notify(env, rec) {
   // 前後の空白を落とす。シークレットに改行が1つ混ざっただけで fetch が落ちる
   const hook = String(env.CONTACT_WEBHOOK == null ? "" : env.CONTACT_WEBHOOK).trim();
   if (!hook) {
     // **黙って諦めない。** 未設定なのか失敗なのかを、あとから `npm run inbox -- --ops` で見分ける。
     // env に何が来ているかも一緒に残す（**鍵の名前だけ。値は絶対に出さない**）
-    await ops(env, "通知なし: CONTACT_WEBHOOK が空。env のキー = " + Object.keys(env).join(","));
+    await ops(env, "通知なし: CONTACT_WEBHOOK が空。" + shapeOf(env.CONTACT_WEBHOOK) + " env のキー = " + Object.keys(env).join(","));
     return;
   }
   const line =
@@ -138,7 +147,8 @@ async function notify(env, rec) {
     // **URLも本文も記録しない。** 残すのは結果だけ
     await ops(env, r.ok ? "通知を送った" : "通知が拒否された status=" + r.status);
   } catch (e) {
-    await ops(env, "通知を送れなかった: " + (e && e.message));
+    // **失敗したときだけ形を添える。** 次に同じことが起きたとき、また往復しないため
+    await ops(env, "通知を送れなかった: " + (e && e.message) + " / " + shapeOf(env.CONTACT_WEBHOOK));
   }
 }
 
