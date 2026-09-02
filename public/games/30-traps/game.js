@@ -67,17 +67,17 @@
 
   /* ---------------- 状態 ---------------- */
   var state = {
-    mode: 'first',      // first / rta / replay
+    mode: 'first',      // first（初見・1回だけ）/ rta（2回目以降）
     t0: 0,
     total: 0,
     idx: 0,
     moved: 0,
     started: false
   };
+  /* 初見は1回だけ。**2回目からは全部RTA**（本人の指示・2026-09-02）。
+     rtaUnlocked が決めるのは「タイマーを出すかどうか」だけで、記録の種類ではない。 */
   function decideMode() {
-    if (REC.first == null) return 'first';
-    if (REC.rtaUnlocked) return 'rta';
-    return 'replay';
+    return REC.first == null ? 'first' : 'rta';
   }
 
   /* ---------------- 広告 ----------------
@@ -946,7 +946,7 @@
   }
 
   function kindLabel(kind) {
-    return kind === 'rta' ? 'RTA' : kind === 'first' ? '初見' : '再走';
+    return kind === 'first' ? '初見' : 'RTA';
   }
 
   /* 到達したあとの文。**本人の言葉そのまま。書き換えない** */
@@ -1036,8 +1036,7 @@
     // ⚠️ **1行目に作品名を置く。** タイムとURLとタグだけだと、
     //    共有された側から見て「乗っ取られた投稿」に見える（本人の指摘・2026-09-02）。
     //    人がスコアを報告している形にしておく。
-    var label = kind === 'rta' ? 'RTA' : kind === 'replay' ? '再走' : '初見';
-    return ['30 TRAPS｜' + label + ' ' + fmtJp(ms),
+    return ['30 TRAPS｜' + kindLabel(kind) + ' ' + fmtJp(ms),
             '革新的なサイトでした',
             '#怒られたら消えるサイト',
             location.origin + location.pathname].join(NL);
