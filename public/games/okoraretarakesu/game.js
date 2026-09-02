@@ -1036,10 +1036,12 @@
     // ⚠️ **1行目に作品名を置く。** タイムとURLとタグだけだと、
     //    共有された側から見て「乗っ取られた投稿」に見える（本人の指摘・2026-09-02）。
     //    人がスコアを報告している形にしておく。
+    // index.html を落として、共有されるURLをきれいにする
+    var url = (location.origin + location.pathname).replace(/index\.html$/, '');
     return ['30 TRAPS｜' + kindLabel(kind) + ' ' + fmtJp(ms),
             '革新的なサイトでした',
             '#怒られたら消えるサイト',
-            location.origin + location.pathname].join(NL);
+            url].join(NL);
   }
 
   /* 選べる共有先を並べる。**いま走った分は大きいボタンのほう。**
