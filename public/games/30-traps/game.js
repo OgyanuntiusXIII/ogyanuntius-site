@@ -1037,11 +1037,8 @@
     //    共有された側から見て「乗っ取られた投稿」に見える（本人の指摘・2026-09-02）。
     //    人がスコアを報告している形にしておく。
     var label = kind === 'rta' ? 'RTA' : kind === 'replay' ? '再走' : '初見';
-    var line = kind === 'rta' ? 'タイムアタックしてきました。'
-             : kind === 'replay' ? '中身を知ってて、もう一回やりました。'
-             : 'まんまと釣られました。';
     return ['30 TRAPS｜' + label + ' ' + fmtJp(ms),
-            line,
+            '革新的なサイトでした',
             '#怒られたら消えるサイト',
             location.origin + location.pathname].join(NL);
   }
