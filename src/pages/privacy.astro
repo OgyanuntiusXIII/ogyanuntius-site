@@ -1,0 +1,173 @@
+---
+/**
+ * 個人情報の扱い。
+ *
+ * **お問い合わせフォーム（/contact）を置いた以上、これが無いと成立しない**ので置いた
+ * （2026-09-01）。フォームを消すならこのページも一緒に見直すこと。
+ *
+ * ⚠️ **ここに書いてあることは、実際のコードと一致していなければならない。**
+ *    書いた時点の根拠：
+ *      ・IPを保存しない            → functions/api/contact.js / nazo.js（日付混じりのハッシュのみ）
+ *      ・Cookieを発行しない        → リポジトリ内に Set-Cookie / document.cookie が無い
+ *      ・localStorage の中身       → Base.astro（theme / viewed）・000/index.astro（nazo）
+ *                                    ＋ public/games・public/tools が各自の記録を持つ
+ *      ・閲覧数は数だけ            → functions/api/views.js（1行に数値1つ）
+ *      ・YouTubeは押すまで読まない → src/components/WorkArticle.astro の遅延読み込み
+ *      ・欧文フォントは外部から    → Base.astro の head（Google Fonts）
+ *    **どれかを変えたら、この本文も直す。** 実装と食い違った時点で、ただの嘘になる。
+ */
+import Base from '../layouts/Base.astro';
+import { SITE, CONTACT } from '../data/site';
+
+/** 最終更新。**本文を直したらここも直す** */
+const UPDATED = '2026年9月1日';
+---
+
+<Base
+  title="個人情報の扱い"
+  description="オギャヌンティウス十三世の公式サイトが、お問い合わせフォームなどで受け取る情報の扱いについて。IPアドレスは保存せず、追跡のためのCookieも使っていません。"
+>
+  <div class="wrap measure pv">
+    <p class="kicker">PRIVACY</p>
+    <h1 class="h1">個人情報の扱い</h1>
+
+    <div class="prose">
+      <p>
+        このサイトは、オギャヌンティウス十三世が個人で運営している雑誌型のサイトです。
+        ここでは、<strong>何を受け取り、何を受け取っていないか</strong>を書いています。
+      </p>
+
+      <h2>お問い合わせフォームで受け取るもの</h2>
+      <p>
+        <a class="link" href={CONTACT.form}>お問い合わせフォーム</a>から送信されたとき、
+        次のものを保存します。
+      </p>
+      <table>
+        <thead>
+          <tr><th>項目</th><th>必須か</th><th>何に使うか</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>お問い合わせ種別</td><td>必須</td><td>読む順番の整理</td></tr>
+          <tr><td>本文</td><td>必須</td><td>内容の確認</td></tr>
+          <tr><td>お名前</td><td>任意</td><td>返信時の呼びかけ</td></tr>
+          <tr><td>メールアドレス</td><td>任意</td><td><strong>返信</strong>にのみ使用</td></tr>
+          <tr><td>関係する作品</td><td>任意</td><td>どの作品の話かの特定</td></tr>
+          <tr><td>動作環境</td><td>任意</td><td>不具合の再現</td></tr>
+          <tr><td>送信日時</td><td>自動</td><td>対応の順番</td></tr>
+        </tbody>
+      </table>
+      <p>
+        <strong>名前もメールアドレスも任意です。</strong>
+        空のまま送れます。その場合、こちらから連絡する手段はありません。
+      </p>
+
+      <h2>受け取っていないもの</h2>
+      <ul>
+        <li>
+          <strong>IPアドレスは保存していません。</strong>
+          短時間に大量の送信が来たときだけ止める仕組みがあり、そこで使うのは
+          「日付とIPアドレスを混ぜて計算した文字列」です。日付が変わると、
+          元の回線とは結びつかなくなります。
+        </li>
+        <li><strong>追跡のためのCookieは発行していません。</strong>アクセス解析ツールも入れていません。</li>
+        <li>広告は配信していません。行動履歴をもとにした広告配信も行っていません。</li>
+        <li>フォーム以外の場所で、個人を特定できる情報を集めることはありません。</li>
+      </ul>
+
+      <h2>保存する場所と期間</h2>
+      <p>
+        送信された内容は、このサイトを動かしている
+        <strong>Cloudflare</strong>（Cloudflare Pages / D1）のデータベースに保存されます。
+        管理画面は作っていないため、読み出せるのは運営者本人だけです。
+      </p>
+      <p>
+        <strong>返信と作品の改善に必要な間だけ置き、不要になったものから消します。</strong>
+        期限を決めた自動削除は行っていません。
+      </p>
+
+      <h2>第三者への提供</h2>
+      <p>
+        受け取った内容を第三者へ渡すことはありません。
+        法令にもとづく開示の求めがあった場合を除きます。
+      </p>
+      <p>
+        感想を作品の宣伝などで紹介したい場合は、<strong>事前にご本人へ確認します。</strong>
+        確認が取れないものは紹介しません。
+      </p>
+
+      <h2>削除・訂正のご依頼</h2>
+      <p>
+        送信した内容を消したい、直したいというときは、
+        フォームの種別「<strong>権利関係について</strong>」から、
+        またはXへご連絡ください。いつ・どんな内容を送ったかが分かると確実です。
+      </p>
+      <p>
+        <a class="link" href={CONTACT.form}>お問い合わせフォーム</a>
+        <span aria-hidden="true"> / </span>
+        <a class="link" href={CONTACT.x} rel="me noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a>
+      </p>
+
+      <h2>ブラウザに残るもの</h2>
+      <p>
+        Cookieの代わりに、お使いのブラウザの中（localStorage）へ次を残しています。
+        <strong>いずれもこちらへは送られません。</strong>ブラウザの設定から消せます。
+      </p>
+      <table>
+        <thead>
+          <tr><th>名前</th><th>中身</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ogyanun.theme</td><td>昼と夜、どちらの表示を選んだか</td></tr>
+          <tr><td>ogyanun.viewed</td><td>表紙の閲覧数を今日すでに数えたかどうか（日付）</td></tr>
+          <tr><td>ogyanun.nazo<br />ogyanun.nazo.id</td><td>目次に無いページを解いた人だけに作られる記録</td></tr>
+        </tbody>
+      </table>
+      <p>
+        このほか、サイト内のゲームやツールが<strong>ハイスコアや途中の回答</strong>を
+        同じ場所へ保存することがあります。これも同じで、こちらへは送られません。
+      </p>
+      <p>
+        表紙に出ている閲覧数は、<strong>数字を1つ増やしているだけ</strong>です。
+        誰が見たかという記録は残していません。
+      </p>
+
+      <h2>外部のサービス</h2>
+      <ul>
+        <li>
+          <strong>Cloudflare</strong> — このサイトの配信とデータベース。
+          通信の中継にあたるため、Cloudflare側にはアクセスの記録が残ります。
+        </li>
+        <li>
+          <strong>Google Fonts</strong> — 誌名に使う欧文書体を1つだけ読み込んでいます。
+          このとき、書体の配信元へIPアドレスなどの接続情報が渡ります。
+        </li>
+        <li>
+          <strong>YouTube</strong> — 作品ページの紹介ムービーは、
+          <strong>再生ボタンを押すまで読み込みません。</strong>
+          押さなければYouTubeとの通信は発生しません。
+        </li>
+      </ul>
+      <p>
+        サイト内のゲームやツールは、すべてブラウザの中だけで動きます。
+        プレイ回数として数字を1つ増やす以外、外部へ何かを送ることはありません。
+      </p>
+
+      <h2>変更について</h2>
+      <p>
+        内容を変えたときは、このページの最終更新日を直します。
+        <strong>最終更新：{UPDATED}</strong>
+      </p>
+    </div>
+
+    <p class="back"><a class="link" href="/">← 表紙へ戻る</a></p>
+  </div>
+  <p class="sr">{SITE.titleEn} — PRIVACY</p>
+</Base>
+
+<style>
+  .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
+  .h1 { font-size: clamp(1.5rem, 4.5vw, 2.4rem); line-height: 1.3; margin: 0 0 2rem; }
+  .pv .prose { max-width: 42rem; }
+  .back { margin-top: 2.4rem; }
+  .sr { position: absolute; left: -9999px; }
+</style>

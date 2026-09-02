@@ -52,3 +52,66 @@
 - 1突破あたりの書き込みは2行。無料枠（10万行/日）から見て無視できる
 
 中身の方針は リポジトリの `CLAUDE.md` 4.7節。
+
+---
+
+## お問い合わせ — `functions/api/contact.js`
+
+同じ D1（`DB`）を使う。**表は自動で作られる**ので、手で SQL を流す必要はない
+（`schema.sql` にも同じ DDL がある）。
+
+| | |
+|---|---|
+| `POST /api/contact` | body `{topic, body, name?, email?, work?, device?, t?, fax?}` → `{ok:true}` |
+
+- **溜めるだけ。返信もメール送信もしない。** 読むのは **`npm run inbox`**（`tools/inbox.mjs`）
+- **管理画面は作らない**（`CLAUDE.md` 5節）。読み書きは wrangler 経由で本人のPCからだけ
+- **IPは保存していない。** 連投を止める鍵は nazo と同じ「日付＋IP」のハッシュ
+- 迷惑メール対策は**静かに捨てる**で統一（蜜壺 `fax` ／ 3秒未満の送信 ／ 1日12件超）。
+  **捨てたことを相手に教えない**（教えると条件を1つずつ外して通るまで試せる）
+- **D1が無いときは `{ok:true, offline:true}`。** 画面はこれを「送信しました」と出さず、
+  Xへ誘導する。**受け取れていないものを受け取ったことにしない**
+- 1件あたりの書き込みは2行（本体＋レート）。無料枠（10万行/日）から見て無視できる
+
+### 読む
+
+**普段はデスクトップの「お問い合わせ受信箱」を押す。** 端末から読むなら：
+
+```bash
+npm run inbox                 # 未対応のものを新しい順に
+npm run inbox -- --all        # 対応済みも
+npm run inbox -- --done 12    # id=12 を対応済みにする
+npm run inbox -- --undone 12  # 取り消す
+npm run inbox:app             # 画面版を起動して既定のブラウザを開く
+```
+
+初回は `npx wrangler login` が要る。
+
+| ファイル | 役目 |
+|---|---|
+| `tools/inbox-db.mjs` | **読み書きの共通部分。** wrangler を叩くのはここだけ |
+| `tools/inbox.mjs` | 端末版 |
+| `tools/inbox-app.mjs` | 画面版。`127.0.0.1` にだけ口を開く |
+| `tools/inbox-app.cmd` | 起動用。**ASCIIだけで書く**（cmd が日本語を壊すため） |
+| `tools/make-inbox-icon.mjs` | アイコン生成（`npm run inbox:icon`）。一度作れば要らない |
+| `tools/make-inbox-shortcut.ps1` | デスクトップへショートカット（`npm run inbox:shortcut`） |
+
+> [!WARNING] `npx` を spawn しない（2026-09-02 に踏んだ）
+> Windows では `npx.cmd` を起動するのに `shell:true` が要り、**そうすると空白を含む引数
+> （＝SQL文）がシェルに分解される。** `Unknown arguments: id,, at,, topic,...` で落ちた。
+> `node node_modules/wrangler/bin/wrangler.js …` と実体を直に叩けば、シェルを挟まない。
+
+> [!WARNING] 画面版は「管理画面」ではない
+> 5節で禁じているのは**サイト上に置く**読み取り口のこと。こちらは `127.0.0.1` にしか
+> 待ち受けず、公開サイトには1バイトも足していない。**`0.0.0.0` に変えないこと。**
+> 起動ごとの合言葉（token）も外さない。**外すと、本人が見ている別のWebページから
+> `127.0.0.1` 経由で中身を読めてしまう。**
+
+### 届いたことを通知させたいとき（任意・**未設定**）
+
+環境変数 `CONTACT_WEBHOOK`（Discord の Webhook URL 形式）があると、
+1件受けるたびにそこへ「届いた」とだけ投げる。**本文は送らない。**
+未設定なら何も起きない。**2026-09-01 時点では設定していないので、この経路は未検証。**
+
+⚠️ `wrangler.toml` があると Pages はダッシュボード側の環境変数を無視する
+（このファイル冒頭の注記）。設定するならこの制約を確認してからにする。

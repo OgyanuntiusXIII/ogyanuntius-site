@@ -1,0 +1,454 @@
+---
+/**
+ * CONTACT — お問い合わせフォーム。**ここが主窓口**（本人・2026-09-01）。
+ *
+ * 旧：連絡はXのみ（2026-08-27）。**Xは消していない。** 二段構えにしただけ：
+ *   お問い合わせ → このフォーム ／ 軽い連絡・交流 → X
+ *
+ * 受け口は `functions/api/contact.js`。D1（plays / views / nazo と同じ `DB`）へ溜める。
+ * 読むのは `npm run inbox`。**管理画面は作らない**（CLAUDE.md 5節）。
+ *
+ * ⚠️ **「送信しました」を安売りしない。** APIが `offline` を返したときは
+ *    本文がどこにも残っていない。そのときはXへ誘導する（ユーザーメモリ5節）。
+ *
+ * ⚠️ 作品の一覧は works / scenarios から組む。**プルダウン用に別データを持たない**
+ *    （/press と同じ方針。作品を1件足せばここにも出る）。
+ */
+import Base from '../layouts/Base.astro';
+import { SITE, CONTACT, CONTACT_TOPICS, CREDITS } from '../data/site';
+import { getCollection } from 'astro:content';
+
+const [works, scenarios] = await Promise.all([
+  getCollection('works'),
+  getCollection('scenarios'),
+]);
+
+const titles = [...works, ...scenarios]
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  .map((e) => e.data.title);
+---
+
+<Base
+  title="お問い合わせ"
+  description="オギャヌンティウス十三世への感想・不具合報告・権利関係のご連絡・お仕事のご相談は、このフォームから送れます。Xのアカウントは要りません。"
+>
+  <div class="wrap ct">
+    <p class="kicker">CONTACT</p>
+    <h1 class="h1">CONTACT</h1>
+
+    <div class="prose">
+      <p>
+        作品へのご感想、不具合報告、権利関係のご連絡、お仕事のご相談などは、ここから送れます。
+        <strong>Xのアカウントは要りません。</strong>名前もメールアドレスも任意です。
+      </p>
+      <p>
+        返信が必要なときだけ、メールアドレスを書いてください。
+        軽い連絡や交流は
+        <a class="link" href={CONTACT.x} rel="me noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a>
+        のほうが早いです。
+      </p>
+    </div>
+
+    <form class="ct__form" id="ctForm" novalidate>
+      <fieldset class="ct__set">
+        <legend class="ct__legend">お問い合わせ種別</legend>
+        <ul class="ct__topics">
+          {CONTACT_TOPICS.map((t, i) => (
+            <li class="ct__topic">
+              <label class="ct__radio">
+                <input type="radio" name="topic" value={t.key} checked={i === 0} />
+                <span class="ct__topicName">{t.label}</span>
+              </label>
+              {t.note && <span class="ct__topicNote">{t.note}</span>}
+            </li>
+          ))}
+        </ul>
+      </fieldset>
+
+      <div class="ct__row">
+        <label class="ct__label" for="ctBody">本文<span class="ct__req">必須</span></label>
+        <textarea
+          class="ct__in ct__area"
+          id="ctBody"
+          name="body"
+          rows="9"
+          maxlength="4000"
+          required
+          aria-describedby="ctCount ctMsg"></textarea>
+        <p class="ct__hint" id="ctCount" aria-live="off">0 / 4000</p>
+      </div>
+
+      <div class="ct__grid">
+        <div class="ct__row">
+          <label class="ct__label" for="ctName">お名前<span class="ct__opt">任意</span></label>
+          <input class="ct__in" id="ctName" name="name" type="text" maxlength="80" autocomplete="name" />
+        </div>
+
+        <div class="ct__row">
+          <label class="ct__label" for="ctMail">メールアドレス<span class="ct__opt">任意</span></label>
+          <input
+            class="ct__in"
+            id="ctMail"
+            name="email"
+            type="email"
+            maxlength="120"
+            autocomplete="email"
+            inputmode="email"
+            aria-describedby="ctMailHint"
+          />
+          <p class="ct__hint" id="ctMailHint">書かなければ返信できません。感想だけなら空のままで大丈夫です。</p>
+        </div>
+      </div>
+
+      <div class="ct__grid">
+        <div class="ct__row">
+          <label class="ct__label" for="ctWork">関係する作品<span class="ct__opt">任意</span></label>
+          <select class="ct__in" id="ctWork" name="work">
+            <option value="">選ばない</option>
+            <option value="このサイト">このサイト（月刊OGYANUN）</option>
+            {titles.map((t) => <option value={t}>{t}</option>)}
+          </select>
+        </div>
+
+        <div class="ct__row">
+          <label class="ct__label" for="ctDev">動作環境<span class="ct__opt">任意</span></label>
+          <input
+            class="ct__in"
+            id="ctDev"
+            name="device"
+            type="text"
+            maxlength="300"
+            autocomplete="off"
+            placeholder="Windows 11 / Chrome など"
+            aria-describedby="ctDevHint"
+          />
+          <p class="ct__hint" id="ctDevHint">
+            不具合報告のときだけで構いません。
+            <button class="ct__mini" type="button" id="ctUA">この端末の情報を入れる</button>
+          </p>
+        </div>
+      </div>
+
+      {/* 蜜壺。**人には見えない欄。** 埋まっていたら人ではないので静かに捨てる */}
+      <div class="ct__pot" aria-hidden="true">
+        <label for="ctFax">FAX</label>
+        <input id="ctFax" name="fax" type="text" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <p class="ct__terms">
+        送信した内容は、返信と作品の改善のためだけに使います。第三者へ渡しません。
+        <a class="link" href={CONTACT.privacy}>個人情報の扱い</a>もあわせてご確認ください。
+      </p>
+
+      <p class="ct__acts">
+        <button class="ct__go" type="submit" id="ctGo">送信する</button>
+      </p>
+    </form>
+
+    <p class="ct__msg" id="ctMsg" role="status" aria-live="polite"></p>
+
+    <section class="ct__done" id="ctDone" hidden aria-label="送信結果">
+      <hr class="ct__rule" />
+      <p class="ct__thanks">お問い合わせありがとうございます。</p>
+      <p class="ct__thanksSub">
+        内容を確認のうえ、必要に応じて返信いたします。
+        メールアドレスを書いていない場合、こちらから連絡する手段はありません。ご了承ください。
+      </p>
+      <p class="ct__acts">
+        <button class="ct__go ct__go--thin" type="button" id="ctMore">続けてもう1件送る</button>
+        <a class="link" href="/">← 表紙へ戻る</a>
+      </p>
+    </section>
+
+    <section class="prose ct__else" aria-labelledby="else-h">
+      <h2 id="else-h">送れないとき</h2>
+      <p>
+        フォームが動かない、うまく送れない、というときは
+        <a class="link" href={CONTACT.x} rel="me noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a>
+        へ直接どうぞ。
+      </p>
+      <p>
+        記事・動画・まとめで作品を紹介してくれる方は、
+        <a class="link" href="/press">プレスキット</a>に素材と掲載条件をまとめてあります。
+        <strong>事前の連絡は要りません。</strong>
+      </p>
+    </section>
+
+    <p class="credits">{CREDITS.text}</p>
+    <p class="back"><a class="link" href="/">← 表紙へ戻る</a></p>
+  </div>
+  <p class="sr">{SITE.titleEn} — CONTACT</p>
+</Base>
+
+<style>
+  /* 色は全部トークン。**ここへ色をベタ書きしない**（夜にしたとき1か所だけ昼のまま残る） */
+  .ct { max-width: 46rem; margin: 0 auto; }
+  .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
+  .h1 { font-family: var(--font-en); font-size: clamp(1.9rem, 6vw, 3.6rem); line-height: 1.05; letter-spacing: -.02em; margin: 0 0 1.6rem; }
+
+  .ct__form { margin: 2.6rem 0 0; }
+  .ct__rule { border: 0; border-top: var(--hair) solid var(--rule); margin: 2.4rem 0; }
+
+  /* 種別。誌面らしく、罫で区切った一覧にする */
+  .ct__set { border: 0; padding: 0; margin: 0 0 2.2rem; }
+  .ct__legend {
+    padding: 0; margin: 0 0 .6rem;
+    font-family: var(--font-en);
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-mid);
+  }
+  .ct__topics { list-style: none; margin: 0; padding: 0; border-top: var(--hair) solid var(--rule); }
+  .ct__topic {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .9em;
+    padding: .55rem 0;
+    border-bottom: var(--hair) solid var(--hair-rule);
+  }
+  .ct__topic:last-child { border-bottom: var(--hair) solid var(--rule); }
+  .ct__radio { display: inline-flex; align-items: baseline; gap: .5em; cursor: pointer; }
+  .ct__radio input { accent-color: var(--accent); }
+  .ct__topicName { font-weight: 700; }
+  .ct__topicNote { font-size: .82rem; color: var(--ink-mid); }
+
+  .ct__row { margin: 0 0 1.6rem; }
+  .ct__grid { display: grid; gap: 0 1.4rem; }
+  @media (min-width: 720px) { .ct__grid { grid-template-columns: 1fr 1fr; } }
+
+  .ct__label {
+    display: block; margin-bottom: .35em;
+    font-family: var(--font-en);
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-mid);
+  }
+  .ct__req, .ct__opt {
+    display: inline-block; margin-left: .8em;
+    font-family: var(--font-jp);
+    font-size: 10px; letter-spacing: .08em; text-transform: none;
+    padding: .1em .5em; vertical-align: .1em;
+  }
+  .ct__req { background: var(--accent); color: var(--accent-ink); }
+  .ct__opt { border: var(--hair) solid var(--hair-rule); color: var(--ink-mid); }
+
+  .ct__in {
+    display: block; width: 100%;
+    font: inherit; color: inherit;
+    background: var(--paper);
+    border: var(--hair) solid var(--rule);
+    padding: .5em .7em;
+    border-radius: 0;
+  }
+  .ct__area { line-height: 1.9; resize: vertical; min-height: 9em; }
+  .ct__in[data-bad] { border-color: var(--accent); border-width: 2px; }
+
+  .ct__hint { margin: .4em 0 0; font-size: .8rem; line-height: 1.8; color: var(--ink-mid); }
+  .ct__mini {
+    font: inherit; font-size: .8rem;
+    color: inherit; background: none;
+    border: var(--hair) solid var(--hair-rule);
+    padding: .1em .6em; margin-left: .3em; cursor: pointer;
+  }
+  .ct__mini:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* 蜜壺。display:none にすると埋めないbotがいるので、画面外へ逃がす */
+  .ct__pot { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  .ct__terms {
+    margin: 2rem 0 0; padding-left: .8em;
+    border-left: 3px solid var(--accent);
+    font-size: .84rem; line-height: 1.9; color: var(--ink-mid);
+  }
+
+  .ct__acts { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: center; margin: 1.6rem 0 0; }
+  .ct__go {
+    font: inherit; color: var(--paper); background: var(--ink);
+    border: var(--hair) solid var(--rule);
+    padding: .55em 2em; letter-spacing: .1em; cursor: pointer;
+  }
+  .ct__go:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .ct__go[disabled] { opacity: .45; cursor: default; }
+  .ct__go[disabled]:hover { background: var(--ink); border-color: var(--rule); color: var(--paper); }
+  .ct__go--thin { background: none; color: inherit; }
+  .ct__go--thin:hover { color: var(--accent-ink); }
+
+  .ct__msg { min-height: 1.9em; margin: 1rem 0 0; font-size: .92rem; color: var(--ink-mid); }
+  .ct__msg[data-bad] { color: var(--accent); }
+
+  .ct__thanks { margin: 0 0 .8rem; font-family: var(--font-mincho); font-size: 1.5rem; letter-spacing: .1em; }
+  .ct__thanksSub { margin: 0; max-width: 40rem; line-height: 1.9; color: var(--ink-mid); }
+
+  .ct__else { margin-top: 3.4rem; }
+  .credits { margin: 3rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--rule); font-size: .78rem; line-height: 1.7; color: var(--ink-mid); }
+  .back { margin-top: 1.2rem; }
+  .sr { position: absolute; left: -9999px; }
+</style>
+
+<script is:inline>
+  /* お問い合わせの送信。
+     ⚠️ このサイトは ClientRouter を使っている。**モジュールscriptは1度しか走らない**ので、
+        委譲は document へ1度だけ張り、画面の初期化は astro:page-load でも走らせる
+        （/000 と同じ。目次から辿って入ったときに無反応になる事故を避ける）。
+     ⚠️ **`offline` を「送信しました」と出さない。** D1が無いときは本文が残っていない。 */
+  (() => {
+    if (window.__contact) return;
+    window.__contact = 1;
+
+    var opened = 0;      // このページを開いた時刻。速すぎる送信を弾く材料にする
+    var busy = false;
+
+    function $(id) { return document.getElementById(id); }
+
+    function say(text, bad) {
+      var m = $('ctMsg');
+      if (!m) return;
+      m.textContent = text || '';
+      if (bad) m.setAttribute('data-bad', ''); else m.removeAttribute('data-bad');
+    }
+
+    function mark(el, bad) {
+      if (!el) return;
+      if (bad) el.setAttribute('data-bad', ''); else el.removeAttribute('data-bad');
+    }
+
+    function count() {
+      var b = $('ctBody'), c = $('ctCount');
+      if (!b || !c) return;
+      c.textContent = b.value.length + ' / 4000';
+    }
+
+    function topic() {
+      var el = document.querySelector('input[name="topic"]:checked');
+      return el ? el.value : 'other';
+    }
+
+    function submit() {
+      if (busy) return;
+      var body = $('ctBody'), mail = $('ctMail'), go = $('ctGo');
+      if (!body) return;
+
+      mark(body, false); mark(mail, false);
+
+      if (!body.value.trim()) {
+        mark(body, true); body.focus();
+        say('本文が空のままです。', true);
+        return;
+      }
+      // メールは任意。**書いたときだけ**形を見る
+      if (mail && mail.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail.value.trim())) {
+        mark(mail, true); mail.focus();
+        say('メールアドレスの形が違うようです。空でも送れます。', true);
+        return;
+      }
+
+      busy = true;
+      if (go) go.disabled = true;
+      say('送信中……');
+
+      fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: topic(),
+          body: body.value,
+          name: $('ctName') ? $('ctName').value : '',
+          email: mail ? mail.value : '',
+          work: $('ctWork') ? $('ctWork').value : '',
+          device: $('ctDev') ? $('ctDev').value : '',
+          fax: $('ctFax') ? $('ctFax').value : '',
+          t: opened ? Date.now() - opened : 0,
+        }),
+      })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          busy = false;
+          if (go) go.disabled = false;
+
+          if (!d) {
+            say('受け口と繋がりませんでした。少し置いてもう一度か、Xへ直接どうぞ。', true);
+            return;
+          }
+          if (d.offline) {
+            // **受け取れていない。** ここで「送信しました」と出すと嘘になる
+            say('いま受け付けを開けていません。お手数ですが、Xへ直接お願いします。', true);
+            return;
+          }
+          if (d.ok === false) {
+            if (d.wait) {
+              say('送信が続いています。' + Math.ceil(d.wait) + '秒ほど置いてからもう一度。', true);
+            } else if (d.error === 'long') {
+              mark(body, true);
+              say('本文が長すぎます。4000字までにしてください。', true);
+            } else if (d.error === 'email') {
+              mark(mail, true);
+              say('メールアドレスの形が違うようです。', true);
+            } else {
+              mark(body, true);
+              say('本文が空のままです。', true);
+            }
+            return;
+          }
+
+          // 受理。フォームを畳んで、礼を出す
+          say('');
+          var form = $('ctForm'), done = $('ctDone');
+          if (form) form.hidden = true;
+          if (done) {
+            done.hidden = false;
+            if (done.scrollIntoView) done.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        })
+        .catch(function () {
+          busy = false;
+          if (go) go.disabled = false;
+          say('受け口と繋がりませんでした。少し置いてもう一度か、Xへ直接どうぞ。', true);
+        });
+    }
+
+    /* 委譲。要素へ直接 addEventListener しない（Base.astro の注意書きと同じ理由） */
+    document.addEventListener('submit', function (e) {
+      var t = e.target;
+      if (!t || t.id !== 'ctForm') return;
+      e.preventDefault();
+      submit();
+    });
+
+    document.addEventListener('input', function (e) {
+      var t = e.target;
+      if (t && t.id === 'ctBody') count();
+    });
+
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!(t instanceof Element)) return;
+
+      // 動作環境の欄を埋める。**押されたときだけ入れる**（勝手に集めない）
+      if (t.closest('#ctUA')) {
+        var dev = $('ctDev');
+        if (dev) {
+          dev.value = String(navigator.userAgent || '').slice(0, 300);
+          dev.focus();
+        }
+        return;
+      }
+
+      // もう1件送る。
+      // ⚠️ **ここで opened を測り直さない。** 測り直すと、2件目を素早く送った人が
+      //    「速すぎる送信」の網に掛かり、**本文が消えたまま礼だけ出る。**
+      //    連投は受け口側の30秒の間隔が見ていて、そちらは理由を返してくれる。
+      if (t.closest('#ctMore')) {
+        var form = $('ctForm'), done = $('ctDone'), body = $('ctBody');
+        if (done) done.hidden = true;
+        if (form) form.hidden = false;
+        if (body) { body.value = ''; body.focus(); }
+        count();
+        return;
+      }
+    });
+
+    function boot() {
+      if (!$('ctForm')) return;   // 別のページ
+      opened = Date.now();
+      count();
+    }
+    boot();
+    document.addEventListener('astro:page-load', boot);
+  })();
+</script>

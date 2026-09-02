@@ -27,3 +27,26 @@ CREATE TABLE IF NOT EXISTS nazo_rate (
   k  TEXT PRIMARY KEY,
   at INTEGER NOT NULL
 );
+
+-- お問い合わせ（/contact）。**管理画面は作らない。** 読むのは `npm run inbox`。
+-- name / email / work / device は任意なので空文字が入りうる。
+-- done は対応済みの印（`npm run inbox -- --done <id>` で立てる）。
+CREATE TABLE IF NOT EXISTS contacts (
+  id     INTEGER PRIMARY KEY AUTOINCREMENT,
+  at     TEXT NOT NULL,                    -- 受信日時（ISO8601 / UTC）
+  topic  TEXT NOT NULL,                    -- feedback | bug | rights | work | other
+  name   TEXT,
+  email  TEXT,
+  work   TEXT,
+  device TEXT,
+  body   TEXT NOT NULL,
+  done   INTEGER NOT NULL DEFAULT 0
+);
+
+-- 連投を止める鍵。nazo_rate と同じで**IPは保存しない**（日付を混ぜたハッシュ）。
+-- n はその日の受信数。上限を超えたぶんは静かに捨てる
+CREATE TABLE IF NOT EXISTS contact_rate (
+  k  TEXT PRIMARY KEY,
+  at INTEGER NOT NULL,
+  n  INTEGER NOT NULL DEFAULT 0
+);

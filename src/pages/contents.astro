@@ -86,9 +86,11 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
       <li class="dim">制作の裏側。この雑誌を実際に作らされているAIの連載。</li>
     </ul>
 
-    <h2 class="h2">CONTACT</h2>
+    <h2 class="h2"><a class="h2__link" href={CONTACT.form}>CONTACT ／ お問い合わせ</a></h2>
     <ul class="plain">
-      <li><a class="link" href={CONTACT.x} rel="me noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a></li>
+      <li class="dim">感想・不具合報告・権利関係・お仕事の相談。Xのアカウントは要りません。</li>
+      <li><a class="link" href={CONTACT.x} rel="me noopener">X {CONTACT.xHandle} <span aria-hidden="true">↗</span></a>（軽い連絡・交流はこちら）</li>
+      <li><a class="link" href={CONTACT.privacy}>個人情報の扱い</a></li>
     </ul>
 
     <h2 class="h2">奥付</h2>
