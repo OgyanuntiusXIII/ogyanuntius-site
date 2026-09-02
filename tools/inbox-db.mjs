@@ -31,7 +31,9 @@ const DDL =
   'name TEXT, email TEXT, work TEXT, device TEXT, body TEXT NOT NULL, ' +
   'done INTEGER NOT NULL DEFAULT 0); ' +
   'CREATE TABLE IF NOT EXISTS contact_rate (' +
-  'k TEXT PRIMARY KEY, at INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0);';
+  'k TEXT PRIMARY KEY, at INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0); ' +
+  'CREATE TABLE IF NOT EXISTS ops (' +
+  'id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, note TEXT NOT NULL);';
 
 export const TOPIC = {
   feedback: '感想・応援',
@@ -145,6 +147,15 @@ export function setDone(store, id, done = true) {
   if (!Number.isInteger(n) || n <= 0) throw new Error('id が不正');
   store.query('UPDATE contacts SET done = ' + (done ? 1 : 0) + ' WHERE id = ' + n);
   return n;
+}
+
+/**
+ * 運用の足跡（通知が飛んだか）。**Function のログは外から見られない**ので、
+ * 結果だけ D1 に残してここで読む。URLも本文も入っていない。
+ */
+export function listOps(store, { limit = 30 } = {}) {
+  const n = Math.max(1, Math.min(200, Number.parseInt(limit, 10) || 30));
+  return store.query('SELECT id, at, note FROM ops ORDER BY id DESC LIMIT ' + n);
 }
 
 /** 未対応の件数。アプリの見出しに出す */

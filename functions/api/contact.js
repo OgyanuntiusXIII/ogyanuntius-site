@@ -92,7 +92,23 @@ async function ensure(db) {
       "CREATE TABLE IF NOT EXISTS contact_rate (" +
         "k TEXT PRIMARY KEY, at INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0)"
     ),
+    // 通知が飛んだかどうかの記録。**ログを外から見られないので、D1に書いて読む。**
+    // ここに出るのは結果だけ。**URLも本文も入れない**
+    db.prepare(
+      "CREATE TABLE IF NOT EXISTS ops (" +
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, note TEXT NOT NULL)"
+    ),
   ]);
+}
+
+/** 運用の足跡を1行残す。**失敗しても本筋を止めない** */
+async function ops(env, note) {
+  if (!env.DB) return;
+  try {
+    await env.DB.prepare("INSERT INTO ops (at, note) VALUES (?, ?)")
+      .bind(new Date().toISOString(), String(note).slice(0, 300))
+      .run();
+  } catch (e) {}
 }
 
 /**
@@ -103,8 +119,9 @@ async function notify(env, rec) {
   // 前後の空白を落とす。シークレットに改行が1つ混ざっただけで fetch が落ちる
   const hook = String(env.CONTACT_WEBHOOK == null ? "" : env.CONTACT_WEBHOOK).trim();
   if (!hook) {
-    // **黙って諦めない。** 未設定なのか失敗なのかを `wrangler pages deployment tail` で見分ける
-    console.log("contact: CONTACT_WEBHOOK が空。通知は飛ばさない");
+    // **黙って諦めない。** 未設定なのか失敗なのかを、あとから `npm run inbox -- --ops` で見分ける。
+    // env に何が来ているかも一緒に残す（**鍵の名前だけ。値は絶対に出さない**）
+    await ops(env, "通知なし: CONTACT_WEBHOOK が空。env のキー = " + Object.keys(env).join(","));
     return;
   }
   const line =
@@ -118,11 +135,10 @@ async function notify(env, rec) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ content: line }),
     });
-    // **URLも本文もログに出さない。** 出るのは結果だけ
-    if (!r.ok) console.log("contact: 通知が拒否された status=" + r.status);
-    else console.log("contact: 通知を送った");
+    // **URLも本文も記録しない。** 残すのは結果だけ
+    await ops(env, r.ok ? "通知を送った" : "通知が拒否された status=" + r.status);
   } catch (e) {
-    console.log("contact: 通知を送れなかった: " + (e && e.message));
+    await ops(env, "通知を送れなかった: " + (e && e.message));
   }
 }
 
