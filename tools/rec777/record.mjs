@@ -18,12 +18,13 @@ const PORT     = 8791;
 const CDP_PORT = 9344;
 const CHROME   = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const PROFILE  = path.join(DIR, "chrome-profile");
-const TIMEOUT_MS = 5 * 60 * 1000;
+const TIMEOUT_MS = 9 * 60 * 1000;
 
 const VW     = Number(process.argv[2] || 1600);
 const VH     = Number(process.argv[3] || 900);
 const TARGET = Number(process.argv[4] || 40);
 const NAME   = process.argv[5] || "take";
+const SCRIPT = process.argv[6] || "";        // 台本（bot.js の SCRIPT。"long" で 7777 まで）
 const OUTFILE = path.join(OUT, NAME + ".webm");
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -134,12 +135,13 @@ for (let i = 0; i < 4; i++){
 }
 const vp = await evalJs("JSON.stringify({w:innerWidth,h:innerHeight,ready:!!document.getElementById('startBtn'),bot:!!window.__REC})");
 console.log("viewport", vp);
+if (SCRIPT) await evalJs("window.__SCRIPT = " + JSON.stringify(SCRIPT) + "; true");
 await sleep(800);
 
 // 本物のクリック（getDisplayMedia はユーザー操作の中でしか許可が取れない）
 for (const type of ["mousePressed", "mouseReleased"]){
   await cdp("Input.dispatchMouseEvent", {
-    type, x: 20, y: 20, button: "left", clickCount: 1,
+    type, x: 60, y: VH - 60, button: "left", clickCount: 1,   // 左上はリンク（← 戻る）があるので踏まない
     buttons: type === "mousePressed" ? 1 : 0,
   });
   await sleep(70);

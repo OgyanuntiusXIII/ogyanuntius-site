@@ -3,49 +3,96 @@
 
    アリアのときに作った仕組みと同じ形：
      getDisplayMedia({preferCurrentTab}) → MediaRecorder（VP9+Opus）→ POST /save
-   canvas.captureStream ではない。それだとDOM側（音量つまみ・覆い）が映らない。 */
+   canvas.captureStream ではない。それだとDOM側（音量つまみ・覆い）が映らない。
+
+   2026-09-04 作り直し：台が変わった（MAX BET→レバー→導入→回、ナビ回、課題、ルーレット、復活待ち→でっかいレバー）。
+   台本（SCRIPT）に沿って「ビタ／普通／わざと外す」を1押しずつ選ぶ。台本が尽きたら外し続けて終わる。 */
 (() => {
   const REC = (window.__REC = {
-    phase: "init", err: null, bytes: 0, combo: 0, coins: 0, w: 0, h: 0,
+    phase: "init", err: null, bytes: 0, combo: 0, coins: 0, w: 0, h: 0, step: 0,
   });
-  // ⚠️ --app= のURLに付けたクエリは届かないことがある（実際1本目で効かなかった）。
-  //    CDP から window.__TARGET を入れられるようにして、押す直前に読む
-  const qTarget = Number(new URLSearchParams(location.search).get("target") || 0);
-  const getTarget = () => Number(window.__TARGET || qTarget || 40);
   const TITLE_MS = Number(new URLSearchParams(location.search).get("title") || 1500);
+  // j=ビタ n=普通 m=わざと外す（Vストックがあれば逆回転で救われる。無くて復活が仕込まれていれば暗転→でっかいレバー）
+  // 台本は CDP から window.__SCRIPT で差し替えられる。"long" は 7777 まで（j j n の繰り返し：ビタで登り、3連続を避けてルーレットに寄り道しない。外さない）
+  const getScript = () => String(window.__SCRIPT || "jjjmjjnmjjjmjjmmmnnjnm");
 
-  let botOn = false, missed = false;
+  let botOn = false, si = 0;
+  const now = () => performance.now();
+  let waitUntil = 0, betDone = false, leverDone = false, pullAt = 0, rouletteStopAt = 0;
 
-  /* ---- 自動で目押しする ------------------------------------------------
-     窓の真ん中あたりで押す。端で押すと滑りが0か最大に張り付いて、
-     人がやったときの「ちょっと滑る」感じが出ない。 */
+  const nextStyle = () => {
+    const sc = getScript();
+    if (sc === "long"){ si++; REC.step = si; return (si % 3 === 0) ? "n" : "j"; }
+    const c = sc[si] || "m"; if (si < sc.length) si++; REC.step = si; return c;
+  };
+  const aheadOf = (i) => { const r = S.reels[i]; return r.aim ? aimsAfter(i, r.aim, r.pos - 1, 3) : (r.dir < 0 ? sevensBefore(i, r.pos + 1, 3) : sevensAfter(i, r.pos - 1, 3)); };
+  // 押す位置（進む向きで見た狙いとの差）：ビタは線の直前、普通は少し手前で滑らせる、外すのは通り過ぎてから
+  const wantD = (style) => style === "j" ? [-0.48, -0.02] : style === "n" ? [-2.6, -1.2] : [3.3, 4.2];
+
+  const pending = {};   // reel -> style（そのリールに決めた押し方）
+  function tryPress(i, style){
+    const r = S.reels[i];
+    if (r.state !== "spin" || !canPress(i) || r.rescue) return false;
+    const [lo, hi] = wantD(style);
+    if (style === "m"){
+      // 通り過ぎてから押す。いちばん近い（すぐ後ろの）狙いを見る
+      const behind = r.dir < 0 ? sevensAfter(i, r.pos - 0.5, 1)[0] : sevensBefore(i, r.pos + 0.5, 1)[0];
+      if (behind == null) return false;
+      const d = (r.pos - behind) * r.dir;
+      if (d >= lo && d <= hi){ press(i); return true; }
+      return false;
+    }
+    for (const c of aheadOf(i)){ const d = (r.pos - c) * r.dir; if (d >= lo && d <= hi){ press(i); return true; } }
+    return false;
+  }
+
   function tick(){
     if (!botOn || !S.running) return;
+    const t = now();
+    if (t < waitUntil) return;
 
-    if (S.phase === "intro" && S.introStarted){
+    // 最初だけ：MAX BET → レバー
+    if (S.phase === "bet"){ if (!betDone){ betDone = true; waitUntil = t + 700; setTimeout(() => pressMaxBet(), 650); } return; }
+    if (S.phase === "lever"){ if (!leverDone){ leverDone = true; waitUntil = t + 700; setTimeout(() => pullLever(), 650); } return; }
+
+    // 導入：左→中→右、普通に
+    if (S.phase === "intro"){
+      if (!S.introStarted) return;
       for (let k = 0; k < 3; k++){
         const r = S.reels[k];
-        if (!r.spinning) continue;
-        if (k > 0 && !S.reels[k-1].stopped) continue;   // 左→中→右
-        if (typeof canPress === "function" && !canPress(k)) continue;   // 加速中は押さない（空打ちが鳴る）
+        if (r.state !== "spin") continue;
+        if (k > 0 && !S.reels[k-1].stopped) continue;
+        if (!canPress(k)) continue;
         const d = r.pos - nearestSevenOn(k, r.pos);
-        if (d >= -S.win * 0.62 && d <= 0){ press(k); return; }
+        if (d >= -S.win * 0.62 && d <= -0.6){ press(k); return; }
       }
       return;
     }
 
-    if (S.phase === "spin"){
-      if (typeof canPress === "function" && !canPress(S.active)) return;
-      const r = S.reels[S.active], p = r.pos;
-      if (S.combo >= getTarget() && !missed){
-        // 締め。**わざと外す。**7を目の前で蹴らせて終わる
-        if (p > r.targets[0] - S.win - 2.4){ missed = true; press(S.active); }
-        return;
-      }
-      for (const c of r.targets){
-        const d = p - c;
-        if (d >= -S.win * 0.60 && d <= -S.win * 0.10){ press(S.active); return; }
-      }
+    // ルーレット：2.2秒回して MAX BET で止める
+    if (S.phase === "roulette"){
+      const r = S.roulette;
+      if (r && r.stage === "spin"){ if (!rouletteStopAt) rouletteStopAt = t + 2200; if (t >= rouletteStopAt){ pressMaxBet(); rouletteStopAt = 0; } }
+      return;
+    }
+    // 復活待ち：0.9秒見せてからレバー。でっかいレバーは出きって0.7秒後に下げる
+    if (S.phase === "dead"){ if (!pullAt) pullAt = t + 900; if (t >= pullAt){ pullLever(); pullAt = 0; } return; }
+    if (S.phase === "pull"){ if (S.big && S.big.stage === "ready"){ if (!pullAt) pullAt = t + 700; if (t >= pullAt){ pullLever(); pullAt = 0; } } return; }
+
+    if (S.phase !== "round") return;
+    // 課題（7を狙え！／BARを狙え！）は全部当てる
+    if (S.extra){
+      for (const i of S.actives){ if (tryPress(i, "j")) return; }
+      return;
+    }
+    // ナビ回は順どおり。それ以外は回っているものから
+    const order = S.navi ? [S.navi.order[S.navi.k]] : S.actives;
+    for (const i of order){
+      if (i == null) continue;
+      const r = S.reels[i];
+      if (r.state !== "spin" || !canPress(i) || r.rescue) continue;
+      if (!pending[i]) pending[i] = nextStyle();
+      if (tryPress(i, pending[i])){ delete pending[i]; return; }
     }
   }
   setInterval(tick, 1);
@@ -104,7 +151,7 @@
   function watchEnd(){
     let wasRunning = false;
     const iv = setInterval(() => {
-      REC.combo = S.combo; REC.coins = S.coins; REC.phase2 = S.phase;
+      REC.combo = S.combo; REC.coins = S.coins; REC.phase2 = S.phase; REC.stock = S.vStock; REC.justN = S.justN;
       if (S.running){ wasRunning = true; return; }
       if (!wasRunning) return;
       clearInterval(iv);
