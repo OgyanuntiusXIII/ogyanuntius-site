@@ -6,3 +6,6 @@ dist/
 
 # wrangler のローカル状態（ローカルD1の中身などが入る）
 .wrangler/
+
+# 777コンボの実験台が作る headless Chrome のプロファイル（残骸）
+tools/lab777/chrome-profile-*/

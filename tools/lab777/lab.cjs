@@ -1,9 +1,11 @@
 /* 『777コンボ』の実験台。headless Chrome を CDP で素で叩く（依存なし・Node 24）。
+ * ⚠️ 拡張子は .cjs。リポジトリの package.json が "type":"module" なので、.js だと require が死ぬ。
  *
- *   node lab.js snap <url> <W> <H> <出力フォルダ> <状態,状態,...>
+ *   node lab.cjs snap <url> <W> <H> <出力フォルダ> <状態,状態,...>
  *       状態: title / intro / c12 (12コンボ・落ち着いた所) / h12 (12コンボ目が止まった瞬間)
  *             m10 (10コンボの節目の演出中) / over20 (20コンボで外して結果画面)
- *   node lab.js sim  <url> <モデルJSON> [回数]
+ *   node lab.cjs sim  <url> <モデルJSON> [回数]
+ *   node lab.cjs seq  <url> <W> <H> <出力フォルダ> <JSONファイル>   1回起動して順に評価→スクショ
  *       人のモデルで遊ばせて、到達コンボの分布を返す
  */
 const { spawn } = require("node:child_process");
@@ -49,7 +51,9 @@ const DRIVER = `
   const gauss = (m, s) => { let u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random(); return m + s*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
   let T = performance.now() + 500;
   const D = window.__lab = { T: () => T };
-  D.begin = () => { S.t = T; last = 0; try{ localStorage.removeItem("ogyanun.777combo.top"); }catch(e){} start(); };
+  // 最初だけ MAX BET → レバー（2026-09-03）。ここで済ませて、導入が回り出す直前まで進める
+  D.begin = () => { S.t = T; last = 0; try{ localStorage.removeItem("ogyanun.777combo.top"); }catch(e){} start(); D.tick(2); pressMaxBet(); D.tick(2); pullLever(); };
+  D.lever = () => { const r = pullLever(); D.tick(1); return { ok: r, phase: S.phase, extra: !!S.extra }; };
   D.tick = (n) => { for (let i = 0; i < (n||1); i++){ T += FR; frame(T); } };
   // いま回っている（止められる）リール。無ければ -1
   D.spinningReel = () => { if (S.phase === "intro") { for (let k = 0; k < 3; k++) if (S.reels[k].state === "spin") return k; return -1; }
@@ -91,7 +95,37 @@ const DRIVER = `
   D.stepPerfect = (n) => { for (let i = 0; i < n; i++){ D.tick(1); D.perfect(); } render(); return { combo: S.combo, phase: S.phase }; };
   D.untilPhase = (ph, max) => { let g = 0; while (S.running && !D.at(ph) && g++ < (max||600)){ D.tick(1); D.perfect(); } render(); return { combo: S.combo, phase: S.phase, g }; };
   D.untilSpin = (max) => { let g = 0; while (S.running && !D.anySpin() && g++ < (max||600)){ D.tick(1); D.perfect(); } render(); return { combo: S.combo, phase: S.phase }; };
-  D.miss = () => { const a = D.spinningReel(); if (a >= 0) autoMissReel(a); let g = 0; while (S.running && g++ < 400) D.tick(1); render(); return { combo: S.combo, running: S.running }; };
+  /* 課題（7を狙え／BARを狙え）を自動で遊ぶ。acc = リールごとに当てる確率。外すときは戻りの外側まで待って押す。課題が終わるまで回す */
+  D.playExtra = (acc) => {
+    let g = 0; const plan = {}; const stops = [];
+    while (S.extra && g++ < 60*60*3){
+      D.tick(1);
+      const e = S.extra;
+      if (!e) break;
+      for (const i of S.actives){
+        const r = S.reels[i];
+        if (r.state !== "spin" || !canPress(i) || !r.targets) continue;
+        if (plan[i] == null) plan[i] = Math.random() < (acc == null ? 1 : acc);
+        for (const c of r.targets){
+          const d = (r.pos - c) * r.dir;
+          if (plan[i] ? (d >= -0.4 && d <= -0.05) : (d >= backOf(r) + 1.2 && d <= backOf(r) + 1.8)){
+            press(i); stops.push({ reel: i, want: plan[i], pos: Math.round(r.pos*100)/100, snapTo: r.snap && r.snap.to, ok: r.snap && r.snap.ok }); break;
+          }
+        }
+      }
+    }
+    return { combo: S.combo, running: S.running, revive: S.revive, extra: !!S.extra, phase: S.phase, stops, reels: S.reels.map(r => Math.round(r.pos*100)/100) };
+  };
+  /* ビタを count 回そろえる（判定のど真ん中で押す） */
+  D.justTimes = (count) => {
+    for (let k = 0; k < count; k++){
+      const r = D.pressAtDd(-0.05); if (!r.pressed) break;
+      let g = 0; while (S.running && !S.extra && !D.quiet() && g++ < 400){ D.tick(1); }
+      if (S.extra) break;
+    }
+    return { justN: S.justN, combo: S.combo, extra: !!S.extra, kind: S.extra && S.extra.kind, line: S.extra && S.extra.line.name, leftOut: S.leftOut, revive: S.revive };
+  };
+  D.miss = () => { const a = D.spinningReel(); if (a >= 0) autoMissReel(a); let g = 0; while (S.running && S.phase !== "dead" && g++ < 400) D.tick(1); render(); return { combo: S.combo, running: S.running, phase: S.phase, dark: Math.round(S.dark*100)/100 }; };
   /* 拍の検証：7が dueAt ちょうどに中央線へ来ているか。各回の誤差（コマ）と、拍の間隔。単発だけにして測る */
   D.verify = (rounds) => {
     window.__NO_STAGES = true;
@@ -291,6 +325,22 @@ async function main(){
     try {
       console.log(await cdp.evalJs(rest[0]));
       if (rest[1]) await shot(cdp, rest[1]);
+    } finally { kill(); }
+  } else if (mode === "seq"){
+    // 連続スクショ：seq <url> <W> <H> <出力フォルダ> <JSONファイル>  JSON は [[名前, 式], ...]。1回起動して順に評価→撮る
+    const [W, H, outDir, listFile] = [Number(rest[0]), Number(rest[1]), rest[2], rest[3]];
+    fs.mkdirSync(outDir, { recursive: true });
+    const list = JSON.parse(fs.readFileSync(listFile, "utf8"));
+    const { cdp, kill } = await launch(url, W, H);
+    try {
+      for (const [name, expr] of list){
+        let info = "";
+        try { info = await cdp.evalJs(expr); } catch (e){ info = "ERR " + e.message.slice(0, 300); }
+        await cdp.evalJs("render(); true");
+        await sleep(160);
+        await shot(cdp, path.join(outDir, name + ".png"));
+        console.log(name, typeof info === "string" ? info.slice(0, 400) : JSON.stringify(info).slice(0, 400));
+      }
     } finally { kill(); }
   } else if (mode === "sim"){
     const opt = JSON.parse(rest[0]); const n = Number(rest[1] || 10);
