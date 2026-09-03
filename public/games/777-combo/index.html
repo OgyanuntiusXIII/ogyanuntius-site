@@ -77,6 +77,18 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 #hud input[type=range]::-moz-range-thumb{
   width:11px;height:11px;border:none;border-radius:50%;background:var(--gold);cursor:pointer;
 }
+/* 設定の小窓（⚙）。BGM・SE・光の強さ。100 が今の強さ、端末に残る */
+#opt{
+  position:absolute;right:.6rem;top:2.7rem;
+  background:rgba(18,18,22,.95);border:1px solid #3c3c42;border-radius:.5rem;
+  padding:.55rem .75rem;display:flex;flex-direction:column;gap:.4rem;min-width:13rem;
+}
+#opt.hidden{display:none;}
+#opt label{display:flex;align-items:center;gap:.5rem;font-size:.75rem;color:var(--ink-mid);}
+#opt label span{width:2.2rem;}
+#opt label b{width:2.2rem;text-align:right;font-family:var(--font-en);font-weight:600;color:var(--ink);}
+#opt input[type=range]{width:110px;}
+#opt p{margin:0;font-size:.68rem;color:#6e6e76;}
 
 /* --- 覆い（タイトル / 結果） --------------------------------------- */
 #veil{
@@ -164,7 +176,13 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 
   <div id="hud">
     <button class="mute" id="muteBtn" title="音">♪</button>
-    <input id="volRange" type="range" min="0" max="100" step="1" value="85" aria-label="音量">
+    <button class="mute" id="optBtn" title="BGM・SE・光の強さ">⚙</button>
+    <div id="opt" class="hidden">
+      <label><span>BGM</span><input id="bgmRange" type="range" min="0" max="150" step="5" value="100" aria-label="BGM"><b id="bgmVal">100</b></label>
+      <label><span>SE</span><input id="seRange" type="range" min="0" max="150" step="5" value="100" aria-label="効果音"><b id="seVal">100</b></label>
+      <label><span>光</span><input id="lightRange" type="range" min="0" max="150" step="5" value="100" aria-label="光の強さ"><b id="lightVal">100</b></label>
+      <p>100 が今の強さ。この端末に残る</p>
+    </div>
   </div>
 
   <div id="veil">
@@ -180,14 +198,16 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
     </div>
     <p class="hint">
       リールは <b>21コマ、毎分80回転</b>。<b>最大5コマ滑る</b>。<br>
-      <b>6秒以内に止めなければ、アウト。</b>時間は縮まない。難しくなるのは滑りと速さと台。<br>
+      <b>時間制限は無い。</b>止めるまで回り続ける。難しくなるのは滑りと速さと台。<br>
       左右は <b>BAR の次が 7</b>、中だけ <b>7 の次が BAR</b>。最初は<b>BARを目印にする</b>のがオススメ。<br>
       <b>7は音の拍に乗って来る。</b>見てからでは遅い。拍で押す。<br>
       <b>30コンボごとに台が変わる。</b>2本同時、高速、3本、逆回転。<b>2本・3本は7が来る間がずれる</b>（同時押しは効かない）。<br>
       線の上ぴったりで止めれば<b>ビタ</b>。<b>一気に +4 コンボ</b>、コインは 777 枚。上手いほど早く登れる。<br>
       <b>ビタ5回で左のモニターが飛び出し「7を狙え！」</b>——指定の線に7を3つ。揃えば <b>+10 コンボ</b>。<br>
       <b>ビタ10回で右に「復活」が仕込まれる</b>。外したら<b>レバーを叩いて「BARを狙え！」</b>。揃えば復活 <b>+10</b>。<br>
-      最初だけ <b>MAX BET</b> を押して<b>レバー</b>を叩く。台はそこから回り出す。
+      最初だけ <b>MAX BET</b> を押して<b>レバー</b>を叩く。台はそこから回り出す。<br>
+      <b>ビタ3回ごとに先ペカ</b>（告知ランプが光った回は、どこで押しても7）。2本・3本を全部ビタで<b>全ビタ</b>ボーナス。<br>
+      90コンボからは<b>シャッターが降りる回</b>がある——見えなくても、拍で押す。77・177 はラッキー、<b>777 でエンディング</b>。
     </p>
     <div class="row"><button id="startBtn">はじめる</button></div>
     <div class="keys">
@@ -195,7 +215,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
       中 <kbd>G</kbd><kbd>S</kbd><kbd>↓</kbd> ／
       右 <kbd>H</kbd><kbd>D</kbd><kbd>→</kbd> ／
       MAX BET・レバー <kbd>Space</kbd><br>
-      スマホは<b>3つのストップボタン</b>を押す（ボタン以外は効かない。MAX BET とレバーはその場所を押す）
+      スマホは<b>3つのストップボタン</b>を押す（ボタン以外は効かない。MAX BET とレバーはその場所を押す）<br>
+      ゲーム中は右上の <b>⚙</b> で <b>BGM・SE・光の強さ</b> を変えられる
     </div>
   </div>
 
@@ -609,12 +630,12 @@ const SLIP   = [[0,5.5],[10,5.5],[22,5],[50,4],[90,3.5],[160,3],[260,2.5]];
    これは腕前ではなく **表示と入力の遅れ**（人が見ている画面は数フレーム前）を機械側で吸収する分。
    後半は詰める。ビタ押しに近づく */
 const BACKT  = [[0,3.0],[10,3.0],[25,2.6],[60,2.0],[120,1.5],[220,1.2]];
-/* **止めるまでの猶予は「秒」で決める。コンボで縮めない。**
+/* **止めるまでの猶予は無い。**
    2026-09-01「最初は5秒、0.1秒ずつ短く、2回転より短くしない」→
-   2026-09-03 本人「時間が短くなるんじゃなくて別の難易度調整がいい。ゲーム体験がかなりいいので
-   時間制限あんまり良くないことに気づいた」→ **6秒固定**。難しさは滑り・速さ・台（ステージ）で上がる。
-   押さなければ終わる、という約束だけ残す */
-const LIMIT_FLAT = 6000;
+   2026-09-03 本人「時間が短くなるんじゃなくて別の難易度調整がいい」→ 6秒固定 →
+   同日 本人「**制限時間ないほうがいいわこれ。制限時間なしにしよう**」→ **無制限**。止めるまで回り続ける。
+   難しさは滑り・速さ・台（ステージ）だけで上がる。時間切れのミスは起きない（autoMissReel は実験台からしか呼ばれない） */
+const LIMIT_FLAT = Infinity;
 function limitMs(c, v){ return LIMIT_FLAT; }
 
 /* 演出の段。企画書8章 */
@@ -658,7 +679,7 @@ const S = {
   actives:[], prev:-1,             // いま回す（回っている）リールの番号
   roundKind:"", roundAt:-9999,     // 今回の種類（ダブル／高速／トリプル／逆転）
   stageLv:0, stageAt:-9999,        // 30コンボごとのステージ
-  v:28, win:5, back:2.6, limit:5000,
+  v:28, win:5, back:2.6, limit:Infinity,
   beat0:0, dueBeat:0,
   reels:[],
   shake:0, flash:0, hit:0, peka:0, segFlash:0, kick:0,
@@ -682,11 +703,15 @@ const S = {
   dark:0,                          // ミスのあとの暗転（復活待ち）0〜1
   deadReel:-1, deadAt:-9999,       // 外したリールと、その時刻
   leverAt:-9999, betAt:-9999,      // レバーを叩いた／MAX BET を押した時刻（動きと光）
+  pekaStock:0, pekaRound:false,    // 先ペカ：ためた数と、この回が「どこで押しても7」か
+  roundJust:0, allJustAt:-9999, allJustN:0,   // この回のビタ数（全ビタボーナス）
+  say:null,                        // モニターの一言 { text, at }
+  ending:false, endingAt:-9999, endClank:0, luckyAt:-9999,   // 777のエンディングとラッキー7
   lite:false,                      // 軽量描画（スマホ）
   pressFx:[0,0,0],
   t:0,
 };
-for (let i = 0; i < 3; i++) S.reels.push({ pos:0, state:"idle", spinning:false, v:0, vNow:0, dir:1, spinAt:0, acc:320, dueAt:0, t7:0, snap:null, stopped:false, targets:null, aim:null });
+for (let i = 0; i < 3; i++) S.reels.push({ pos:0, state:"idle", spinning:false, v:0, vNow:0, dir:1, spinAt:0, acc:320, dueAt:0, t7:0, snap:null, stopped:false, targets:null, aim:null, blind:false, blindAt:0, openAt:0, sure:false });
 
 /* --- この端末に残す記録。サーバーへは送らない ----------------------- */
 const LS_TOP = "ogyanun.777combo.top";
@@ -721,7 +746,17 @@ function countPlay(){
    ========================================================================= */
 
 let actx = null, master = null, whir = null, whirGain = null, whirFilt = null;
-let vol = 0.85, muted = false, audioDead = false;
+/* --- 設定：BGM・SE・光の強さ（本人 2026-09-03「BGM、SEを簡単に調整できるようにしてほしい。あと光の強さも」）。
+   100 ＝ これまでの強さ。0〜150。この端末に残す（サーバーへは送らない） --- */
+const LS_OPT = "ogyanun.777combo.opt";
+const OPT = { bgm:100, se:100, light:100, muted:false };
+try { const o = JSON.parse(localStorage.getItem(LS_OPT) || "{}"); for (const k in OPT) if (typeof o[k] === typeof OPT[k]) OPT[k] = o[k]; } catch (e){}
+for (const k of ["bgm", "se", "light"]) OPT[k] = Math.max(0, Math.min(150, OPT[k]));
+function saveOpt(){ try { localStorage.setItem(LS_OPT, JSON.stringify(OPT)); } catch (e){} }
+let lightK = OPT.light / 100;                 // 光り物（閃光・放射・後光・輪）の強さの倍率
+const MIX = { se: 0.85, bgm: 0.425 };         // 100% のときの経路の音量（これまでの混ぜ具合そのまま）
+let vol = 1.0, muted = OPT.muted, audioDead = false;
+let seBus = null;                             // 効果音の経路（BGM は bgGain）
 const MAX_VOICES = 16;
 let voices = 0;
 
@@ -736,14 +771,16 @@ function initAudio(){
   lim.threshold.value = -10; lim.knee.value = 0; lim.ratio.value = 20;
   lim.attack.value = 0.002;  lim.release.value = 0.12;
   master.connect(lim); lim.connect(actx.destination);
-  bgGain = actx.createGain();
-  bgGain.gain.value = 0.5;
-  bgGain.connect(master);
+  seBus = actx.createGain(); seBus.connect(master);
+  bgGain = actx.createGain(); bgGain.connect(master);
+  applyVol();
 }
 function applyVol(){
   if (!master) return;
   master.gain.cancelScheduledValues(actx.currentTime);
   master.gain.setValueAtTime(muted || audioDead ? 0 : vol, actx.currentTime);
+  if (seBus)  seBus.gain.setTargetAtTime(MIX.se  * OPT.se  / 100, actx.currentTime, 0.02);
+  if (bgGain) bgGain.gain.setTargetAtTime(MIX.bgm * OPT.bgm / 100, actx.currentTime, 0.02);
 }
 /** ミスした瞬間。**全部止める。** 企画書9章の「一瞬の静寂」 */
 function silence(){
@@ -767,7 +804,7 @@ function tone(freq, t0, dur, type, peak){
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(peak || 0.10, t0 + 0.008);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  o.connect(g); g.connect(master);
+  o.connect(g); g.connect(seBus);
   o.start(t0); o.stop(t0 + dur + 0.02);
 }
 let NOISE_BUF = null;
@@ -792,7 +829,7 @@ function noise(t0, dur, peak, freq, q, type){
   g.gain.setValueAtTime(peak || 0.10, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   src.onended = () => { voices--; };
-  src.connect(f); f.connect(g); g.connect(master);
+  src.connect(f); f.connect(g); g.connect(seBus);
   src.start(t0); src.stop(t0 + dur + 0.01);
 }
 /** リールがコマを1つ送るたびの機械音 */
@@ -812,7 +849,7 @@ function startWhir(){
   whirFilt = actx.createBiquadFilter();
   whirFilt.type = "lowpass"; whirFilt.frequency.value = 420;
   whirGain = actx.createGain(); whirGain.gain.value = 0.0001;
-  whir.connect(whirFilt); whirFilt.connect(whirGain); whirGain.connect(master);
+  whir.connect(whirFilt); whirFilt.connect(whirGain); whirGain.connect(seBus);
   whir.frequency.setValueAtTime(30, actx.currentTime);
   whir.start();
   whirGain.gain.exponentialRampToValueAtTime(0.05, actx.currentTime + 0.05);
@@ -845,7 +882,7 @@ function sndStop(){
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(0.36, t + 0.005);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.17);
-    o.connect(g); g.connect(master);
+    o.connect(g); g.connect(seBus);
     o.start(t); o.stop(t + 0.19);
   }
 }
@@ -880,7 +917,7 @@ function sndHit(c){
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(0.20, t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
-    o.connect(g); g.connect(master);
+    o.connect(g); g.connect(seBus);
     o.start(t); o.stop(t + 0.15);
   }
   for (const q of parts) tone(q.f, t + 0.03, 0.20, "square", 0.16 * q.amp);
@@ -896,12 +933,13 @@ function sndKind(kind){
     if (voices < MAX_VOICES){ voices++; const o = actx.createOscillator(), g = actx.createGain(); o.onended = () => { voices--; };
       o.type = "sawtooth"; o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(2400, t + 0.22);
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
-      o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.28); }
-  } else if (kind === "逆転"){
+      o.connect(g); g.connect(seBus); o.start(t); o.stop(t + 0.28); }
+  } else if (kind === "ブラインド"){ sndServo(0.30); noise(t + 0.26, 0.04, 0.22, 2600, 1.6); }
+  else if (kind === "逆転"){
     if (voices < MAX_VOICES){ voices++; const o = actx.createOscillator(), g = actx.createGain(); o.onended = () => { voices--; };
       o.type = "square"; o.frequency.setValueAtTime(1800, t); o.frequency.exponentialRampToValueAtTime(300, t + 0.30);
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.11, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
-      o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.36); }
+      o.connect(g); g.connect(seBus); o.start(t); o.stop(t + 0.36); }
   }
 }
 /** 役物：サーボの唸り（落ちる）→ 金属の当たり。回るときはカチカチ */
@@ -914,7 +952,7 @@ function sndServo(dur){
   o.type = "sawtooth"; o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(180, t + dur);
   f.type = "lowpass"; f.frequency.value = 900;
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+  o.connect(f); f.connect(g); g.connect(seBus); o.start(t); o.stop(t + dur + 0.02);
 }
 function sndClank(big){
   if (!actx || audioDead) return;
@@ -926,7 +964,7 @@ function sndClank(big){
     const o = actx.createOscillator(), g = actx.createGain(); o.onended = () => { voices--; };
     o.type = "triangle"; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.16);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.40, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.32);
+    o.connect(g); g.connect(seBus); o.start(t); o.stop(t + 0.32);
   }
 }
 function sndSpin(){
@@ -952,7 +990,7 @@ function sndLever(){
     const o = actx.createOscillator(), g = actx.createGain(); o.onended = () => { voices--; };
     o.type = "triangle"; o.frequency.setValueAtTime(180, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.11);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.20);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.22);
+    o.connect(g); g.connect(seBus); o.start(t); o.stop(t + 0.22);
   }
 }
 /** ビタ押しの「ピンッ」。高くて短い */
@@ -1502,10 +1540,23 @@ function drawReel(i){
   ctx.fillStyle = "rgba(255,255,255,.07)";
   ctx.fillRect(r.x, r.y + r.h*0.12, r.w*0.55, r.h*0.15);
   if (S.hit > 0.05 && !spinning && i === S.lastReel){
-    ctx.fillStyle = "rgba(255,240,210," + (S.hit*0.42).toFixed(3) + ")";
+    ctx.fillStyle = "rgba(255,240,210," + Math.min(1, S.hit*0.42*lightK).toFixed(3) + ")";
     ctx.fillRect(r.x, r.y, r.w, r.h);
   }
+  // **ブラインド回：金属のシャッターが窓を覆う。**回り出しで降りて、止まると上がる（開けた瞬間に結果が見える）
+  const cov = shutterCover(reel);
+  if (cov > 0){
+    const hh = snap(r.h * cov);
+    for (let yy = r.y; yy < r.y + hh; yy += PX*3){ pRect(r.x, yy, r.w, PX*2, CAB.trim); pRect(r.x, yy + PX*2, r.w, PX, CAB.trimLo); }
+    pRect(r.x, r.y + hh - PX, r.w, PX, CAB.trimHi);
+  }
   ctx.restore();
+}
+/** シャッターがどれだけ窓を覆っているか（0〜1） */
+function shutterCover(reel){
+  if (!reel.blindAt) return 0;
+  if (reel.openAt) return Math.max(0, 1 - (S.t - reel.openAt) / 260);
+  return Math.min(1, (S.t - reel.blindAt) / 260);
 }
 
 /** 中央のライン。ここに来た絵柄が答え。**拍で一瞬明るくなる** */
@@ -1623,9 +1674,15 @@ function drawTopPanel(tier){
     });
     blitLow(dots, p.x, p.y);
   }
-  // キャラは拍で1ドット弾む（拍の頭で上がって戻る）
+  // キャラは拍で1ドット弾む（拍の頭で上がって戻る）。エンディングは脇が無い画面だと巨大7がここで暴れる
   const bob = (S.running && S.phase !== "over" && beatPhase(S.t) < 0.25) ? -PX : 0;
-  drawArt(CHARA_TOP, p.x + p.w*0.50, p.y + PX + bob, p.w*0.50 - PX*3, p.h - PX, "right", "top");
+  if (S.phase === "ending" && !L.wings && EMBLEM_SPR){
+    const pose = gimmickPose();
+    const sc = Math.max(1, Math.floor(p.h * 0.80 / EMBLEM_SPR.height));
+    const ew = EMBLEM_SPR.width * sc, eh = EMBLEM_SPR.height * sc;
+    const jx = Math.round((Math.random() - 0.5) * 2) * PX, jy = Math.round(pose.drop * 3) * PX;
+    ctx.drawImage(EMBLEM_SPR, snap(p.x + p.w*0.76 - ew/2 + jx), snap(p.y + p.h*0.50 - eh/2 + jy), ew, eh);
+  } else drawArt(CHARA_TOP, p.x + p.w*0.50, p.y + PX + bob, p.w*0.50 - PX*3, p.h - PX, "right", "top");
   // 胸像の切り口を、下端の暗い帯で隠す（「ちぎれて」見えないように）
   ctx.fillStyle = "rgba(20,4,6,.55)";
   ctx.fillRect(p.x, p.y + p.h - PX*5, p.w, PX*5);
@@ -1683,7 +1740,7 @@ function drawBezel(tier){
 function drawPeka(tier){
   const q = L.peka;
   const blink = Math.floor(S.lampT*2.6) % 2 === 0;
-  const lit = S.peka > 0.40 || (tier >= 5 && blink);
+  const lit = S.peka > 0.40 || (S.pekaRound && S.phase === "round") || S.phase === "ending" || (tier >= 5 && blink);
   pDisk(q.x, q.y, q.r*1.35, "#0b0c0f");
   pDisk(q.x, q.y, q.r*1.12, lit ? "#c98f0a" : "#1a1812");
   pDisk(q.x, q.y, q.r, lit ? CAB.gold : CAB.goldOff);
@@ -1837,6 +1894,59 @@ function drawLowPanel(tier){
    「別条件で発動するものは、ビタの回数で発動できる、とかだとバランスも取れる」→ **役物はビタで動く**
    ========================================================================= */
 
+/* --- モニターの一言（本人 2026-09-03「⑥は実装でいい」）。**台詞はここだけ**。差し替えやすいようにまとめる --- */
+const SAY = {
+  just:    ["そこだ", "見えた", "冴えてる"],
+  near:    ["あと半コマ"],
+  early:   ["急ぐな"],
+  late:    ["見てからじゃ遅い"],
+  double:  ["2本、来る"], triple: ["3本まとめて"], fast: ["速いぞ"], reverse: ["逆だ"], blind: ["見えなくても、拍は聞こえる"],
+  allJust: ["見えてる"],
+  gauge:   ["行くぞ"], clear: ["揃った"], part: ["惜しい"], none: ["次だ"],
+  armed:   ["一回だけ、拾ってやる"], dead: ["……まだだ"], lever: ["来い"], revived: ["戻ったぞ"],
+  stage:   ["台が変わる"], lucky: ["ラッキー"], peka: ["光った"], ending: ["……完璧だ"],
+};
+function say(key){ const a = SAY[key]; if (!a) return; S.say = { text: a[Math.floor(Math.random() * a.length)], at: S.t }; }
+
+/** 木人（もくじん）。左モニターの右側に立つ。ビタで殴られてひび、5発で砕けて、新しいのが下から立つ。
+    3発目で腕が1本落ちる。ステージが上がると明るく（硬く）なり、2からは鉢巻。**四角の組み合わせだけ**（絵は要らない） */
+function drawDummy(x, y, w, h, big, meterH){
+  const u2 = big ? PX : Math.max(1, PX - 1);
+  const cx = snap(x + w * (big ? 0.76 : 0.76));
+  const base = snap(y + h - meterH - PX*3);
+  const hits = S.justN % 5;
+  const since = S.t - S.gaugeFullAt;
+  const brk = S.justN > 0 && hits === 0 && since < 700;
+  const rise = (S.justN > 0 && hits === 0 && since >= 700 && since < 1000) ? 1 - (since - 700) / 300 : 0;
+  const shake = (S.t - S.justAt < 240 && !brk) ? (Math.floor(S.t / 40) % 2 ? u2 : -u2) : 0;
+  const st = S.stageLv;
+  const col = st >= 3 ? "#ffd0c8" : st >= 1 ? LED.on : LED.mid;
+  const H = big ? 40 : 15, postW = big ? 6 : 3, headS = big ? 10 : 5, armW = big ? 22 : 9, armT = big ? 3 : 1;
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y + PX*7, w, h - PX*7 - meterH - PX); ctx.clip();
+  if (brk){
+    const k = since / 700;
+    for (let i = 0; i < 6; i++){
+      const ang = -Math.PI * (0.15 + i * 0.14), sp = (big ? 26 : 10) * (0.6 + (i % 3) * 0.3);
+      const px = cx + Math.cos(ang) * sp * k * u2, py = base - H*u2*0.5 + Math.sin(ang) * sp * k * u2 + (big ? 60 : 22) * k * k * u2;
+      pRect(px, py, u2 * (2 + i % 2), u2 * (2 + (i+1) % 2), i % 2 ? col : LED.mid);
+    }
+    ctx.restore(); return;
+  }
+  const dy = rise * (H + headS + 4) * u2;
+  const ox = cx + shake, top = base - H*u2 + dy;
+  pRect(ox - Math.floor(postW/2)*u2, top, postW*u2, H*u2, col);                                   // 柱
+  pRect(ox - Math.floor(headS/2)*u2, top - (headS + 1)*u2, headS*u2, headS*u2, col);              // 頭
+  if (st >= 2) pRect(ox - Math.floor(headS/2)*u2, top - (headS - 2)*u2, headS*u2, u2, "#020102");  // 鉢巻
+  const arms = hits >= 3 ? 1 : 2;
+  const armY = [Math.round(H*0.15), Math.round(H*0.38)];
+  for (let a = 0; a < arms; a++) pRect(ox - Math.floor(armW/2)*u2, top + armY[a]*u2, armW*u2, armT*u2, col);   // 腕
+  const dark = "#020102", c1 = Math.max(2, Math.round(H*0.12));
+  if (hits >= 1) for (let i = 0; i < Math.max(3, Math.round(headS*0.5)); i++) pRect(ox - u2 + (i % 2) * u2, top - (headS - 1 - i)*u2, u2, u2, dark);
+  if (hits >= 2) for (let i = 0; i < c1; i++) pRect(ox + ((i % 2) ? u2 : -u2), top + (Math.round(H*0.50) + i)*u2, u2, u2, dark);
+  if (hits >= 4) for (let i = 0; i < c1; i++) pRect(ox + ((i % 2) ? -u2 : 0), top + (Math.round(H*0.72) + i)*u2, u2, u2, dark);
+  ctx.restore();
+}
+
 /** 立ち絵のコマ。0=構え 1=突き 2=笑って突き。
     拍の頭で突いて構えに戻る（2拍に1回）。ビタの直後は笑って突く。節目・ステージ・ゲージ満タンは交互に連打 */
 function fighterFrame(){
@@ -1883,19 +1993,29 @@ function drawMonitorScreen(x, y, w, h, big){
   }
   if (S.stageLv > 0) drawPixelText(stageName(S.stageLv), x + w - PX*3, gy + PX, Math.max(2, PX-2), LED.text, "right", null, 11);
 
-  // 立ち絵。頭の中心を画面の中央に、頭の上を帯の下にそろえる。拍で1ドット弾む
+  // 立ち絵。頭の中心を画面の左寄り（3割）に、頭の上を帯の下にそろえる。拍で1ドット弾む。右に木人
   const set = big ? "b" : "s", f = fighterFrame();
   const img = FIGHTER[set][f] || FIGHTER[set][0];
   const meterH = PX * (big ? 10 : 5);
+  drawDummy(x, y, w, h, big, meterH);
   if (img){
     const spr = ledSprite(img, PX);
     const ax = FIGHTER_AX[set][f] * PX;
     const bob = (S.running && S.phase !== "over" && ph < 0.25 && f === 0) ? -PX : 0;
     const top = y + PX*8 + bob;
-    const left = x + w/2 - ax;
+    const left = x + w*(big ? 0.32 : 0.34) - ax;
     ctx.save(); ctx.beginPath(); ctx.rect(x, y + PX*7, w, h - PX*7 - meterH - PX); ctx.clip();
     ctx.drawImage(spr, snap(left), snap(top));
     ctx.restore();
+  }
+  // 一言。立ち絵の足元に字幕で1.7秒
+  if (S.say && S.t - S.say.at < 1700 && live){
+    const sc = fitScale(S.say.text, 11, w - PX*6, Math.max(2, big ? PX - 1 : PX - 2));
+    const th = textH(11, sc);
+    const sy = y + h - meterH - PX*4 - th/2;
+    const tw = bakePixelText(S.say.text, 11, "#ffffff").width * sc;
+    pRect(x + w/2 - tw/2 - PX*2, sy - th/2, tw + PX*4, th, "rgba(0,0,0,.72)");
+    drawPixelText(S.say.text, x + w/2, sy, sc, "#ffd0c8", "center", null, 11);
   }
 
   // 下：VUメーター。赤いドットの柱が拍で跳ねる
@@ -1948,6 +2068,12 @@ function gimmickPose(){
     if (a < 200) return { drop: 1, ang: 0, hit: 1 - (a-120)/80 };
     if (a < 500) return { drop: 1 - (a-200)/300, ang: 0, hit: 0 };
     S.gim = null; return { drop: 0, ang: 0, hit: 0 };
+  }
+  if (g.kind === "wild"){
+    // エンディング：がくがく動きまくる（本人「GGOのゼッケンみたいに7が勝手にがくがく動きまくって」）
+    if (S.phase !== "ending"){ S.gim = null; return { drop: 0, ang: 0, hit: 0 }; }
+    const q = Math.floor(a / 70) % 2, r2 = Math.floor(a / 110) % 3;
+    return { drop: q ? 0.35 + 0.65 * (r2 / 2) : 1, ang: (q ? -1 : 1) * 0.18 * (1 + r2 * 0.4), hit: q ? 0 : 0.8 };
   }
   // spin：280msで落ちる → 900ms回る（2回転） → 700msで戻る
   if (a < 280) return { drop: Math.pow(a/280, 2), ang: 0, hit: 0 };
@@ -2011,9 +2137,12 @@ function drawReviveScreen(x, y, w, h){
     const on = full || i < gN;
     pRect(gx0 + i*PX*6, gy, PX*4, PX*2, on ? (full && Math.floor(S.t/90) % 2 ? "#ffd0c8" : LED.on) : LED.off);
   }
-  // 復活：仕込まれていれば大きく灯る。無ければ「10ビタで」
+  // 復活：仕込まれていれば大きく灯る。無ければ「10ビタで」。エンディングは「完全制覇」
   const blink = Math.floor(S.t / 400) % 2 === 0;
-  if (S.revive){
+  if (S.phase === "ending"){
+    drawPixelText("完全制覇", x + w/2, y + h*0.40, fitScale("完全制覇", 12, w - PX*6, Math.max(2, PX)), blink ? "#ffd0c8" : LED.on, "center", null, 12);
+    drawPixelText("777 → 7777", x + w/2, y + h*0.62, fitScale("777 → 7777", 11, w - PX*6, Math.max(2, PX-1)), LED.text, "center", enFont(), 11);
+  } else if (S.revive){
     drawPixelText("復活", x + w/2, y + h*0.40, Math.max(2, PX), blink ? "#ffd0c8" : LED.on, "center", null, 12);
     drawPixelText("READY", x + w/2, y + h*0.58, Math.max(2, PX-1), LED.text, "center", enFont(), 11);
     drawPixelText("外したら レバー", x + w/2, y + h*0.74, Math.max(2, PX-2), LED.text, "center", null, 11);
@@ -2080,8 +2209,9 @@ function drawReelFrame(i, strong){
   const base = strong ? 0.9 : 0.55;
   const a = Math.min(1, base + pulse*0.5);
   const g = Math.round(150 + 70*pulse);
-  // 逆転は水色、高速は白っぽい橙。普段は金
-  if (reel.dir < 0) ctx.fillStyle = "rgba(" + Math.round(90 + 80*pulse) + ",230,255," + a.toFixed(2) + ")";
+  // 先ペカは白金、逆転は水色、高速は白っぽい橙。普段は金
+  if (reel.sure) ctx.fillStyle = "rgba(255," + Math.round(240 + 15*pulse) + "," + Math.round(190 + 60*pulse) + "," + a.toFixed(2) + ")";
+  else if (reel.dir < 0) ctx.fillStyle = "rgba(" + Math.round(90 + 80*pulse) + ",230,255," + a.toFixed(2) + ")";
   else if (reel.v > S.v * 1.1) ctx.fillStyle = "rgba(255," + Math.round(210 + 40*pulse) + "," + Math.round(160 + 90*pulse) + "," + a.toFixed(2) + ")";
   else ctx.fillStyle = "rgba(255," + g + "," + (40 + Math.round(120*pulse)) + "," + a.toFixed(2) + ")";
   const x = snap(r.x - PX*2), y = snap(r.y - PX*2);
@@ -2098,6 +2228,7 @@ function drawOffsetMark(){
   const age = S.t - off.at;
   if (age < 0 || age > 1100) return;
   const r = L.reels[off.reel];
+  if (shutterCover(S.reels[off.reel]) > 0.3) return;
   const y = L.payY + Math.max(-1.55, Math.min(1.55, off.dd * off.dir)) * L.cell;
   const a = age < 800 ? 1 : 1 - (age - 800) / 300;
   // ⚠️ 白はクリーム色のリールに溶けて見えない（実際見えなかった）。橙と赤で
@@ -2204,7 +2335,8 @@ function drawCue(){
     const bandH = Math.max(PX*6, snap(L.u*0.10));
     ctx.fillStyle = "rgba(0,0,0,.72)";
     ctx.fillRect(snap(p.x), snap(L.cueY - bandH/2), snap(p.w), bandH);
-    drawPixelText(text, p.x + p.w/2, L.cueY, Math.max(2, PX-1), col);
+    // 長い札は幅に合わせて縮める（「ペカ！ ▶ どこで押しても 7」が両端で切れていた）
+    drawPixelText(text, p.x + p.w/2, L.cueY, fitScale(text, 12, p.w - PX*4, Math.max(2, PX-1)), col);
   };
   const kb = (navigator.maxTouchPoints || 0) === 0 ? "（Space）" : "";
   // **最初だけ MAX BET → レバー。** 復活待ちはレバーだけ
@@ -2214,6 +2346,7 @@ function drawCue(){
     if (L.wings && S.t - S.deadAt > 500) band(Math.floor(S.t/400) % 2 ? "レバーを叩け" + kb : "復活チャレンジ ▶ レバー", "#ff8a7a");
     return;
   }
+  if (S.phase === "ending"){ band(S.combo < 7777 ? "777 ▶ 完全制覇" : "7777 COMBO", "#fff3a0"); return; }
   if (S.phase !== "round") return;
   const cl = cueLevel(S.combo);
   for (const i of S.actives){
@@ -2239,10 +2372,13 @@ function drawCue(){
       }
     }
   }
+  else if (S.t - S.allJustAt < 1400){ text = "全ビタ！ +" + S.allJustN + " コンボ"; col = "#fff3a0"; }
   else if (S.stageLv > 0 && S.t - S.stageAt < 1800){ text = "ステージ " + S.stageLv + " ▶ " + stageName(S.stageLv); col = "#fff3a0"; }
+  else if (S.t - S.luckyAt < 1400){ text = "ラッキー 7 ▶ +777 コイン"; col = "#fff3a0"; }
+  else if (S.pekaRound && S.t - S.roundAt < 1400){ text = "ペカ！ ▶ どこで押しても 7"; col = "#fff3a0"; }
   else if (S.roundKind && S.t - S.roundAt < 900){
     text = S.roundKind + "!";
-    col = S.roundKind === "逆転" ? "#9ef1ff" : S.roundKind === "高速" ? "#ffc4a8" : "#ffe07a";
+    col = S.roundKind === "逆転" ? "#9ef1ff" : S.roundKind === "高速" ? "#ffc4a8" : S.roundKind === "ブラインド" ? "#c8d0ff" : "#ffe07a";
   }
   else if (S.combo < 4 && S.actives.length){ text = "つぎ " + REEL_NAME[S.actives[0]] + " ▶ 拍で押す"; }
   if (text) band(text, col);
@@ -2384,7 +2520,7 @@ function drawBackdrop(){
     g.fillStyle = rg; g.fillRect(0, 0, w, h);
   });
   blitLow(bg, 0, 0);
-  if (tier === 0 && S.heat < 0.05) return;
+  if ((tier === 0 && S.heat < 0.05) || lightK <= 0) return;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   const cx = W/2, cy = H/2;
@@ -2392,7 +2528,7 @@ function drawBackdrop(){
   //    背景の光は薄く、そのぶん**動くもの**（回る放射・色の巡り・帯）で派手さを出す
   if (tier >= 3){
     const pulse = 0.5 + 0.5*Math.sin(S.t / (tier >= 6 ? 90 : 180));
-    ctx.globalAlpha = Math.min(0.16, 0.05 + 0.06*pulse + tier*0.008);
+    ctx.globalAlpha = Math.min(0.16, 0.05 + 0.06*pulse + tier*0.008) * lightK;
     ctx.imageSmoothingEnabled = true;
     const R = Math.max(W, H) * 0.75;
     ctx.drawImage(glowBall(), cx - R, cy - R, R*2, R*2);
@@ -2401,7 +2537,7 @@ function drawBackdrop(){
   if (tier >= 5){
     // ゆっくり回る放射（焼いた星を回す）
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(S.t/1400);
-    ctx.globalAlpha = tier >= 7 ? 0.09 : 0.06;
+    ctx.globalAlpha = (tier >= 7 ? 0.09 : 0.06) * lightK;
     ctx.imageSmoothingEnabled = true;
     const R = Math.max(W, H);
     ctx.drawImage(rayStar(24, 0.05), -R, -R, R*2, R*2);
@@ -2413,7 +2549,7 @@ function drawBackdrop(){
     for (let k = 0; k < 3; k++){
       const q = (ph + k/3) % 1;
       const rr2 = q * Math.max(W, H) * 0.7;
-      ctx.strokeStyle = "hsla(" + ((S.t/5 + k*120) % 360) + ",95%,60%," + ((1-q)*0.22).toFixed(3) + ")";
+      ctx.strokeStyle = "hsla(" + ((S.t/5 + k*120) % 360) + ",95%,60%," + Math.min(1, (1-q)*0.22*lightK).toFixed(3) + ")";
       ctx.lineWidth = PX*3;
       ctx.beginPath(); ctx.arc(cx, L.payY, rr2, 0, 7); ctx.stroke();
     }
@@ -2469,7 +2605,7 @@ function drawRays(){
   const star = rayStar(n, wide);
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = pow * (0.14 + Math.min(0.12, lv * 0.012));
+  ctx.globalAlpha = Math.min(1, pow * (0.14 + Math.min(0.12, lv * 0.012)) * lightK);
   ctx.imageSmoothingEnabled = true;
   ctx.translate(W/2, L.payY);
   ctx.rotate(S.t / (900 - Math.min(700, lv*45)));
@@ -2478,7 +2614,7 @@ function drawRays(){
   ctx.restore();
   if (lv >= 5 && S.mega > 0.08){
     const hue = (S.t / 4) % 360;
-    ctx.fillStyle = "hsla(" + hue + ",95%,60%," + (S.mega*0.16).toFixed(3) + ")";
+    ctx.fillStyle = "hsla(" + hue + ",95%,60%," + Math.min(1, S.mega*0.16*lightK).toFixed(3) + ")";
     const t2 = Math.max(PX*2, snap(L.u*0.02));
     ctx.fillRect(0, 0, W, t2); ctx.fillRect(0, H - t2, W, t2);
     ctx.fillRect(0, 0, t2, H); ctx.fillRect(W - t2, 0, t2, H);
@@ -2491,7 +2627,7 @@ function drawBloom(){
   if (pow < 0.04) return;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = pow * 0.22;
+  ctx.globalAlpha = Math.min(1, pow * 0.22 * lightK);
   ctx.imageSmoothingEnabled = true;
   const R = L.cab.w * 1.1;
   ctx.drawImage(glowBall(), W/2 - R, L.payY - R, R*2, R*2);
@@ -2515,7 +2651,7 @@ function drawOneWave(r, base){
     const grow = k * L.u * 0.26;
     const a = (1 - k) * amp;
     const t = Math.max(PX, snap(PX * (2.2 - k*1.2)));
-    ctx.fillStyle = "rgba(255,196,120," + a.toFixed(3) + ")";
+    ctx.fillStyle = "rgba(255,196,120," + Math.min(1, a * lightK).toFixed(3) + ")";
     const x = snap(r.x - grow), y = snap(r.y - grow);
     const w = snap(r.w + grow*2), h = snap(r.h + grow*2);
     ctx.fillRect(x, y, w, t); ctx.fillRect(x, y + h - t, w, t);
@@ -2541,7 +2677,7 @@ function drawMilestoneBack(){
   const w = img.width * sc, h = img.height * sc;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = a * 0.16;
+  ctx.globalAlpha = Math.min(1, a * 0.16 * lightK);
   ctx.drawImage(img, snap(W/2 - w/2), snap(L.payY - h/2), w, h);
   ctx.restore();
 }
@@ -2623,7 +2759,7 @@ function render(){
   drawFx();
   drawMilestone();
   if (S.flash > 0.01){
-    ctx.fillStyle = "rgba(255,245,210," + (S.flash*0.50) + ")";
+    ctx.fillStyle = "rgba(255,245,210," + Math.min(1, S.flash*0.50*lightK).toFixed(3) + ")";
     ctx.fillRect(0, 0, W, H);
   }
   ctx.restore();
@@ -2660,7 +2796,7 @@ function stageOf(c){ return Math.floor(c / STAGE_EVERY); }
 const STAGE_NAMES = ["", "ダブル", "高速", "トリプル", "逆転", "無双"];
 function stageName(st){ return STAGE_NAMES[Math.min(st, STAGE_NAMES.length - 1)]; }
 const FAST_K = 1.45;       // 高速リールの速さ（倍）
-const LIMIT_SPECIAL = 1.5; // 特殊な回（ダブル・トリプル・高速・逆転）の猶予（倍）。6秒→9秒
+const LIMIT_SPECIAL = 1.5; // 特殊な回（ダブル・トリプル・高速・逆転）の猶予（倍）。猶予が無制限になった今は効かない
 
 /** そのリールの判定の幅。**高速リールは速いぶんコマ数を増やして、時間で同じ幅にする**
     （本人「高速の猶予が短すぎる」。窓が 214ms→148ms に縮んでいた。高速の難しさは読みにくさだけにする） */
@@ -2693,8 +2829,11 @@ function pickRound(){
   else reels = [pickReel()];
   const fast = (st >= 2 && Math.random() < (st >= 5 ? 0.35 : 0.25)) ? [reels[Math.floor(Math.random()*reels.length)]] : [];
   const reverse = (st >= 4 && Math.random() < (st >= 5 ? 0.40 : 0.30)) ? ((st >= 5 && Math.random() < 0.5) ? reels.slice() : [reels[0]]) : [];
-  const kind = n === 3 ? "トリプル" : n === 2 ? "ダブル" : reverse.length ? "逆転" : fast.length ? "高速" : "";
-  return { reels, fast, reverse, kind };
+  // **ブラインド**：90コンボから1割、150コンボから3割。1本にシャッターが降りる（見えない。拍で押す）
+  const force = (typeof __FORCE_BLIND !== "undefined" && __FORCE_BLIND);
+  const blind = (force || (st >= 3 && Math.random() < (st >= 5 ? 0.30 : 0.12))) ? [reels[Math.floor(Math.random()*reels.length)]] : [];
+  const kind = n === 3 ? "トリプル" : n === 2 ? "ダブル" : reverse.length ? "逆転" : fast.length ? "高速" : blind.length ? "ブラインド" : "";
+  return { reels, fast, reverse, blind, kind };
 }
 
 /** 次の回を組む。**回すリールの最初の7が拍に来る**ように回り出しを逆算する。
@@ -2710,6 +2849,10 @@ function nextRound(firstRound){
   // 本人（2026-09-03）「ダブルと高速の猶予が短すぎる。時間は今の3倍くらい緩和していい」。
   // 猶予の下限（2回転＝1.5秒）に着くのが35コンボ＝ダブルが始まる直後で、2本が同じ時計を分け合っていた
   const special = rd.reels.length >= 2 || rd.fast.length > 0 || rd.reverse.length > 0;
+  // **先ペカ。**ためてあれば、この回は「どこで押しても7」（本人：3ビタで1つ、課題クリアでさらに1つ）
+  S.pekaRound = false;
+  if (S.pekaStock > 0 && S.combo > 0){ S.pekaStock--; S.pekaRound = true; }
+  S.roundJust = 0;
   let t7max = 0;
   for (const i of rd.reels){
     const reel = S.reels[i];
@@ -2720,6 +2863,9 @@ function nextRound(firstRound){
     reel.t7 = timeTo7(gapAhead(i, reel.pos, reel.dir), reel.v, reel.acc);
     t7max = Math.max(t7max, reel.t7);
     reel.state = "wait"; reel.spinning = false; reel.snap = null; reel.vNow = 0; reel.targets = null; reel.aim = null;
+    reel.sure = S.pekaRound;
+    reel.blind = rd.blind.includes(i);
+    if (!reel.blind){ reel.blindAt = 0; reel.openAt = 0; }
   }
   // 前の7の拍から2拍あと。最初だけ、ひと呼吸おく
   let B = firstRound ? nextBeat(S.t + 700 + t7max) : nextBeat(S.dueBeat + beat*1.5);
@@ -2729,18 +2875,23 @@ function nextRound(firstRound){
   S.dueBeat = B + beat * (n - 1);     // 最後の1本を止める予定の拍
   S.roundKind = rd.kind; S.roundAt = S.t;
   if (rd.kind) sndKind(rd.kind);
+  if (S.pekaRound){ S.peka = 1; sndPeka(true); say("peka"); }
+  else if (rd.kind === "ダブル") say("double"); else if (rd.kind === "トリプル") say("triple");
+  else if (rd.kind === "高速") say("fast"); else if (rd.kind === "逆転") say("reverse"); else if (rd.kind === "ブラインド") say("blind");
   S.phase = "round";
 }
 
 /** リール1本を回し始める。**今止まっている位置から、そのまま** */
 function startReel(i){
   const reel = S.reels[i];
+  // 先の狙い（実験台の運転手が読む）。猶予が無制限なので、30回転ぶんで打ち切る
   const komaInLimit = reel.v * reel.limit / 1000;
-  const count = Math.ceil(komaInLimit / N * 2) + 2;
+  const count = Number.isFinite(komaInLimit) ? Math.ceil(komaInLimit / N * 2) + 2 : 60;
   reel.targets = reel.aim ? aimsAfter(i, reel.aim, reel.pos + 0.5, count)
               : reel.dir < 0 ? sevensBefore(i, reel.pos - 0.5, count) : sevensAfter(i, reel.pos + 0.5, count);
   reel.pos0 = reel.pos;
   reel.state = "spin"; reel.spinning = true; reel.vNow = 0; reel.snap = null;
+  if (reel.blind){ reel.blindAt = S.t; reel.openAt = 0; sndServo(0.2); setTimeout(() => { if (S.running) sndClank(false); }, 260); }
   startWhir();
 }
 
@@ -2829,7 +2980,8 @@ function press(i){
   // 課題なら、狙う絵柄を線へ持って来る停止位置を狙う（判定の幅は本編と同じ）
   const list = reel.aim ? aimsNear(i, reel.aim.sym, reel.aim.row, reel.pos, N) : null;
   const symName = reel.aim && reel.aim.sym === "bar" ? "BAR" : "7";
-  const hit = judge(i, reel.pos, reel.dir, winOf(reel), backOf(reel), list);
+  // 先ペカの回は滑りが1周ぶん＝どこで押しても次の7を引き込む
+  const hit = judge(i, reel.pos, reel.dir, reel.sure ? N : winOf(reel), backOf(reel), list);
   const ok = hit !== null;
   sndStop();
   if (!anySpinningExcept(i)) stopWhir();
@@ -2850,7 +3002,7 @@ function press(i){
 }
 function anySpinningExcept(i){ return S.actives.some(j => j !== i && S.reels[j].state === "spin"); }
 
-/** 押さないまま猶予を使い切った。次のコマで止まる＝ミス */
+/** 押さないまま猶予を使い切った。次のコマで止まる＝ミス（猶予は無制限なので、いまは実験台の D.miss() からだけ） */
 function autoMissReel(i){
   const reel = S.reels[i];
   if (!anySpinningExcept(i)) stopWhir();
@@ -2870,6 +3022,7 @@ function freezeOthers(except){
     if (r.state === "spin"){ r.pos = r.dir > 0 ? Math.ceil(r.pos + 0.02) : Math.floor(r.pos - 0.02); while (isSeven(k, r.pos)) r.pos += r.dir; }
     if (r.state === "snap") r.pos = r.snap.to;
     r.state = "done"; r.spinning = false; r.snap = null; r.vNow = 0;
+    if (r.blind && r.blindAt && !r.openAt) r.openAt = S.t;
   }
 }
 
@@ -2877,6 +3030,7 @@ function freezeOthers(except){
 function onReelStop(i, ok){
   const reel = S.reels[i];
   sndSeat();
+  if (reel.blind && reel.blindAt && !reel.openAt){ reel.openAt = S.t; sndServo(0.2); }   // シャッターを開けて結果を見せる
   if (S.extra){ onAimStop(i, ok); return; }             // 課題（8.5章）は別勘定
   if (!ok){
     S.deadSym = STRIPS[i][mod(Math.round(reel.pos), N)];
@@ -2888,18 +3042,23 @@ function onReelStop(i, ok){
     return;
   }
   reel.state = "done";
-  const before = S.combo;
-  // **ビタ押し。**7が線の上（±半コマ）で押していたら、**一気に3コンボ**＋コインが倍以上
-  //（本人の指示・2026-09-03「ビタだと一気に3コンボたまるようにしよう」）。腕の見せどころ
+  // **ビタ押し。**7が線の上（±半コマ）で押していたら、**一気に4コンボ**＋コインが倍以上
+  //（本人の指示・2026-09-03「ビタで4短縮」）。腕の見せどころ
   const just = Math.abs(S.lastHitDd) < 0.5;
-  S.combo += just ? COMBO_JUST : 1;
+  const gain = just ? COMBO_JUST : 1;
   S.lastReel = i;
   S.hit = 1; S.segFlash = 1; S.peka = 1; S.kick = 1;
-  sndHit(S.combo);
+  sndHit(S.combo + gain);
   sndPeka(false);
-  const tier = tierOf(S.combo);
+  const tier = tierOf(S.combo + gain);
+  if (!just){
+    const d = S.lastHitDd;
+    if (Math.abs(d) < 1.0) say("near"); else if (d < -2.5) say("early"); else if (d > 1.5) say("late");
+  }
   if (just){
-    S.justAt = S.t; S.justReel = i; S.justN++; sndJust(); S.shake = 1;
+    S.justAt = S.t; S.justReel = i; S.justN++; S.roundJust++; sndJust(); S.shake = 1;
+    say("just");
+    if (S.justN % 3 === 0) S.pekaStock++;                 // **先ペカ**を1つためる（3ビタごと）
     // **脇の装置はビタで動く。**5回ごと：左のモニターが本体からガシャンと飛び出して（2回目からは打ち直し）、
     //   この回が終わったら「7を狙え！」。10回ごと：右の役物も飛び出して「復活」が仕込まれる
     //   （外したとき1回だけ、レバーで「BARを狙え！」）。飛び出す音は frame の wingWant の変化で鳴る
@@ -2908,9 +3067,11 @@ function onReelStop(i, ok){
       S.extraPending = true;
       S.aimLine = LINES[Math.floor(Math.random() * LINES.length)];
       if (S.leftOut) slamWing("L"); else S.leftOut = true;
+      say("gauge");
       if (S.justN % 10 === 0){
         if (S.revive && S.wingOut.R > 0.9) slamWing("R");
         S.revive = true; S.reviveAt = S.t;
+        say("armed");
         if (L.wings) setTimeout(() => { if (S.running && S.revive) gimmickTrigger("spin"); }, 520); else sndSpin();
       }
     } else if (L.wings && S.wingOut.R > 0.9) gimmickTrigger("stamp");
@@ -2924,29 +3085,92 @@ function onReelStop(i, ok){
   S.coins += just ? COIN_JUST : COIN_PER_HIT;
   S.payFlash = 1;
   spawnCoins((just ? 30 : 14) + tier * 3);
-  // 節目は「10の線をまたいだら」。ビタで+3すると 8→11 のように飛ぶことがあるため
-  const lvNew = Math.min(16, Math.floor(S.combo / 10)), lvOld = Math.floor(before / 10);
-  const lv = lvNew > lvOld ? lvNew : 0;
-  if (lv){
-    S.milestone = S.combo + " COMBO";
-    S.milestoneAt = S.t;
-    S.megaLv = lv;
-    S.mega = 1;
-    S.flash = Math.min(0.85, 0.45 + lv*0.03);
-    S.shake = 1;
-    burst(90 + lv*26, tier);
-    rain(38 + lv*12);
-    spawnCoins(30 + lv*7);
-    for (let k = 0; k < 3; k++) S.waves.push({ t0: S.t + k*70, i: k });
-    sndPeka(true);
-    sndFanfare(Math.min(7, 2 + Math.floor(lv/2)));
-  }
-  if (stageOf(S.combo) > stageOf(before)) stageUp();
-  // 全部止まったら次へ。課題が控えていればそちらへ
+  if (addCombo(gain)) return;                              // 777 に届いたらエンディング
+  // 全部止まったら次へ。**全部ビタなら「全ビタ」ボーナス。**課題が控えていればそちらへ
   if (S.actives.every(j => S.reels[j].state === "done")){
+    if (S.actives.length >= 2 && S.roundJust === S.actives.length){
+      const bonus = S.actives.length === 3 ? COMBO_ALLJUST3 : COMBO_ALLJUST2;
+      S.allJustAt = S.t; S.allJustN = bonus;
+      S.coins += COIN_ALLJUST; S.payFlash = 1; spawnCoins(40);
+      S.flash = Math.max(S.flash, 0.6); S.shake = 1; S.mega = Math.max(S.mega, 0.7);
+      burst(100, 6); sndFanfare(5); say("allJust");
+      if (addCombo(bonus)) return;
+    }
     if (S.extraPending) startAim("seven");
     else nextRound(false);
   }
+}
+
+/** コンボを足す。節目（10ごと）・ラッキー7（77・177…）・ステージ昇格・**777のエンディング**まで面倒を見る。
+    エンディングに入ったら true（呼んだ側はそこで止める） */
+function luckyOf(c){ return c >= 77 ? Math.floor((c - 77) / 100) + 1 : 0; }
+function addCombo(n){
+  const before = S.combo;
+  S.combo += n;
+  const tier = tierOf(S.combo);
+  // 節目は「10の線をまたいだら」。ビタで+4すると 8→11 のように飛ぶことがあるため
+  const lvNew = Math.min(16, Math.floor(S.combo / 10)), lvOld = Math.floor(before / 10);
+  if (lvNew > lvOld){
+    const lv = lvNew;
+    S.milestone = S.combo + " COMBO"; S.milestoneAt = S.t;
+    S.megaLv = lv; S.mega = 1;
+    S.flash = Math.min(0.85, 0.45 + lv*0.03); S.shake = 1;
+    burst(90 + lv*26, tier); rain(38 + lv*12); spawnCoins(30 + lv*7);
+    for (let k = 0; k < 3; k++) S.waves.push({ t0: S.t + k*70, i: k });
+    sndPeka(true); sndFanfare(Math.min(7, 2 + Math.floor(lv/2)));
+  }
+  // **ラッキー7**：77・177・277…（名前が『777コンボ』なので）。コイン777枚
+  if (luckyOf(S.combo) > luckyOf(before)){
+    S.milestone = "LUCKY " + S.combo; S.milestoneAt = S.t; S.luckyAt = S.t;
+    S.megaLv = Math.max(S.megaLv, 7); S.mega = 1;
+    S.coins += 777; S.payFlash = 1; spawnCoins(40); S.peka = 1; S.flash = Math.max(S.flash, 0.6);
+    sndFanfare(4); sndPeka(true); say("lucky");
+  }
+  if (stageOf(S.combo) > stageOf(before)) stageUp();
+  if (before < 777 && S.combo >= 777){ startEnding(); return true; }
+  return false;
+}
+
+/* --- 777のエンディング（本人 2026-09-03「777になったら、GGOのゼッケンみたいに7が勝手にがくがく動きまくって、
+   7777コンボになって終了」）。1.2秒 777 を見せて、8秒かけて 7777 まで勝手に回り、1.8秒止めて結果へ --- */
+const END_SHOW = 1200, END_RUN = 8000, END_HOLD = 1800;
+function startEnding(){
+  S.phase = "ending"; S.ending = true; S.endingAt = S.t; S.endClank = 0;
+  S.combo = 777;
+  S.extra = null; S.extraPending = false; S.revive = false; S.pekaRound = false; S.lastMiss = null;
+  S.reels.forEach((r, i) => { r.aim = null; r.state = "idle"; r.snap = null; r.spinning = false; r.vNow = 0; r.pos = nearestSevenOn(i, r.pos); r.sure = false; if (r.blind && r.blindAt && !r.openAt) r.openAt = S.t; });
+  S.actives = []; S.roundKind = "";
+  stopWhir();
+  S.milestone = "777 COMBO"; S.milestoneAt = S.t; S.megaLv = 16; S.mega = 1; S.heat = 1;
+  S.flash = 0.9; S.shake = 1; S.peka = 1; S.segFlash = 1;
+  S.gim = { kind: "wild", t0: S.t };
+  burst(200, 7); rain(120); spawnCoins(80);
+  sndFanfare(7); sndCheer(); sndSpin();
+  say("ending");
+}
+function stepEnding(now){
+  const a = now - S.endingAt;
+  S.heat = 1; S.mega = Math.max(S.mega, 0.6);
+  if (a - S.endClank * 180 >= 180){ S.endClank++; if (S.endClank % 2) sndClank(false); S.shake = Math.max(S.shake, 0.35); }
+  if (a < END_SHOW) return;
+  if (a < END_SHOW + END_RUN){
+    const k = (a - END_SHOW) / END_RUN;
+    const c = Math.min(7777, Math.round(777 + 7000 * k * k));
+    if (Math.floor(c / 100) !== Math.floor(S.combo / 100)){
+      S.segFlash = 1; S.kick = 1; S.hit = 1; S.lastReel = Math.floor(c / 100) % 3;
+      spawnCoins(12); sndHit(Math.floor(c / 100));
+      if (Math.floor(c / 1000) !== Math.floor(S.combo / 1000)){ S.milestone = Math.floor(c / 1000) * 1000 + " COMBO"; S.milestoneAt = now; S.flash = Math.max(S.flash, 0.5); rain(30); }
+    }
+    S.combo = c;
+    return;
+  }
+  if (S.combo !== 7777){
+    S.combo = 7777; S.milestone = "7777 COMBO"; S.milestoneAt = now; S.megaLv = 16; S.mega = 1;
+    S.flash = 1; S.shake = 1; S.peka = 1;
+    burst(240, 7); rain(150); spawnCoins(120);
+    sndFanfare(7); sndCheer();
+  }
+  if (a >= END_SHOW + END_RUN + END_HOLD) gameOver();
 }
 
 /** ステージが上がった（30コンボごと）。台の色が変わり、調が上がり、いちばん大きい祝砲 */
@@ -2960,6 +3184,7 @@ function stageUp(){
   spawnCoins(60);
   sndFanfare(7);
   sndCheer();
+  say("stage");
   ART_CACHE.clear();          // パネルの色が変わる
 }
 
@@ -2982,13 +3207,14 @@ const LINES = [
   { name:"右上がり", rows:[ 1, 0,-1] },
 ];
 const COMBO_AIM_ALL = 10, COMBO_AIM_ONE = 2, COMBO_REVIVE = 10;
+const COMBO_ALLJUST2 = 6, COMBO_ALLJUST3 = 10, COIN_ALLJUST = 1000;   // 全ビタ（2本／3本）
 
 /** 課題を始める。kind: "seven"（左）／"bar"（復活）。3本とも今の位置から回す */
 function startAim(kind, deadReel){
   const bar = kind === "bar";
   const line = bar ? LINES[1] : (S.aimLine || LINES[Math.floor(Math.random() * LINES.length)]);
   S.extra = { kind, line, stage:"ready", t0:S.t, hits:0, ok:false, reward:0, deadReel: deadReel == null ? -1 : deadReel, resultAt:0 };
-  S.extraPending = false; S.roundKind = "";
+  S.extraPending = false; S.roundKind = ""; S.pekaRound = false;
   setDifficulty();
   const beat = beatMs();
   let t7max = 0;
@@ -2996,6 +3222,7 @@ function startAim(kind, deadReel){
     const reel = S.reels[i];
     reel.dir = 1; reel.v = S.v; reel.limit = S.limit * LIMIT_SPECIAL; reel.acc = accMs(reel.v);
     reel.aim = { sym: kind, row: line.rows[i] };
+    reel.sure = false; reel.blind = false; reel.blindAt = 0; reel.openAt = 0;
     reel.t7 = timeTo7(aimsAfter(i, reel.aim, reel.pos + 0.5, 1)[0] - reel.pos, reel.v, reel.acc);
     t7max = Math.max(t7max, reel.t7);
     reel.state = "wait"; reel.spinning = false; reel.snap = null; reel.vNow = 0; reel.targets = null; reel.stopped = false;
@@ -3028,39 +3255,35 @@ function onAimStop(i, ok){
 function resolveAim(){
   const e = S.extra;
   e.ok = e.hits === 3; e.stage = "result"; e.resultAt = S.t;
-  const before = S.combo;
   if (e.kind === "bar"){
     if (e.ok){
       e.reward = COMBO_REVIVE; S.revive = false;
-      S.combo += e.reward;
       bgmStart(1);
       S.segFlash = 1; S.heat = 1; S.flash = 0.8; S.shake = 1; S.peka = 1; S.mega = 1;
       burst(160, 7); rain(90); spawnCoins(60);
-      sndFanfare(7); sndCheer();
+      sndFanfare(7); sndCheer(); say("revived");
     } else {
       bgmStop(); sndKind("逆転");
     }
   } else {
     e.reward = e.ok ? COMBO_AIM_ALL : e.hits * COMBO_AIM_ONE;
-    if (e.reward){ S.combo += e.reward; S.segFlash = 1; }
+    if (e.reward) S.segFlash = 1;
     if (e.ok){
       S.coins += COIN_GAUGE; S.payFlash = 1; spawnCoins(50);
       S.heat = 1; S.flash = Math.max(S.flash, 0.6); S.shake = 1; S.mega = Math.max(S.mega, 0.9); S.peka = 1;
       burst(120, 6); rain(60);
-      sndFanfare(5); sndCheer();
-    } else if (e.hits){ sndPeka(true); S.heat = Math.max(S.heat, 0.5); }
-    else sndKind("逆転");
+      sndFanfare(5); sndCheer(); say("clear");
+      S.pekaStock++;                                        // **クリアで先ペカをさらに1つ**（本人 2026-09-03）
+    } else if (e.hits){ sndPeka(true); S.heat = Math.max(S.heat, 0.5); say("part"); }
+    else { sndKind("逆転"); say("none"); }
   }
-  if (S.combo > before){
-    const lvNew = Math.min(16, Math.floor(S.combo / 10)), lvOld = Math.floor(before / 10);
-    if (lvNew > lvOld){ S.milestone = S.combo + " COMBO"; S.milestoneAt = S.t; S.megaLv = lvNew; S.mega = 1; }
-    if (stageOf(S.combo) > stageOf(before)) stageUp();
-  }
+  if (e.reward) addCombo(e.reward);                         // 777 に届いたらここでエンディング（課題は startEnding が畳む）
 }
 
 /** 課題の時間の進み（結果を見せる → 7へ戻す → 次へ）。毎フレーム */
 function stepAim(now){
   const e = S.extra;
+  if (!e) return;
   if (e.stage === "result"){
     const wait = e.kind === "bar" ? (e.ok ? 1900 : 1300) : (e.ok ? 1700 : 1200);
     if (now - e.resultAt < wait) return;
@@ -3094,6 +3317,7 @@ function enterDead(i){
   S.roundKind = ""; S.stageAt = -9999; S.gim = null;
   S.actives = [];
   S.dark = 1;
+  say("dead");
 }
 
 /** MAX BET。**最初の1回だけ**（本人 2026-09-03「一番最初だけ、マックスベットとレバーが必要なようにしよう」） */
@@ -3119,7 +3343,7 @@ function pullLever(){
   }
   if (S.phase === "dead" && S.t - S.deadAt > 500){
     reviveAudio();
-    S.leverAt = S.t; sndLever();
+    S.leverAt = S.t; sndLever(); say("lever");
     S.beat0 = S.t;
     startAim("bar", S.deadReel);
     return true;
@@ -3132,6 +3356,7 @@ function slamWing(k){ S.slamAt[k] = S.t; sndServo(0.22); }
 /** その脇が出ていてほしいか。左は5ビタで出て以後ずっと。右は復活が仕込まれている間と、復活待ち・復活の課題の間 */
 function wantWing(k){
   if (!S.running || S.phase === "over") return false;
+  if (S.phase === "ending") return true;
   if (k === "L") return S.leftOut;
   return S.revive || S.phase === "dead" || !!(S.extra && S.extra.kind === "bar");
 }
@@ -3362,10 +3587,11 @@ function whyText(){
 }
 
 function gameOver(){
+  const fin = S.phase === "ending";                         // 777 のエンディング。静寂にはしない
   S.running = false;
   S.phase = "over";
   bgmStop();
-  silence();
+  if (fin) stopWhir(); else silence();
   S.fx.length = 0;
   S.shake = 0; S.flash = 0; S.peka = 0; S.segFlash = 0; S.waves.length = 0; S.heat = 0; S.mega = 0; S.milestone = ""; S.kick = 0;
   S.roundKind = ""; S.stageAt = -9999;
@@ -3387,7 +3613,7 @@ function gameOver(){
     veil.classList.remove("bare");
     const LF = String.fromCharCode(10);
     const text = [
-      "『777コンボ』で " + reached + " COMBO。",
+      fin ? "『777コンボ』で 777 → 7777 COMBO。完全制覇。" : "『777コンボ』で " + reached + " COMBO。",
       "777を揃え続けるだけのゲーム。",
       "#777コンボ"
     ].join(LF);
@@ -3404,6 +3630,7 @@ function gameOver(){
                 (stageOf(reached) > 0 ? '　ステージ <strong>' + stageOf(reached) + '</strong>' : '') + '</p>';
     veil.innerHTML =
       '<div class="big">' + reached + '<small>COMBO</small></div>' +
+      (fin ? '<p class="fade"><strong>完全制覇</strong>　777 を揃え切った。台が勝手に 7777 まで回った</p>' : '') +
       (isNew ? '<p class="fade"><strong>自己ベスト更新</strong></p>' : '') +
       sub +
       (why ? '<div class="why fade">' + why + '</div>' : '') +
@@ -3453,8 +3680,10 @@ function start(){
   S.extra = null; S.extraPending = false; S.aimLine = null; S.revive = false; S.reviveAt = -9999;
   S.leftOut = false; S.wingOut = { L:0, R:0 }; S.wingWant = { L:false, R:false }; S.slamAt = { L:-9999, R:-9999 };
   S.dark = 0; S.deadReel = -1; S.deadAt = -9999; S.leverAt = -9999; S.betAt = -9999;
+  S.pekaStock = 0; S.pekaRound = false; S.roundJust = 0; S.allJustAt = -9999; S.allJustN = 0;
+  S.say = null; S.ending = false; S.endingAt = -9999; S.endClank = 0; S.luckyAt = -9999;
   S.pressFx = [0,0,0];
-  for (const r of S.reels){ r.pos = 0; r.state = "idle"; r.spinning = false; r.v = 0; r.vNow = 0; r.dir = 1; r.snap = null; r.stopped = false; r.targets = null; r.aim = null; r.dueAt = 0; }
+  for (const r of S.reels){ r.pos = 0; r.state = "idle"; r.spinning = false; r.v = 0; r.vNow = 0; r.dir = 1; r.snap = null; r.stopped = false; r.targets = null; r.aim = null; r.dueAt = 0; r.blind = false; r.blindAt = 0; r.openAt = 0; r.sure = false; }
 
   countPlay();
   S.v = 28;
@@ -3482,6 +3711,7 @@ function frame(now){
     if (S.phase === "intro") stepIntro(now, dt);
 
     if (S.extra) stepAim(now);
+    if (S.phase === "ending") stepEnding(now);
     if (S.phase === "round"){
       let koma = false, vmax = 0;
       const acts = S.actives.slice();          // 止まると nextRound で入れ替わるので写しを回す
@@ -3646,14 +3876,27 @@ document.addEventListener("visibilitychange", () => {
 
 /* --- 音量 ------------------------------------------------------------ */
 const muteBtn = document.getElementById("muteBtn");
-const volRange = document.getElementById("volRange");
-muteBtn.onclick = () => {
-  muted = !muted;
-  muteBtn.classList.toggle("off", muted);
-  muteBtn.textContent = muted ? "×" : "♪";
-  applyVol();
-};
-volRange.oninput = () => { vol = Number(volRange.value)/100; applyVol(); };
+const optBtn = document.getElementById("optBtn"), optPanel = document.getElementById("opt");
+const RANGES = { bgm: "bgmRange", se: "seRange", light: "lightRange" };
+function syncOptUi(){
+  for (const k in RANGES){ document.getElementById(RANGES[k]).value = OPT[k]; document.getElementById(k + "Val").textContent = OPT[k]; }
+  muteBtn.classList.toggle("off", muted); muteBtn.textContent = muted ? "×" : "♪";
+}
+muteBtn.onclick = () => { muted = !muted; OPT.muted = muted; saveOpt(); syncOptUi(); applyVol(); };
+optBtn.onclick = () => { optPanel.classList.toggle("hidden"); };
+for (const k in RANGES){
+  const el = document.getElementById(RANGES[k]);
+  el.oninput = () => {
+    OPT[k] = Number(el.value); document.getElementById(k + "Val").textContent = OPT[k];
+    if (k === "light"){ lightK = OPT.light / 100; if (S.running && S.phase !== "dead"){ S.flash = Math.max(S.flash, 0.5); S.heat = 1; } }   // 動かした瞬間に光って見せる
+    else applyVol();
+    saveOpt();
+  };
+  // ⚠️ 触り終わったらフォーカスを外す。残るとストップのキー（F/G/H…）がスライダーに食われる
+  el.addEventListener("change", () => { el.blur(); if (k === "se" && actx && !audioDead) sndStop(); });
+  el.addEventListener("pointerup", () => el.blur());
+}
+syncOptUi();
 ["pointerdown","keydown"].forEach(ev => {
   document.getElementById("hud").addEventListener(ev, e => e.stopPropagation());
 });

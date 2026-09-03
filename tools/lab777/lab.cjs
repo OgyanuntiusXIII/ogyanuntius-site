@@ -79,9 +79,29 @@ const DRIVER = `
       for (const i of S.actives){
         const r = S.reels[i];
         if (r.state !== "spin" || !canPress(i)) continue;
-        for (const c of r.targets){ const d = (r.pos - c) * r.dir; if (d >= -S.win*0.6 && d <= -S.win*0.1){ press(i); return; } }
+        // 狙いはその場で引く（猶予が無制限になり、先読みの一覧を使い切ると押さなくなっていた）
+        for (const c of D.aheadOf(i)){ const d = (r.pos - c) * r.dir; if (d >= -S.win*0.6 && d <= -S.win*0.1){ press(i); return; } }
       }
     }
+  };
+  /* 列 i が進む先の狙い（7、課題なら線へ持って来る位置）を近い順に3つ */
+  D.aheadOf = (i) => { const r = S.reels[i]; return r.aim ? aimsAfter(i, r.aim, r.pos - 1, 3) : (r.dir < 0 ? sevensBefore(i, r.pos + 1, 3) : sevensAfter(i, r.pos - 1, 3)); };
+  /* 回っているリールを全部ビタで止める（|dd| < 0.3 のときだけ押す）。回が終わるまで */
+  D.allJust = () => {
+    let g = 0, started = false; const before = S.combo;
+    while (S.running && g++ < 3000){
+      D.tick(1);
+      const spinning = S.phase === "round" && S.actives.some(i => S.reels[i].state === "spin" || S.reels[i].state === "snap");
+      if (spinning) started = true;
+      if (started && !spinning && (D.quiet() || S.extra || S.phase !== "round")) break;
+      if (!spinning) continue;
+      for (const i of S.actives){
+        const r = S.reels[i];
+        if (r.state !== "spin" || !canPress(i)) continue;
+        for (const c of D.aheadOf(i)){ const d = (r.pos - c) * r.dir; if (d >= -0.3 && d <= -0.02){ press(i); break; } }
+      }
+    }
+    return { gained: S.combo - before, combo: S.combo, allJustN: S.allJustN, roundJust: S.roundJust, phase: S.phase };
   };
   D.drive = (target, stopPhase) => {
     let g = 0;
