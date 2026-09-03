@@ -131,6 +131,14 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
   background:none;color:var(--ink-mid);border:none;font-size:.85rem;
   text-decoration:underline;padding:.3rem;font-weight:400;
 }
+/* 練習スタート。到達したステージから。記録には残さない */
+.practice{gap:.4rem;}
+.practice:empty{display:none;}
+.practice span{font-size:.78rem;color:#6e6e76;margin-right:.2rem;}
+#veil .practice button{
+  font-size:.8rem;font-weight:600;padding:.42rem .8rem;border-radius:999px;
+  background:#1a1a1d;color:var(--ink);border:1px solid #3c3c42;
+}
 /* ランキング（この端末に残っているだけ。サーバーへは送らない） */
 .rank{
   font-family:var(--font-en);font-size:.9rem;color:var(--ink-mid);
@@ -180,18 +188,19 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
     </div>
     <p class="hint">
       リールは <b>21コマ、毎分80回転</b>。<b>最大5コマ滑る</b>。<br>
-      <b>5秒以内に止めなければ、アウト。</b>1コンボごとに0.1秒短くなる。<br>
+      <b>6秒以内に止めなければ、アウト。</b>時間は縮まない。難しくなるのは滑りと速さと台。<br>
       左右は <b>BAR の次が 7</b>、中だけ <b>7 の次が BAR</b>。最初は<b>BARを目印にする</b>のがオススメ。<br>
       <b>7は音の拍に乗って来る。</b>見てからでは遅い。拍で押す。<br>
       <b>30コンボごとに台が変わる。</b>2本同時、高速、3本、逆回転。<br>
       線の上ぴったりで止めれば<b>ビタ</b>。<b>一気に +3 コンボ</b>、コインは 777 枚。
     </p>
     <div class="row"><button id="startBtn">はじめる</button></div>
+    <div class="row practice" id="practice"></div>
     <div class="keys">
       左 <kbd>F</kbd><kbd>A</kbd><kbd>←</kbd> ／
       中 <kbd>G</kbd><kbd>S</kbd><kbd>↓</kbd> ／
       右 <kbd>H</kbd><kbd>D</kbd><kbd>→</kbd><br>
-      スマホは<b>画面の左・中・右</b>を押す
+      スマホは<b>3つのストップボタン</b>を押す（ボタン以外は効かない）
     </div>
   </div>
 
@@ -426,8 +435,9 @@ function bakeAll(px){
      chara_low.png … 下パネル（同じ縮尺の胴・59x36ドット）
      logo.png      … 題字（63x26ドット） */
 let CHARA_TOP = null, CHARA_LOW = null, LOGO_IMG = null;
-/* 低解像度で描いた下絵の置き場（7章の lowres）。**layout() より前に要る** */
+/* 低解像度で描いた下絵の置き場（7章の lowres）と、コインの絵の置き場。**layout() より前に要る** */
 const ART_CACHE = new Map();
+const COIN_SPR = [];
 function loadArt(src, set){
   const im = new Image();
   im.onload = () => { set(im); ART_CACHE.clear(); };
@@ -531,10 +541,13 @@ const SLIP   = [[0,5.5],[10,5.5],[22,5],[50,4],[90,3.5],[160,3],[260,2.5]];
    これは腕前ではなく **表示と入力の遅れ**（人が見ている画面は数フレーム前）を機械側で吸収する分。
    後半は詰める。ビタ押しに近づく */
 const BACKT  = [[0,3.0],[10,3.0],[25,2.6],[60,2.0],[120,1.5],[220,1.2]];
-/* **止めるまでの猶予は「秒」で決める。**（本人の指示・2026-09-01）
-   最初は5秒。1コンボごとに0.1秒ずつ短くなる。ただし **2回転ぶんの時間より短くはしない** */
-const LIMIT0 = 5000, LIMIT_STEP = 100;
-function limitMs(c, v){ return Math.max(LIMIT0 - LIMIT_STEP*c, 2 * N / v * 1000); }
+/* **止めるまでの猶予は「秒」で決める。コンボで縮めない。**
+   2026-09-01「最初は5秒、0.1秒ずつ短く、2回転より短くしない」→
+   2026-09-03 本人「時間が短くなるんじゃなくて別の難易度調整がいい。ゲーム体験がかなりいいので
+   時間制限あんまり良くないことに気づいた」→ **6秒固定**。難しさは滑り・速さ・台（ステージ）で上がる。
+   押さなければ終わる、という約束だけ残す */
+const LIMIT_FLAT = 6000;
+function limitMs(c, v){ return LIMIT_FLAT; }
 
 /* 演出の段。企画書8章 */
 function tierOf(c){
@@ -565,7 +578,7 @@ function timeTo7(g, v, A){ v = v || S.v; A = A || accMs(v); return A/2 + g / v *
    ========================================================================= */
 
 const cv = document.getElementById("cv");
-const ctx = cv.getContext("2d");
+let ctx = cv.getContext("2d");      // コインのスプライトを焼くときだけ一時的に差し替える
 const stage = document.getElementById("stage");
 const veil = document.getElementById("veil");
 
@@ -586,7 +599,10 @@ const S = {
   mega:0, megaLv:0, waves:[],
   fx:[], lampT:0, milestone:"", milestoneAt:-9999,
   deadSym:"", lastMiss:null, lastHitDd:0,
+  lastOff:null,                    // 直前の停止のズレ { dd(コマ・+は遅い), ms, reel, at, just, dir }
   justAt:-9999, justReel:-1, justN:0,
+  practiceFrom:0,                  // 練習スタート（0なら本番）
+  lite:false,                      // 軽量描画（スマホ）
   pressFx:[0,0,0],
   t:0,
 };
@@ -1019,6 +1035,9 @@ function layout(){
   const px = Math.max(2, Math.floor(cell * 0.99 / SPR_N));
   if (px !== sprPx || !SPRITES.seven){ sprPx = px; bakeAll(px); }
   PX = Math.max(2, sprPx);
+  // **スマホは軽く描く。**粒とコインを減らし、放射と光は焼いた1枚で
+  S.lite = (W * H < 700 * 1000) || ((navigator.maxTouchPoints || 0) > 0 && W < 900);
+  COIN_SPR.length = 0;
   ART_CACHE.clear();
   if (drawReady) render();
   drawChart();
@@ -1434,17 +1453,19 @@ function drawTopPanel(tier){
   });
   blitLow(art, p.x, p.y);
 
-  // 段が上がると放射が回る（明るい輪を重ねる）
+  // 段が上がると放射が回る（明るい点の列。2コマの絵を焼いて交互に貼る）
   if (tier >= 4){
-    const cx = p.x + p.w*0.30, cy = p.y + p.h*0.56;
     const step = Math.floor(S.lampT*2.4) % 2;
-    for (let a2 = 0; a2 < 16; a2++){
-      if ((a2 + step) % 2) continue;
-      const th = a2 * Math.PI/8;
-      for (let d = p.h*0.30; d < p.w*0.75; d += PX*3){
-        pRect(cx + Math.cos(th)*d, cy + Math.sin(th)*d*0.55, PX*2, PX*2, "rgba(255,230,120,.22)");
+    const dots = lowres("topdots" + step, p.w, p.h, (g, w, h) => {
+      const cx = w*0.30, cy = h*0.56;
+      g.fillStyle = "rgba(255,230,120,.22)";
+      for (let a2 = 0; a2 < 16; a2++){
+        if ((a2 + step) % 2) continue;
+        const th = a2 * Math.PI/8;
+        for (let d = h*0.30; d < w*0.75; d += 3) g.fillRect(Math.round(cx + Math.cos(th)*d), Math.round(cy + Math.sin(th)*d*0.55), 2, 2);
       }
-    }
+    });
+    blitLow(dots, p.x, p.y);
   }
   drawArt(CHARA_TOP, p.x + p.w*0.50, p.y + PX, p.w*0.50 - PX*3, p.h - PX, "right", "top");
   // 題字。左寄せで大きく。下に COMBO
@@ -1525,15 +1546,23 @@ function drawInfo(){
   const smH = f.h*0.40, wSeg = segWidth(smH, 4);
   drawPixelText("BEST", f.x + f.w - PX*4, f.y + f.h*0.24, lab, "#8a8f98", "right", enFont(), 11);
   drawSeg(f.x + f.w - PX*4 - wSeg, f.y + f.h*0.44, smH, best(), CAB.segBest, 4);
-  // 残り時間のランプ
-  const frac = timeLeft();
-  const lit = (S.phase === "round" && anySpinning()) ? Math.ceil(frac * 5) : 0;
+  // **ズレのメーター**（本人 2026-09-03「右側の5個のランプでズレてる目安作れそう」）
+  //   早い ◀ [−2][−1][ビタ][+1][+2] ▶ 遅い。直前の停止がどこだったかを1つだけ灯す。下に ms
   const lr = PX*2, gap2 = PX*6;
-  const ly = f.y + f.h*0.56, lx0 = f.x + f.w*0.44;
+  const ly = f.y + f.h*0.50, lx0 = f.x + f.w*0.50 - gap2*2;
+  const off = S.lastOff;
+  let idx = -1;
+  if (off){ const d = off.dd; idx = d <= -1.5 ? 0 : d <= -0.5 ? 1 : d < 0.5 ? 2 : d < 1.5 ? 3 : 4; }
   for (let i = 0; i < 5; i++){
-    const on = i < lit;
-    const hot = on && lit <= 1 && (Math.floor(S.t/160) % 2 === 0);
-    pDisk(lx0 + i*gap2, ly, lr, on ? (hot ? "#ff5a2a" : CAB.gold) : CAB.goldOff);
+    const on = i === idx;
+    const col = i === 2 ? CAB.goldHi : (i === 1 || i === 3) ? CAB.gold : "#ff6a3c";
+    pDisk(lx0 + i*gap2, ly, i === 2 ? lr + PX/2 : lr, on ? col : CAB.goldOff);
+  }
+  drawPixelText("早", lx0 - gap2*0.95, ly, lab, "#6a6f78", "center", null, 11);
+  drawPixelText("遅", lx0 + gap2*4.95, ly, lab, "#6a6f78", "center", null, 11);
+  if (off){
+    const txt = off.just ? "ビタ" : (off.ms > 0 ? "+" : "−") + Math.round(Math.abs(off.ms)) + "ms";
+    drawPixelText(txt, f.x + f.w*0.50, f.y + f.h*0.82, lab, off.just ? "#fff3a0" : "#c9ccd2", "center", enFont(), 11);
   }
   ctx.restore();
 }
@@ -1676,6 +1705,34 @@ function drawReelFrame(i, strong){
   ctx.fillRect(x, y, t, h); ctx.fillRect(x + w - t, y, t, h);
 }
 
+/** **押した瞬間に7がいた位置**の目印（本人「どこで止めてたかをビジュアル化してビタを狙いやすく」）。
+    止めた窓に、線からのズレの位置へ横線と「+2.3」（コマ）。1.1秒で消える */
+function drawOffsetMark(){
+  const off = S.lastOff;
+  if (!off) return;
+  const age = S.t - off.at;
+  if (age < 0 || age > 1100) return;
+  const r = L.reels[off.reel];
+  const y = L.payY + Math.max(-1.55, Math.min(1.55, off.dd * off.dir)) * L.cell;
+  const a = age < 800 ? 1 : 1 - (age - 800) / 300;
+  // ⚠️ 白はクリーム色のリールに溶けて見えない（実際見えなかった）。橙と赤で
+  const col = off.just ? "#ffe14a" : Math.abs(off.dd) < 1.5 ? "#ff9a3c" : "#ff6a4a";
+  ctx.save();
+  ctx.globalAlpha = a;
+  // 横線（点線）。線の上ならビタなので太く
+  const t = off.just ? PX*2 : PX;
+  for (let x = r.x + PX; x < r.x + r.w - PX; x += PX*3) pRect(x, y - t/2, PX*2, t, col);
+  // 札。数字だけ（コマ）。窓の右上に寄せる
+  const label = (off.dd > 0 ? "+" : off.dd < 0 ? "−" : "±") + Math.abs(off.dd).toFixed(1);
+  const sc = Math.max(2, PX - 1);
+  const img = bakePixelText(label, 12, col, enFont());
+  const w = img.width * sc, h = img.height * sc;
+  const ty = Math.max(r.y + PX, Math.min(r.y + r.h - h - PX, y - h/2));
+  pRect(r.x + r.w - w - PX*3, ty, w + PX*2, h, "rgba(20,4,4,.80)");
+  ctx.drawImage(img, snap(r.x + r.w - w - PX*2), snap(ty), w, h);
+  ctx.restore();
+}
+
 /** ビタ押しの札。止めた窓の上に一瞬 */
 function drawJust(){
   const age = S.t - S.justAt;
@@ -1728,6 +1785,7 @@ function drawCue(){
     else if (r.state === "spin"){ if (cl >= 1) drawReelFrame(i, canPress(i)); }
     else if (r.state === "snap") drawReelFrame(i, false);
   }
+  drawOffsetMark();
   drawJust();
   // 札。ステージ解禁 → 今回の種類 → 最初の数回の案内、の順で1枚だけ
   let text = null, col = "#ffe07a";
@@ -1758,32 +1816,58 @@ function spawnCoins(n){
       y: t.y + t.h * 0.35,
       vx: (Math.random() - 0.5) * L.u * 0.055,
       vy: -(0.6 + Math.random() * 1.3) * L.u * 0.016,
-      r: PX * (Math.random() < 0.35 ? 1.6 : 2.2),
+      big: Math.random() >= 0.35,
     });
   }
-  if (S.coinFx.length > 240) S.coinFx.splice(0, S.coinFx.length - 240);
+  const cap = S.lite ? 110 : 240;
+  if (S.coinFx.length > cap) S.coinFx.splice(0, S.coinFx.length - cap);
 }
 function stepCoins(dt){
-  for (let i = S.coinFx.length - 1; i >= 0; i--){
+  let w = 0;
+  for (let i = 0; i < S.coinFx.length; i++){
     const c = S.coinFx[i];
     c.x += c.vx * dt * 0.055;
     c.y += c.vy * dt * 0.055;
     c.vy += dt * 0.0018 * L.u * 0.10;
-    if (c.y > H + L.u*0.08 || c.x < -L.u*0.1 || c.x > W + L.u*0.1) S.coinFx.splice(i, 1);
+    if (!(c.y > H + L.u*0.08 || c.x < -L.u*0.1 || c.x > W + L.u*0.1)) S.coinFx[w++] = c;
   }
+  S.coinFx.length = w;
+}
+/* コインは2種類の絵を1回だけ焼いて、あとは貼るだけ（1枚あたり fillRect 20回 → drawImage 1回）。
+   置き場 COIN_SPR は1章（layout() より前）で宣言してある */
+function coinSprite(big){
+  const k = big ? 1 : 0;
+  if (COIN_SPR[k]) return COIN_SPR[k];
+  const r = PX * (big ? 2.2 : 1.6);
+  const size = Math.ceil(r * 1.15 / PX) * 2 * PX + PX * 4;
+  const c = document.createElement("canvas");
+  c.width = size; c.height = size;
+  const g = c.getContext("2d");
+  const saved = ctx;
+  // pDisk は ctx に描くので、一時的に差し替える
+  ctx = g;
+  const cx = size / 2, cy = size / 2;
+  pDisk(cx, cy, r * 1.15, "#3a2c06");
+  pDisk(cx, cy, r, "#c8960f");
+  pDisk(cx, cy - PX*0.6, r * 0.66, "#ffd23a");
+  pDisk(cx - PX*0.5, cy - PX*0.9, r * 0.30, "#fff4c4");
+  ctx = saved;
+  c.half = size / 2;
+  COIN_SPR[k] = c;
+  return c;
 }
 function drawCoins(){
   for (const c of S.coinFx){
-    pDisk(c.x, c.y, c.r * 1.15, "#3a2c06");
-    pDisk(c.x, c.y, c.r, "#c8960f");
-    pDisk(c.x, c.y - PX*0.6, c.r * 0.66, "#ffd23a");
-    pDisk(c.x - PX*0.5, c.y - PX*0.9, c.r * 0.30, "#fff4c4");
+    const sp = coinSprite(c.big);
+    ctx.drawImage(sp, snap(c.x - sp.half), snap(c.y - sp.half));
   }
 }
 
 /* --- 粒 ------------------------------------------------------------- */
+const FX_CAP = () => S.lite ? 420 : 1100;
 function burst(n, tier){
   const cx = L.cab.x + L.cab.w/2, cy = L.payY;
+  if (S.lite) n = Math.ceil(n * 0.45);
   for (let i = 0; i < n; i++){
     const a = Math.random()*Math.PI*2;
     const sp = (0.6 + Math.random()*2.4) * (1 + tier*0.25) * L.u*0.010;
@@ -1792,12 +1876,14 @@ function burst(n, tier){
       y: cy + (Math.random()-0.5)*L.cell,
       vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - L.u*0.004,
       life:1, size: L.u*(0.008 + Math.random()*0.018),
-      hue: tier >= 5 ? Math.random()*360 : (Math.random() < 0.5 ? 44 : 6),
+      col: "hsl(" + (tier >= 5 ? Math.random()*360 : (Math.random() < 0.5 ? 44 : 6)) + ",92%,58%)",
     });
   }
-  if (S.fx.length > 1100) S.fx.splice(0, S.fx.length - 1100);
+  const cap = FX_CAP();
+  if (S.fx.length > cap) S.fx.splice(0, S.fx.length - cap);
 }
 function rain(n){
+  if (S.lite) n = Math.ceil(n * 0.45);
   for (let i = 0; i < n; i++){
     S.fx.push({
       x: Math.random() * W,
@@ -1806,27 +1892,31 @@ function rain(n){
       vy: (0.3 + Math.random() * 0.9) * L.u * 0.006,
       life: 1,
       size: L.u * (0.007 + Math.random() * 0.016),
-      hue: Math.random() < 0.5 ? 44 : (Math.random() < 0.5 ? 6 : 160),
+      col: "hsl(" + (Math.random() < 0.5 ? 44 : (Math.random() < 0.5 ? 6 : 160)) + ",92%,58%)",
     });
   }
-  if (S.fx.length > 1400) S.fx.splice(0, S.fx.length - 1400);
+  const cap = FX_CAP() + 300;
+  if (S.fx.length > cap) S.fx.splice(0, S.fx.length - cap);
 }
 function stepFx(dt){
-  for (let i = S.fx.length - 1; i >= 0; i--){
+  let w = 0;
+  for (let i = 0; i < S.fx.length; i++){
     const p = S.fx[i];
     p.x += p.vx*dt*0.06; p.y += p.vy*dt*0.06;
     p.vy += dt*0.0016*L.u*0.06;
     p.life -= dt/900;
-    if (p.life <= 0) S.fx.splice(i, 1);
+    if (p.life > 0) S.fx[w++] = p;
   }
+  S.fx.length = w;
 }
+/* 粒は透明度を1つずつ変えない（遅い）。消えぎわは小さくなる */
 function drawFx(){
   for (const p of S.fx){
-    ctx.globalAlpha = Math.max(0, p.life);
-    ctx.fillStyle = "hsl(" + p.hue + ",92%,58%)";
-    ctx.fillRect(snap(p.x - p.size/2), snap(p.y - p.size/2), Math.max(PX, snap(p.size)), Math.max(PX, snap(p.size*1.6)));
+    const k = p.life < 0.35 ? p.life / 0.35 : 1;
+    const sz = Math.max(PX, snap(p.size * k));
+    ctx.fillStyle = p.col;
+    ctx.fillRect(snap(p.x - sz/2), snap(p.y - sz/2), sz, Math.max(PX, snap(p.size * 1.6 * k)));
   }
-  ctx.globalAlpha = 1;
 }
 
 /* --- 背景 ------------------------------------------------------------
@@ -1856,22 +1946,20 @@ function drawBackdrop(){
   // ⚠️ 加算は積むとすぐ白飛びする（一度、画面全体が平たい橙になった）。
   //    背景の光は薄く、そのぶん**動くもの**（回る放射・色の巡り・帯）で派手さを出す
   if (tier >= 3){
-    const gg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W,H)*0.75);
     const pulse = 0.5 + 0.5*Math.sin(S.t / (tier >= 6 ? 90 : 180));
-    gg.addColorStop(0, "rgba(255,170,40," + Math.min(0.16, 0.05 + 0.06*pulse + tier*0.008).toFixed(3) + ")");
-    gg.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = Math.min(0.16, 0.05 + 0.06*pulse + tier*0.008);
+    ctx.imageSmoothingEnabled = true;
+    const R = Math.max(W, H) * 0.75;
+    ctx.drawImage(glowBall(), cx - R, cy - R, R*2, R*2);
+    ctx.globalAlpha = 1;
   }
   if (tier >= 5){
-    // ゆっくり回る放射。段が上がると色が巡る
+    // ゆっくり回る放射（焼いた星を回す）
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(S.t/1400);
-    const rays = 24, R = Math.max(W, H);
-    for (let i = 0; i < rays; i++){
-      ctx.rotate(Math.PI*2/rays);
-      const hue = tier >= 7 ? (S.t/8 + i*15) % 360 : (i % 2 ? 42 : 12);
-      ctx.fillStyle = "hsla(" + hue + ",95%,58%," + (tier >= 7 ? 0.07 : 0.05) + ")";
-      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R, -R*0.05); ctx.lineTo(R, R*0.05); ctx.fill();
-    }
+    ctx.globalAlpha = tier >= 7 ? 0.09 : 0.06;
+    ctx.imageSmoothingEnabled = true;
+    const R = Math.max(W, H);
+    ctx.drawImage(rayStar(24, 0.05), -R, -R, R*2, R*2);
     ctx.restore();
   }
   if (tier >= 6){
@@ -1895,23 +1983,53 @@ function drawBackdrop(){
 }
 
 /** 当たった瞬間に背後から出る放射。熱で出る。加算 */
+/* 放射の星と、光の玉は**小さく1回だけ焼いて**、回す・伸ばすだけにする。
+   毎フレーム画面いっぱいの三角を数十枚描くのはスマホには重い（節目でカクついていた） */
+const STAR_CACHE = new Map();
+function rayStar(n, wide){
+  const key = n + "|" + wide.toFixed(3);
+  let c = STAR_CACHE.get(key);
+  if (c) return c;
+  const size = 512;
+  c = document.createElement("canvas"); c.width = size; c.height = size;
+  const g = c.getContext("2d");
+  g.translate(size/2, size/2);
+  const R = size * 0.75;
+  for (let i = 0; i < n; i++){
+    g.rotate(Math.PI*2/n);
+    g.fillStyle = i % 2 ? "rgba(255,200,80,1)" : "rgba(255,90,40,0.7)";
+    g.beginPath(); g.moveTo(0,0); g.lineTo(R, -R*wide); g.lineTo(R, R*wide); g.fill();
+  }
+  STAR_CACHE.set(key, c);
+  return c;
+}
+let GLOW_BALL = null;
+function glowBall(){
+  if (GLOW_BALL) return GLOW_BALL;
+  const size = 256;
+  const c = document.createElement("canvas"); c.width = size; c.height = size;
+  const g = c.getContext("2d");
+  const rg = g.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  rg.addColorStop(0, "rgba(255,190,90,1)"); rg.addColorStop(0.45, "rgba(255,140,50,.45)"); rg.addColorStop(1, "rgba(255,120,40,0)");
+  g.fillStyle = rg; g.fillRect(0, 0, size, size);
+  GLOW_BALL = c;
+  return c;
+}
 function drawRays(){
   const pow = Math.max(S.heat, S.mega);
   if (pow < 0.06) return;
   const lv = S.mega > 0.05 ? S.megaLv : 0;
   const n = 20 + Math.min(28, lv * 2);
+  const wide = 0.045 + Math.min(0.05, lv * 0.004);
+  const star = rayStar(n, wide);
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = pow * (0.14 + Math.min(0.12, lv * 0.012));
+  ctx.imageSmoothingEnabled = true;
   ctx.translate(W/2, L.payY);
   ctx.rotate(S.t / (900 - Math.min(700, lv*45)));
   const R = Math.max(W, H) * 1.2;
-  const a = pow * (0.14 + Math.min(0.12, lv * 0.012));
-  const wide = 0.045 + Math.min(0.05, lv * 0.004);
-  for (let i = 0; i < n; i++){
-    ctx.rotate(Math.PI*2/n);
-    ctx.fillStyle = i % 2 ? "rgba(255,200,80," + a.toFixed(3) + ")" : "rgba(255,90,40," + (a*0.7).toFixed(3) + ")";
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R, -R*wide); ctx.lineTo(R, R*wide); ctx.fill();
-  }
+  ctx.drawImage(star, -R, -R, R*2, R*2);
   ctx.restore();
   if (lv >= 5 && S.mega > 0.08){
     const hue = (S.t / 4) % 360;
@@ -1928,11 +2046,10 @@ function drawBloom(){
   if (pow < 0.04) return;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  const cab = L.cab;
-  const g = ctx.createRadialGradient(W/2, L.payY, cab.w*0.2, W/2, L.payY, cab.w*1.1);
-  g.addColorStop(0, "rgba(255,180,80," + (pow*0.20).toFixed(3) + ")");
-  g.addColorStop(1, "rgba(255,120,40,0)");
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = pow * 0.22;
+  ctx.imageSmoothingEnabled = true;
+  const R = L.cab.w * 1.1;
+  ctx.drawImage(glowBall(), W/2 - R, L.payY - R, R*2, R*2);
   ctx.restore();
 }
 
@@ -2068,6 +2185,12 @@ function stageOf(c){ return Math.floor(c / STAGE_EVERY); }
 const STAGE_NAMES = ["", "ダブル", "高速", "トリプル", "逆転", "無双"];
 function stageName(st){ return STAGE_NAMES[Math.min(st, STAGE_NAMES.length - 1)]; }
 const FAST_K = 1.45;       // 高速リールの速さ（倍）
+const LIMIT_SPECIAL = 1.5; // 特殊な回（ダブル・トリプル・高速・逆転）の猶予（倍）。6秒→9秒
+
+/** そのリールの判定の幅。**高速リールは速いぶんコマ数を増やして、時間で同じ幅にする**
+    （本人「高速の猶予が短すぎる」。窓が 214ms→148ms に縮んでいた。高速の難しさは読みにくさだけにする） */
+function winOf(reel){ return S.win * reel.v / S.v; }
+function backOf(reel){ return S.back * reel.v / S.v; }
 
 function pickReel(){
   if (S.prev >= 0 && Math.random() < 0.2) return S.prev;
@@ -2107,11 +2230,16 @@ function nextRound(firstRound){
   S.actives = rd.reels;
   S.prev = rd.reels[rd.reels.length - 1];
   const beat = beatMs();
+  // **特殊な回（ダブル・トリプル・高速・逆転）は猶予3倍。**
+  // 本人（2026-09-03）「ダブルと高速の猶予が短すぎる。時間は今の3倍くらい緩和していい」。
+  // 猶予の下限（2回転＝1.5秒）に着くのが35コンボ＝ダブルが始まる直後で、2本が同じ時計を分け合っていた
+  const special = rd.reels.length >= 2 || rd.fast.length > 0 || rd.reverse.length > 0;
   let t7max = 0;
   for (const i of rd.reels){
     const reel = S.reels[i];
     reel.dir = rd.reverse.includes(i) ? -1 : 1;
     reel.v = S.v * (rd.fast.includes(i) ? FAST_K : 1);
+    reel.limit = S.limit * (special ? LIMIT_SPECIAL : 1);
     reel.acc = accMs(reel.v);
     reel.t7 = timeTo7(gapAhead(i, reel.pos, reel.dir), reel.v, reel.acc);
     t7max = Math.max(t7max, reel.t7);
@@ -2130,9 +2258,10 @@ function nextRound(firstRound){
 /** リール1本を回し始める。**今止まっている位置から、そのまま** */
 function startReel(i){
   const reel = S.reels[i];
-  const komaInLimit = reel.v * S.limit / 1000;
+  const komaInLimit = reel.v * reel.limit / 1000;
   const count = Math.ceil(komaInLimit / N * 2) + 2;
   reel.targets = reel.dir < 0 ? sevensBefore(i, reel.pos - 0.5, count) : sevensAfter(i, reel.pos + 0.5, count);
+  reel.pos0 = reel.pos;
   reel.state = "spin"; reel.spinning = true; reel.vNow = 0; reel.snap = null;
   startWhir();
 }
@@ -2144,12 +2273,17 @@ function canPress(i){
 }
 function anySpinning(){ return S.actives.some(i => S.reels[i].state === "spin"); }
 
-/** リールを1フレーム進める（加速つき・向きつき） */
+/** リールを進める（加速つき・向きつき）。
+    ⚠️ **位置はフレームごとの積算ではなく、回り出しからの時間で出す。**
+    積算だとフレームが落ちた瞬間（節目の演出でスマホが重くなる）に dt が頭打ちになって
+    リールが拍から遅れ、拍どおりに押した人が「早い」で外れる。時間の関数なら落ちても7は拍ちょうどに来る */
 function advanceReel(reel, dt){
-  const k = Math.min(1, (S.t - reel.spinAt) / reel.acc);
-  reel.vNow = reel.v * k;
+  const tau = Math.max(0, (S.t - reel.spinAt) / 1000);
+  const A = reel.acc / 1000;
+  reel.vNow = reel.v * Math.min(1, tau / A);
+  const travel = tau < A ? reel.v * tau * tau / (2 * A) : reel.v * A / 2 + reel.v * (tau - A);
   const before = Math.floor(reel.pos);
-  reel.pos += reel.dir * reel.vNow * dt / 1000;
+  reel.pos = reel.pos0 + reel.dir * travel;
   return Math.floor(reel.pos) !== before;
 }
 
@@ -2176,11 +2310,13 @@ function stepSnap(reel, now){
 }
 
 /** 判定。進む向きで見て、7が [手前 win, 過ぎて back] にあれば掴む。いちばん近いもの */
-function judge(i, pos, dir){
+function judge(i, pos, dir, win, back){
+  if (win == null) win = S.win;
+  if (back == null) back = S.back;
   let hit = null, hd = Infinity;
   for (const c of sevensNear(i, pos, N)){
     const dd = (pos - c) * dir;
-    if (dd >= -S.win && dd <= S.back){ const a = Math.abs(dd); if (a < hd){ hd = a; hit = c; } }
+    if (dd >= -win && dd <= back){ const a = Math.abs(dd); if (a < hd){ hd = a; hit = c; } }
   }
   return hit;
 }
@@ -2188,13 +2324,14 @@ function judge(i, pos, dir){
 /** 外したときに止まるコマ。**早い/遅いが絵で分かる**ように止める。
     早い（7がまだ先）: 滑れる範囲で7の1つ手前まで。7は上段の上に残る（逆転なら下）
     遅い（7を過ぎた）: その場。7は抜ける */
-function missTarget(i, pos, dir){
+function missTarget(i, pos, dir, win){
+  if (win == null) win = S.win;
   let near = null, nd = Infinity;
   for (const c of sevensNear(i, pos, N)){ const d = Math.abs(pos - c); if (d < nd){ nd = d; near = c; } }
   const dd = (pos - near) * dir;
   let to;
-  if (dd < 0) to = dir > 0 ? Math.min(near - 1, Math.ceil(pos + 0.02) + Math.floor(S.win))
-                          : Math.max(near + 1, Math.floor(pos - 0.02) - Math.floor(S.win));
+  if (dd < 0) to = dir > 0 ? Math.min(near - 1, Math.ceil(pos + 0.02) + Math.floor(win))
+                          : Math.max(near + 1, Math.floor(pos - 0.02) - Math.floor(win));
   else        to = dir > 0 ? Math.ceil(pos + 0.02) : Math.floor(pos - 0.02);
   while (isSeven(i, to)) to += dir;
   S.lastMiss = { early: dd < 0, koma: Math.abs(dd), timeout: false };
@@ -2204,17 +2341,25 @@ function missTarget(i, pos, dir){
 /** 止める。ここが全部 */
 function press(i){
   if (S.phase === "intro"){ if (S.introStarted) pressIntro(i); return; }
-  if (S.phase !== "round" || !S.actives.includes(i)) return;
+  if (S.phase !== "round") return;
   const reel = S.reels[i];
-  if (reel.state !== "spin") return;
+  // 回っていないボタンを押しても「カチ」だけ鳴る（押せたことは伝える。何も起きない）
+  if (!S.actives.includes(i) || reel.state !== "spin"){ sndClick(); S.pressFx[i] = 1; return; }
   if (!canPress(i)){ sndClick(); S.pressFx[i] = 1; return; }
   S.pressFx[i] = 1;
-  const hit = judge(i, reel.pos, reel.dir);
+  const hit = judge(i, reel.pos, reel.dir, winOf(reel), backOf(reel));
   const ok = hit !== null;
   sndStop();
   if (!anySpinningExcept(i)) stopWhir();
-  const to = ok ? hit : missTarget(i, reel.pos, reel.dir);
+  const to = ok ? hit : missTarget(i, reel.pos, reel.dir, winOf(reel));
   if (ok) S.lastHitDd = (reel.pos - hit) * reel.dir;
+  // **どこで押したか**を残す（ズレのメーター・リール窓の目印・結果画面）
+  {
+    const ref = ok ? hit : nearestSevenOn(i, reel.pos);
+    const dd = (reel.pos - ref) * reel.dir;
+    S.lastOff = { dd, ms: dd / reel.v * 1000, reel: i, at: S.t, just: ok && Math.abs(dd) < 0.5, dir: reel.dir };
+    if (S.lastMiss && !ok) S.lastMiss.ms = Math.abs(dd) / reel.v * 1000;
+  }
   const backward = (to - reel.pos) * reel.dir < 0;
   const dist = Math.abs(to - reel.pos);
   const dur = backward ? 80 : Math.min(260, Math.max(40, dist / reel.v * 1000) + 30);
@@ -2228,7 +2373,7 @@ function autoMissReel(i){
   const reel = S.reels[i];
   if (!anySpinningExcept(i)) stopWhir();
   sndStop();
-  const to = missTarget(i, reel.pos, reel.dir);
+  const to = missTarget(i, reel.pos, reel.dir, winOf(reel));
   S.lastMiss = { timeout: true };
   reel.snap = { from: reel.pos, to, t0: S.t, dur: Math.max(40, Math.abs(to - reel.pos) / reel.v * 1000), ok:false, backward:false };
   reel.state = "snap"; reel.spinning = false;
@@ -2325,7 +2470,7 @@ function stepIntro(now, dt){
   if (!S.introStarted){
     if (now < S.introAt) return;
     S.introStarted = true;
-    for (const r of S.reels){ r.state = "spin"; r.spinning = true; r.dir = 1; r.v = S.v; r.vNow = 0; r.spinAt = now; r.acc = accMs(S.v); r.snap = null; r.stopped = false; }
+    for (const r of S.reels){ r.state = "spin"; r.spinning = true; r.dir = 1; r.v = S.v; r.vNow = 0; r.spinAt = now; r.pos0 = r.pos; r.acc = accMs(S.v); r.limit = 1e9; r.snap = null; r.stopped = false; }
     startWhir();
     bgmStart(0);
     return;
@@ -2363,7 +2508,8 @@ function introDone(){
   S.heat = 1; S.peka = 1; S.flash = 0.6; S.kick = 1;
   sndPeka(true); sndFanfare(1);
   burst(70, 1);
-  S.combo = 0;
+  S.combo = S.practiceFrom;          // 練習なら、そのコンボから（難しさ・台・曲もそこから）
+  S.stageLv = stageOf(S.combo);
   nextRound(true);
 }
 
@@ -2399,11 +2545,11 @@ function pressIntro(i){
   if (!S.reels.some(r => r.state === "spin")) stopWhir();
 }
 
-/** 猶予の残り（0〜1）。1本ぶん */
+/** 猶予の残り（0〜1）。1本ぶん（猶予はリールごと。特殊な回は長い） */
 function timeLeftOf(i){
   const reel = S.reels[i];
   if (!reel || reel.state !== "spin") return 1;
-  return Math.max(0, Math.min(1, 1 - (S.t - reel.spinAt) / S.limit));
+  return Math.max(0, Math.min(1, 1 - (S.t - reel.spinAt) / (reel.limit || S.limit)));
 }
 /** 回っているリールのうち、いちばん残りが少ないもの。情報帯のランプはこれで動く */
 function timeLeft(){
@@ -2426,8 +2572,9 @@ function whyText(){
   if (!m) return "";
   if (m.timeout) return "時間切れ。<b>7は拍ごとに来る。</b>音に合わせて押そう。";
   const k = Math.max(1, Math.round(m.koma));
-  if (m.early) return "7の <b>" + k + "コマ手前</b>で止まった。<b>早い。</b>あと一瞬待とう。";
-  return "7が <b>" + k + "コマ</b>通り過ぎていた。<b>遅い。</b>7が見えたときには、もう押す。";
+  const ms = m.ms ? "（" + Math.round(m.ms) + "ms）" : "";
+  if (m.early) return "7の <b>" + k + "コマ手前</b>" + ms + "で止まった。<b>早い。</b>あと一瞬待とう。";
+  return "7が <b>" + k + "コマ</b>" + ms + "通り過ぎていた。<b>遅い。</b>7が見えたときには、もう押す。";
 }
 
 function gameOver(){
@@ -2442,7 +2589,8 @@ function gameOver(){
 
   const reached = S.combo;
   const prevBest = best();
-  const top = pushTop(reached);
+  const practice = S.practiceFrom > 0;
+  const top = practice ? loadTop() : pushTop(reached);   // 練習は記録に残さない
 
   clearOverTimers();
   overTimers.push(setTimeout(() => {
@@ -2464,14 +2612,16 @@ function gameOver(){
     const rankRows = top.filter(n => n > 0)
       .map((n, i) => (i+1) + "位　" + (i === 0 ? "<b>" + n + "</b>" : n) + " COMBO")
       .join("<br>");
-    const isNew = reached > 0 && reached >= top[0] && reached > prevBest;
+    const isNew = !practice && reached > 0 && reached >= top[0] && reached > prevBest;
     const why = whyText();
+    const tag = practice ? '<p class="fade">練習（' + S.practiceFrom + 'から）。記録には残らない</p>' : '';
 
     const sub = '<p class="fade">COIN <strong>' + S.coins.toLocaleString() + '</strong>枚' +
                 (S.justN ? '　ビタ <strong>' + S.justN + '</strong>回' : '') +
                 (stageOf(reached) > 0 ? '　ステージ <strong>' + stageOf(reached) + '</strong>' : '') + '</p>';
     veil.innerHTML =
       '<div class="big">' + reached + '<small>COMBO</small></div>' +
+      tag +
       (isNew ? '<p class="fade"><strong>自己ベスト更新</strong></p>' : '') +
       sub +
       (why ? '<div class="why fade">' + why + '</div>' : '') +
@@ -2481,7 +2631,7 @@ function gameOver(){
         '<a class="btn-x" href="' + share + '" target="_blank" rel="noopener">Xで共有する</a>' +
       '</div>' +
       '<button class="link fade" id="backBtn">タイトルに戻る</button>';
-    document.getElementById("againBtn").onclick = start;
+    document.getElementById("againBtn").onclick = () => start(S.practiceFrom);   // 同じ地点からもう一回
     document.getElementById("backBtn").onclick = () => location.reload();
   }, 1900));
 }
@@ -2490,7 +2640,26 @@ function gameOver(){
    10. 開始
    ========================================================================= */
 
-function start(){
+/** タイトルの練習ボタン。**到達したステージから始められる**（本人「何回も30までいくのめんどくさい」） */
+function buildPractice(){
+  const el = document.getElementById("practice");
+  if (!el) return;
+  const b = best();
+  el.innerHTML = "";
+  const opts = [30, 60, 90, 120, 150].filter(n => b >= n);
+  if (!opts.length) return;
+  const lab = document.createElement("span"); lab.textContent = "練習（記録には残らない）";
+  el.appendChild(lab);
+  for (const n of opts){
+    const btn = document.createElement("button");
+    btn.textContent = n + "から";
+    btn.onclick = () => start(n);
+    el.appendChild(btn);
+  }
+}
+
+function start(from){
+  from = (typeof from === "number" && from > 0) ? from : 0;
   clearOverTimers();
   initAudio();
   if (actx && actx.state === "suspended") actx.resume();
@@ -2504,6 +2673,8 @@ function start(){
   S.running = true;
   S.paused = false;
   S.combo = 0;
+  S.practiceFrom = from;
+  S.lastOff = null;
   S.prev = -1; S.actives = []; S.lastReel = -1;
   S.roundKind = ""; S.roundAt = -9999; S.stageLv = 0; S.stageAt = -9999;
   ART_CACHE.clear();
@@ -2554,7 +2725,7 @@ function frame(now){
         if (reel.state === "spin"){
           if (advanceReel(reel, dt)) koma = true;
           vmax = Math.max(vmax, reel.vNow);
-          if (now - reel.spinAt > S.limit) autoMissReel(i);
+          if (now - reel.spinAt > (reel.limit || S.limit)) autoMissReel(i);
         }
         if (reel.state === "snap"){
           const done = stepSnap(reel, now);
@@ -2612,10 +2783,24 @@ addEventListener("keydown", (e) => {
   press(i);
 }, { passive:false });
 
+/* **ストップボタンの上だけ効く。**それ以外の場所は何もしない（本人の指示・2026-09-03）。
+   当たりはボタンの絵より広く、台座の高さいっぱい＋左右に少し（指で押すため）。
+   canvas は画面いっぱいなので clientX/Y がそのまま版面の座標 */
+function buttonAt(x, y){
+  if (!L) return -1;
+  // ボタンの列の帯（上下に少し余裕）。**帯の中なら左右は画面の端まで3分割**——
+  // スマホは右ボタンのすぐ隣が MAX BET と投入口で、そこに指が落ちて無反応になっていた
+  const top = L.deck.y - L.deck.h * 0.35, bottom = L.deck.y + L.deck.h * 1.35;
+  if (y < top || y > bottom) return -1;
+  const cx = L.btns.map(b => b.x + b.w/2);
+  return x < (cx[0] + cx[1]) / 2 ? 0 : x < (cx[1] + cx[2]) / 2 ? 1 : 2;
+}
 cv.addEventListener("pointerdown", (e) => {
   if (!S.running) return;
-  const x = e.clientX;
-  press(x < W/3 ? 0 : x < W*2/3 ? 1 : 2);
+  const i = buttonAt(e.clientX, e.clientY);
+  if (i < 0) return;
+  e.preventDefault();
+  press(i);
 });
 
 /* --- 席を外したとき --------------------------------------------------
@@ -2666,7 +2851,8 @@ volRange.oninput = () => { vol = Number(volRange.value)/100; applyVol(); };
   document.getElementById("hud").addEventListener(ev, e => e.stopPropagation());
 });
 
-document.getElementById("startBtn").onclick = start;
+document.getElementById("startBtn").onclick = () => start(0);
+buildPractice();
 </script>
 </body>
 </html>
