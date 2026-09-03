@@ -53,7 +53,8 @@ const DRIVER = `
   const D = window.__lab = { T: () => T };
   // 最初だけ MAX BET → レバー（2026-09-03）。ここで済ませて、導入が回り出す直前まで進める
   D.begin = () => { S.t = T; last = 0; try{ localStorage.removeItem("ogyanun.777combo.top"); }catch(e){} start(); D.tick(2); pressMaxBet(); D.tick(2); pullLever(); };
-  D.lever = () => { const r = pullLever(); D.tick(1); return { ok: r, phase: S.phase, extra: !!S.extra }; };
+  // 復活待ち：小さいレバー → でっかいレバーが出る（520ms）→ 下げる（pullBig）→ 420ms 後に課題
+  D.lever = () => { const r = pullLever(); D.tick(36); const r2 = (S.phase === "pull") ? pullLever() : null; D.tick(30); return { ok: r, big: r2, phase: S.phase, extra: !!S.extra, kind: S.extra && S.extra.kind }; };
   D.tick = (n) => { for (let i = 0; i < (n||1); i++){ T += FR; frame(T); } };
   // いま回っている（止められる）リール。無ければ -1
   D.spinningReel = () => { if (S.phase === "intro") { for (let k = 0; k < 3; k++) if (S.reels[k].state === "spin") return k; return -1; }
@@ -343,7 +344,8 @@ async function main(){
     // 任意の式をページで評価する（デバッグ用）。第2引数が式。第3引数があればスクショの出力先
     const { cdp, kill } = await launch(url, Number(process.env.W || 1600), Number(process.env.H || 900));
     try {
-      console.log(await cdp.evalJs(rest[0]));
+      // 式が "await:" で始まれば Promise を待つ（結果画面の setTimeout を見るときなど）
+      console.log(rest[0].startsWith("await:") ? await cdp.evalJs(rest[0].slice(6), true) : await cdp.evalJs(rest[0]));
       if (rest[1]) await shot(cdp, rest[1]);
     } finally { kill(); }
   } else if (mode === "seq"){

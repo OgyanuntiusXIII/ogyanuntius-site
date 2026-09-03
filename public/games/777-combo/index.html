@@ -238,8 +238,9 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
         <h2>3. 台の変化</h2>
         <ul>
           <li><b>30コンボごとにステージ</b>：30 ダブル（2本）／60 高速／90 トリプル（3本）／120 逆転／150 無双。パネルの色と曲の調が変わる。</li>
-          <li><b>2本・3本は7が来る間がずれる。</b>同時押しは効かない。情報帯の<b>ナビ（①②③）</b>が押す順を示す。</li>
-          <li>90コンボからは<b>ブラインド</b>：1本にシャッターが降りて見えない。枠の脈と拍で押す。</li>
+          <li><b>2本・3本は7が来る間がずれる。</b>同時押しは効かない。左から順に来る。</li>
+          <li><b>ビタの次の回はナビ回</b>：3本回って、上パネルに<b>押す順</b>が大きく出る。順どおりに全部7で止めれば <b>+5</b>。</li>
+          <li>90コンボからは<b>ブラインド</b>：1本にシャッターが降りて<b>中段だけ見える</b>。枠の脈と拍で押す。</li>
         </ul>
       </section>
       <section class="page">
@@ -247,7 +248,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
         <ul>
           <li><b>3ビタごとに Vストック</b>：外しても1回だけ無かったことにして7へ引き込む。使うまで持ち越し。告知ランプが灯る。</li>
           <li><b>5ビタで左のモニターが飛び出し「7を狙え！」</b>：指定の線に7を3つ。揃えば <b>+10</b>（Vストックも +1）。2つまでは +2×揃った数。</li>
-          <li><b>10ビタで右に「復活」</b>：外したら暗転してレバーだけ光る。叩いて<b>「BARを狙え！」</b>。中段にBAR3つで復活 <b>+10</b>。</li>
+          <li><b>10ビタで右に「復活」</b>：外したら暗転してレバーだけ光る。叩くと<b>でっかいレバー</b>が出てくるので下げる。リールがゆっくり回って<b>BARだけ光る</b>。中段にBAR3つで復活 <b>+10</b>。</li>
+          <li><b>ビタ3連続でルーレット</b>：上から役物が降りてきて回る。MAX BET かボタンで止めて、出た目のぶん（+3〜+10・Vストック・コイン）。</li>
           <li>2本・3本を全部ビタで<b>全ビタ</b>（+6／+10）。77・177…は<b>ラッキー7</b>。<b>777 でエンディング</b>。</li>
         </ul>
       </section>
@@ -753,6 +755,12 @@ const S = {
   deadReel:-1, deadAt:-9999,       // 外したリールと、その時刻
   leverAt:-9999, betAt:-9999,      // レバーを叩いた／MAX BET を押した時刻（動きと光）
   vStock:0, stockAt:-9999, stockGotAt:-9999, savedAt:-9999,   // Vストック：ためた数、使った時刻、ためた時刻、救われた停止の時刻
+  naviPending:false, navi:null, naviAt:-9999,   // ナビ回：ビタの次の回。{ order:[押す順], k:止めた数, ok:順どおりか }
+  justStreak:0, rouletteQueued:false, roulette:null, rouletteAt:-9999, rouletteText:"",   // ルーレット（ビタ3連続）
+  patOut:0,                        // パトランプ（復活待ち）が出ている量
+  vPlateAt:-9999,                  // V役物（Vストック発動）が降りた時刻
+  bannerAt:-9999, bannerText:"", bannerSub:"",   // 垂れ幕（ステージ昇格・完全制覇）
+  big:null,                        // でっかい下げレバー（復活）{ t0, stage: out/ready/pulled/back, pulledAt, backAt }
   roundJust:0, allJustAt:-9999, allJustN:0,   // この回のビタ数（全ビタボーナス）
   say:null,                        // モニターの一言 { text, at }
   ending:false, endingAt:-9999, endClank:0, luckyAt:-9999,   // 777のエンディングとラッキー7
@@ -806,7 +814,7 @@ let lightK = OPT.light / 100;                 // 光り物（閃光・放射・�
 const MIX = { se: 0.85, bgm: 0.425 };         // 100% のときの経路の音量（これまでの混ぜ具合そのまま）
 let vol = 1.0, muted = OPT.muted, audioDead = false;
 let seBus = null;                             // 効果音の経路（BGM は bgGain）
-const MAX_VOICES = 16;
+const MAX_VOICES = 24;
 let voices = 0;
 
 function initAudio(){
@@ -984,6 +992,7 @@ function sndKind(kind){
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
       o.connect(g); g.connect(seBus); o.start(t); o.stop(t + 0.28); }
   } else if (kind === "ブラインド"){ sndServo(0.30); noise(t + 0.26, 0.04, 0.22, 2600, 1.6); }
+  else if (kind === "ナビ"){ tone(1046, t, 0.07, "square", 0.10); tone(1318, t + 0.08, 0.07, "square", 0.10); tone(1568, t + 0.16, 0.14, "square", 0.11); }
   else if (kind === "逆転"){
     if (voices < MAX_VOICES){ voices++; const o = actx.createOscillator(), g = actx.createGain(); o.onended = () => { voices--; };
       o.type = "square"; o.frequency.setValueAtTime(1800, t); o.frequency.exponentialRampToValueAtTime(300, t + 0.30);
@@ -1042,13 +1051,31 @@ function sndLever(){
     o.connect(g); g.connect(seBus); o.start(t); o.stop(t + 0.22);
   }
 }
-/** ビタ押しの「ピンッ」。高くて短い */
-function sndJust(){
+/** 垂れ幕の「バサッ」 */
+function sndCloth(){ if (!actx || audioDead) return; noise(actx.currentTime, 0.14, 0.18, 700, 0.6); noise(actx.currentTime + 0.05, 0.10, 0.10, 300, 0.5); }
+/** ビタ押しの「キュイン！」。**脳汁**（本人 2026-09-04）：跳ね上げ＋高い分散和音＋底のドン＋きらめきの尾。
+    連続ビタで半音ずつ上がる（6まで） */
+function sndJust(streak){
   if (!actx || audioDead) return;
   const t = actx.currentTime;
-  tone(3136, t + 0.02, 0.10, "sine", 0.14);
-  tone(4186, t + 0.06, 0.16, "sine", 0.10);
-  noise(t, 0.03, 0.10, 6500, 3);
+  const up = Math.pow(2, Math.min(6, streak || 0) / 12);
+  const osc = (type, f0, f1, dur, peak) => {
+    if (voices >= MAX_VOICES) return;
+    voices++;
+    const o = actx.createOscillator(), g = actx.createGain(); o.onended = () => { voices--; };
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.55);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(seBus); o.start(t); o.stop(t + dur + 0.02);
+  };
+  osc("sawtooth", 700 * up, 3400 * up, 0.20, 0.15);            // 跳ね上げ「キュイーン」
+  osc("triangle", 170, 48, 0.20, 0.30);                        // 底の「ドン」
+  [2093, 2637, 3136, 4186].forEach((f, k) => {                 // 高い分散和音 C-E-G-C
+    tone(f * up, t + 0.04 + k * 0.035, 0.22, "square", 0.085);
+    tone(f * up * 0.5, t + 0.04 + k * 0.035, 0.16, "triangle", 0.045);
+  });
+  tone(4186 * up, t + 0.30, 0.32, "sine", 0.07);               // こだま
+  noise(t, 0.05, 0.12, 7000, 2.5);                             // きらめき
+  noise(t + 0.06, 0.26, 0.05, 9000, 1.2, "highpass");
 }
 /** 告知ランプの「ペカッ」 */
 function sndPeka(big){
@@ -1592,12 +1619,20 @@ function drawReel(i){
     ctx.fillStyle = "rgba(255,240,210," + Math.min(1, S.hit*0.42*lightK).toFixed(3) + ")";
     ctx.fillRect(r.x, r.y, r.w, r.h);
   }
+  if (S.extra && S.extra.kind === "bar") drawBarGhost(i, reel);   // 復活の課題：BARだけ不気味に光る
   // **ブラインド回：金属のシャッターが窓を覆う。**回り出しで降りて、止まると上がる（開けた瞬間に結果が見える）
   const cov = shutterCover(reel);
   if (cov > 0){
-    const hh = snap(r.h * cov);
-    for (let yy = r.y; yy < r.y + hh; yy += PX*3){ pRect(r.x, yy, r.w, PX*2, CAB.trim); pRect(r.x, yy + PX*2, r.w, PX, CAB.trimLo); }
-    pRect(r.x, r.y + hh - PX, r.w, PX, CAB.trimHi);
+    // **中段だけ見える。**上下からシャッターが閉まり、線の上の1コマぶんは開いたまま
+    //（本人 2026-09-04「ブラインドは真ん中だけ見えるようにして。さすがに鬼難易度すぎる」）
+    const full = (r.h - L.cell) / 2, hh = snap(full * cov);
+    if (hh > 0){
+      for (let yy = r.y; yy < r.y + hh; yy += PX*3){ pRect(r.x, yy, r.w, PX*2, CAB.trim); pRect(r.x, yy + PX*2, r.w, PX, CAB.trimLo); }
+      pRect(r.x, r.y + hh - PX, r.w, PX, CAB.trimHi);
+      const y1 = r.y + r.h - hh;
+      for (let yy = y1; yy < r.y + r.h; yy += PX*3){ pRect(r.x, yy, r.w, PX*2, CAB.trim); pRect(r.x, yy + PX*2, r.w, PX, CAB.trimLo); }
+      pRect(r.x, y1, r.w, PX, CAB.trimHi);
+    }
   }
   ctx.restore();
 }
@@ -1626,7 +1661,7 @@ function drawPayline(){
 
 /** どれだけ灯っているか。段の下地に、当たった瞬間の熱を重ねる */
 function litLevel(){
-  if (S.phase === "over" || S.phase === "dead") return 0;
+  if (S.phase === "over" || S.phase === "dead" || S.phase === "pull") return 0;
   const tier = tierOf(S.combo);
   return Math.max(S.heat, S.mega, Math.min(0.6, tier * 0.08));
 }
@@ -1689,6 +1724,7 @@ function drawTopPanel(tier){
   glassFrame(p.x, p.y, p.w, p.h);
   ctx.save();
   ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+  if (!L.wings && S.big){ drawBigLever(p.x, p.y, p.w, p.h); ctx.restore(); return; }
   if (!L.wings && (S.extra || S.extraPending || S.phase === "dead")){ drawAimBoard(p.x, p.y, p.w, p.h); ctx.restore(); return; }
 
   const pal = stagePal();
@@ -1815,39 +1851,9 @@ function drawInfo(){
   const smH = f.h*0.40, wSeg = segWidth(smH, 4);
   drawPixelText("BEST", f.x + f.w - PX*4, f.y + f.h*0.24, lab, "#8a8f98", "right", enFont(), 11);
   drawSeg(f.x + f.w - PX*4 - wSeg, f.y + f.h*0.44, smH, best(), CAB.segBest, 4);
-  // 早い/遅いのメーターは外した（本人 2026-09-04「邪魔だからいらない」。ズレは窓の目印に残っている）。代わりに押し順ナビ
-  drawNav(f);
+  // 早い/遅いのメーターは外した（本人 2026-09-04「邪魔だからいらない」。ズレは窓の目印に残っている）。真ん中は Vストックの数
+  if (S.vStock > 0) drawPixelText(STOCK_NAME + " ×" + S.vStock, f.x + f.w*0.52, f.y + f.h*0.52, lab, "#ffe27a", "center", null, 11);
   ctx.restore();
-}
-
-/** 押し順ナビ（本人 2026-09-04「よくあるナビ表記。左、右、中とかで順おし促したり、バーのナビとか」）
-    情報帯の真ん中に 左・中・右 の3つ。回す順の番号を灯し、**次に押すものが点滅**、止めた所は緑。
-    課題なら狙う絵柄（7／BAR）をナビの左に出す */
-function drawNav(f){
-  const tall = f.h >= PX*11;
-  const cx = f.x + f.w*0.55, gap = PX*10, r = PX*2.5;
-  const cy = tall ? f.y + f.h*0.68 : f.y + f.h*0.52;
-  const order = {};
-  if (S.phase === "round") S.actives.forEach((i, k) => { order[i] = k + 1; });
-  let next = -1;
-  if (S.phase === "round") for (const i of S.actives){ const st = S.reels[i].state; if ((st === "spin" || st === "wait") && (next < 0 || order[i] < order[next])) next = i; }
-  const blink = Math.floor(S.t / 200) % 2 === 0;
-  for (let i = 0; i < 3; i++){
-    const x = cx + (i - 1) * gap;
-    if (tall) drawPixelText(REEL_NAME[i], x, f.y + f.h*0.18, Math.max(2, PX-2), "#6a6f78", "center", null, 9);
-    const k = order[i];
-    const done = !!k && S.reels[i].state === "done";
-    const on = !!k && !done;
-    const col = on ? ((i === next && blink) ? "#fff1a8" : CAB.gold) : done ? "#3ec8a0" : CAB.goldOff;
-    pDisk(x, cy, r + PX, "#0b0c0f"); pDisk(x, cy, r, col);
-    if (k) drawPixelText(String(k), x, cy, Math.max(1, PX-2), (on || done) ? "#1a1408" : "#6a6f78", "center", enFont(), 9);
-  }
-  const e = S.extra;
-  if (e){
-    const spr = SPRITES[e.kind === "bar" ? "bar" : "seven"];
-    if (spr){ const sz = PX*7; ctx.drawImage(spr, snap(cx - gap*2.2 - sz/2), snap(cy - sz/2), sz, sz); }
-    if (tall) drawPixelText("狙え", cx - gap*2.2, f.y + f.h*0.18, Math.max(2, PX-2), "#ffd15a", "center", null, 9);
-  }
 }
 
 /** 操作部の台座。手前へせり出している。天面は明るい帯 */
@@ -1859,7 +1865,7 @@ function drawDeck(){
   chromeBar(d.x + PX*2, d.y + d.h - PX*4, d.w - PX*4, PX*3);     // 前縁
   // MAX BET と投入口。**最初の1回だけ押す**（本人 2026-09-03）。押す番なら点滅
   const m = L.maxBet;
-  const betLive = S.running && S.phase === "bet";
+  const betLive = S.running && (S.phase === "bet" || (S.phase === "roulette" && S.roulette && S.roulette.stage === "spin"));
   const blink = Math.floor(S.t / 260) % 2 === 0;
   if (betLive) pRect(m.x - PX*2, m.y - PX*2, m.w + PX*4, m.h + PX*4, blink ? "#ffe27a" : "#a06c06");
   pBox(m.x, m.y, m.w, m.h, (betLive && blink) || S.t - S.betAt < 260 ? "#fff0a8" : "#d9a410", "#ffe27a", "#7a5a05", 1, true);
@@ -1970,6 +1976,7 @@ const SAY = {
   gauge:   ["行くぞ"], clear: ["揃った"], part: ["惜しい"], none: ["次だ"],
   armed:   ["一回だけ、拾ってやる"], dead: ["……まだだ"], lever: ["来い"], revived: ["戻ったぞ"],
   stage:   ["台が変わる"], lucky: ["ラッキー"], stock: ["ストック", "貯めた"], saved: ["今のは無し"], ending: ["……完璧だ"],
+  navi:    ["順に押せ"], naviOk: ["読めてる"], roulette: ["回せ"],
 };
 function say(key){ const a = SAY[key]; if (!a) return; S.say = { text: a[Math.floor(Math.random() * a.length)], at: S.t }; }
 
@@ -2047,7 +2054,7 @@ function drawDummy(x, y, w, h, big, meterH, floorY){
 /** 立ち絵のコマ。0=構え 1=突き 2=笑って突き。
     拍の頭で突いて構えに戻る（2拍に1回）。ビタの直後は笑って突く。節目・ステージ・ゲージ満タンは交互に連打 */
 function fighterFrame(){
-  if (!S.running || S.phase === "over" || S.phase === "dead") return 0;
+  if (!S.running || S.phase === "over" || S.phase === "dead" || S.phase === "pull") return 0;
   const beat = Math.floor((S.t - S.beat0) / beatMs());
   const ph = beatPhase(S.t);
   const crane = 3;                                          // 鶴の構え（絵が無ければ構えに落ちる）
@@ -2067,7 +2074,7 @@ const LED = { on:"#ff3b2a", mid:"#a4180f", off:"#2a0806", text:"#ff6a58" };
 
 /** モニターの中身。x,y,w,h は画面（黒いガラスの内側）。big=脇の大きい方 */
 function drawMonitorScreen(x, y, w, h, big){
-  const live = S.running && S.phase !== "dead" && S.phase !== "over";
+  const live = S.running && S.phase !== "dead" && S.phase !== "pull" && S.phase !== "over";
   const ph = live ? beatPhase(S.t) : 0.5;
   const kick = ph < 0.15 ? 1 - ph/0.15 : 0;
   // 地：黒。消灯ドットの格子を1回だけ焼いて貼る
@@ -2189,7 +2196,8 @@ function drawGimmickWing(){
   // 上：盤面
   glassFrame(scr.x, scr.y, scr.w, scr.h);
   ctx.save(); ctx.beginPath(); ctx.rect(scr.x, scr.y, scr.w, scr.h); ctx.clip();
-  if ((S.extra && S.extra.kind === "bar") || S.phase === "dead") drawAimBoard(scr.x, scr.y, scr.w, scr.h);
+  if (S.big) drawBigLever(scr.x, scr.y, scr.w, scr.h);
+  else if ((S.extra && S.extra.kind === "bar") || S.phase === "dead") drawAimBoard(scr.x, scr.y, scr.w, scr.h);
   else drawReviveScreen(scr.x, scr.y, scr.w, scr.h);
   ctx.restore();
   // 下：レール
@@ -2271,6 +2279,278 @@ function drawTray(){
   chromeBar(t.x + PX*2, t.y + t.h - PX*3, t.w - PX*4, PX*2);
 }
 
+/* =========================================================================
+   7.7 役物 — 本体から出てくるもの（本人 2026-09-04「本体から出てくるギミックはもっと増やしたほうが絶対に面白い。
+   あと4つくらい増やしたい。いろいろ役物つくろうよ」）
+     押し順ナビ（上パネル・ナビ回）／ルーレット（上から降りて回る・ビタ3連続）／
+     垂れ幕（ステージ昇格）／V役物（窓に降りる・Vストック発動）／パトランプ（本体の上に出て回る・復活待ち）
+   ========================================================================= */
+
+/** 押し順ナビ（大）。上パネルに、リールの列ごとに大きな番号。次に押す番号が点滅、止めたら緑
+    （本人 2026-09-04「パチスロみたいにリール下か上にでっかく出す」） */
+function drawNaviBig(){
+  const nv = S.navi;
+  if (!nv || S.phase !== "round") return;
+  const p = L.topPanel;
+  ctx.save(); ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+  const sz = Math.max(PX*10, snap(p.h*0.42)), cy = p.y + p.h*0.46;
+  ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(p.x, snap(cy - sz/2 - PX*2), p.w, sz + PX*4);
+  const blink = Math.floor(S.t / 180) % 2 === 0;
+  const nextReel = nv.k < 3 ? nv.order[nv.k] : -1;
+  for (let i = 0; i < 3; i++){
+    const k = nv.order.indexOf(i) + 1;
+    const r = L.reels[i], x = r.x + r.w/2;
+    const done = S.reels[i].state === "done";
+    const isNext = i === nextReel;
+    const face = done ? "#1f7a52" : isNext ? (blink ? "#fff1a8" : "#ffd15a") : "#7a5a05";
+    const ink = done ? "#bfffe0" : isNext ? "#3a2400" : "#3a2a08";
+    pBoxR(x - sz/2, cy - sz/2, sz, sz, face, done ? "#4ec89a" : "#fff6cc", done ? "#0e3a26" : "#5a3d00", 1, true);
+    drawPixelText(String(k), x, cy, Math.max(2, Math.floor(sz / 20)), ink, "center", enFont(), 12);
+  }
+  ctx.restore();
+}
+
+/** ルーレット。上パネルの上から降りてきて回る。MAX BET かストップボタンで止める（4秒で勝手に止まる）。
+    出た目：+3／+5／+7／+10／Vストック／コイン1000。止まったら目を見せて、上へ戻る */
+const ROULETTE = [
+  { t:"+3", c:3 }, { t:"+5", c:5 }, { t:"+10", c:10 }, { t:"Vストック", v:1 },
+  { t:"コイン", coin:1000 }, { t:"+3", c:3 }, { t:"+7", c:7 }, { t:"+5", c:5 },
+];
+const ROULETTE_SEC = Math.PI * 2 / ROULETTE.length;
+function startRoulette(){
+  S.rouletteQueued = false;
+  const pick = Math.floor(Math.random() * ROULETTE.length);
+  S.roulette = { stage:"drop", t0:S.t, ang:0, pick, spinAt:0, brakeAt:0, angBrake:0, angStop:0, showAt:0, liftAt:0 };
+  S.phase = "roulette"; S.actives = []; S.roundKind = "";
+  sndServo(0.42); setTimeout(() => { if (S.running) sndClank(true); }, 420);
+  say("roulette");
+}
+function stopRoulette(){
+  const r = S.roulette;
+  if (!r || r.stage !== "spin") return false;
+  r.stage = "brake"; r.brakeAt = S.t; r.angBrake = r.ang;
+  // 針は上（角度0）。目 pick の中心が針に来る角度まで、あと2周ちょっと回して止まる
+  const th = r.pick * ROULETTE_SEC + ROULETTE_SEC / 2;
+  r.angStop = r.ang + mod(-th - r.ang, Math.PI * 2) + Math.PI * 4;
+  sndClick();
+  return true;
+}
+function stepRoulette(now, dt){
+  const r = S.roulette;
+  if (!r) return;
+  const tickSec = (a0, a1) => { if (Math.floor(a0 / ROULETTE_SEC) !== Math.floor(a1 / ROULETTE_SEC)) sndClick(); };
+  if (r.stage === "drop"){ if (now - r.t0 > 420){ r.stage = "spin"; r.spinAt = now; sndSpin(); } return; }
+  if (r.stage === "spin"){
+    const a0 = r.ang; r.ang += 0.20 * dt / 16.7; tickSec(a0, r.ang);
+    if (now - r.spinAt > 4000) stopRoulette();
+    return;
+  }
+  if (r.stage === "brake"){
+    const t = Math.min(1, (now - r.brakeAt) / 1400);
+    const a0 = r.ang; r.ang = r.angBrake + (r.angStop - r.angBrake) * (1 - Math.pow(1 - t, 3)); tickSec(a0, r.ang);
+    if (t >= 1){
+      r.stage = "show"; r.showAt = now;
+      const pz = ROULETTE[r.pick];
+      S.rouletteAt = now; S.rouletteText = pz.t + (pz.c ? " コンボ" : pz.coin ? " " + pz.coin + "枚" : "");
+      sndClank(false);
+      S.flash = Math.max(S.flash, 0.6); S.shake = 1; S.peka = 1; S.mega = Math.max(S.mega, 0.7);
+      burst(90, 5); spawnCoins(pz.coin ? 60 : 30);
+      if (pz.v){ S.vStock += pz.v; S.stockGotAt = now; }
+      if (pz.coin){ S.coins += pz.coin; S.payFlash = 1; }
+      sndFanfare(pz.c >= 10 ? 6 : 4);
+      if (pz.c && addCombo(pz.c)) return;          // 777 に届けばエンディング（startEnding が畳む）
+    }
+    return;
+  }
+  if (r.stage === "show"){ if (now - r.showAt > 1300){ r.stage = "lift"; r.liftAt = now; sndServo(0.35); } return; }
+  if (r.stage === "lift"){
+    if (now - r.liftAt < 420) return;
+    S.roulette = null;
+    S.phase = "round";
+    if (S.extraPending) startAim("seven");
+    else { S.dueBeat = nextBeat(now); nextRound(true); }
+  }
+}
+function drawRoulette(){
+  const r = S.roulette;
+  if (!r) return;
+  const p = L.topPanel;
+  const a = S.t - r.t0;
+  const k = r.stage === "drop" ? 1 - Math.pow(1 - Math.min(1, a / 420), 3) : r.stage === "lift" ? Math.max(0, 1 - (S.t - r.liftAt) / 420) : 1;
+  const R = p.h * 0.46, cx = p.x + p.w * 0.5, cy = p.y + p.h * 0.5 - (1 - k) * (p.h + R);
+  ctx.save(); ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+  ctx.fillStyle = "rgba(0,0,0," + (0.62 * k).toFixed(3) + ")"; ctx.fillRect(p.x, p.y, p.w, p.h);
+  // 盤：8つの目。針は上。ドットの升目には載せない（回るものはなめらかでよい）
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(r.ang);
+  for (let j = 0; j < ROULETTE.length; j++){
+    const a0 = -Math.PI/2 + j * ROULETTE_SEC, a1 = a0 + ROULETTE_SEC;
+    const win = r.stage === "show" && j === r.pick;
+    ctx.fillStyle = win ? "#fff1a8" : (j % 2 ? "#b81b21" : "#ffc21a");
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a0, a1); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#2c2f36"; ctx.lineWidth = 2; ctx.stroke();
+  }
+  ctx.restore();
+  // 目の文字（回さずに、目の中心へ置く）
+  for (let j = 0; j < ROULETTE.length; j++){
+    const th = -Math.PI/2 + j * ROULETTE_SEC + ROULETTE_SEC/2 + r.ang;
+    const tx = cx + Math.cos(th) * R * 0.66, ty = cy + Math.sin(th) * R * 0.66;
+    const pz = ROULETTE[j];
+    drawPixelText(pz.t, tx, ty, Math.max(1, PX - 2), j % 2 ? "#fff3e0" : "#3a2400", "center", pz.c ? enFont() : null, pz.c ? 12 : 9);
+  }
+  // 軸と針
+  pDisk(cx, cy, R * 0.18, "#2c2f36"); pDisk(cx, cy, R * 0.12, "#cfd3d9");
+  pTri(cx, cy - R - PX*2, PX*5, "#ffffff", 1);
+  ctx.save(); ctx.translate(cx, cy - R + PX); ctx.rotate(Math.PI/2); ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-PX*4, -PX*3); ctx.lineTo(-PX*4, PX*3); ctx.closePath(); ctx.fill(); ctx.restore();
+  if (r.stage === "show"){
+    const pz = ROULETTE[r.pick];
+    const label = pz.t + (pz.coin ? " " + pz.coin : "");
+    const sc = fitScale(label, 12, p.w * 0.6, Math.max(2, PX));
+    pRect(cx - p.w*0.32, cy - textH(12, sc)/2 - PX, p.w*0.64, textH(12, sc) + PX*2, "rgba(20,4,4,.85)");
+    drawPixelText(label, cx, cy, sc, "#ffe14a", "center", pz.c ? enFont() : null, 12);
+  }
+  ctx.restore();
+}
+
+/** でっかい下げレバー。復活待ちでレバーを叩くと、右の画面（スマホは上パネル）から右へ滑り出て、下げると復活の課題が始まる
+    （本人 2026-09-04「でっかい上から下に下げるレバーが右のあの画面から出てきて、それを下げるとゆっくりリールが回って」） */
+function drawBigLever(x, y, w, h){
+  const b = S.big;
+  if (!b) return;
+  const a = S.t - b.t0;
+  const slide = b.stage === "out" ? 1 - Math.pow(1 - Math.min(1, a / 520), 3) : b.stage === "back" ? Math.max(0, 1 - (S.t - b.backAt) / 450) : 1;
+  const pull = (b.stage === "pulled" || b.stage === "back") ? Math.min(1, (S.t - b.pulledAt) / 300) : 0;
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  const X = x + (1 - slide) * w;                    // 右から滑り出る
+  ctx.fillStyle = "#050608"; ctx.fillRect(X, y, w, h);
+  const cx = X + w/2, top = y + h*0.34, bot = y + h*0.84, travel = bot - top;
+  pRect(cx - PX*3, top - PX*2, PX*6, travel + PX*4, "#15171b"); pRect(cx - PX*2, top - PX, PX*4, travel + PX*2, "#2c2f36");
+  const e = pull < 0.85 ? pull / 0.85 : 1 + Math.sin((pull - 0.85) / 0.15 * Math.PI) * 0.05;
+  const hy = top + travel * Math.min(1.05, e);
+  pRect(cx - PX*2, top - PX*2, PX*4, Math.max(PX, hy - top + PX*2), "#9aa0aa"); pRect(cx - PX*2, top - PX*2, PX, Math.max(PX, hy - top + PX*2), "#e2e5ea");
+  const R = Math.max(PX*3, Math.min(PX*7, snap(w * 0.12), snap(h * 0.09)));
+  pDisk(cx, hy, R + PX, "#08090b"); pDisk(cx, hy, R, "#a81f11"); pDisk(cx - R*0.2, hy - R*0.2, R*0.6, "#d92a18"); pDisk(cx - R*0.4, hy - R*0.4, R*0.2, "#ffcabf");
+  const blink = Math.floor(S.t / 220) % 2 === 0;
+  if (b.stage === "ready"){
+    drawPixelText("▼ 下げろ", cx, y + h*0.13, fitScale("▼ 下げろ", 12, w - PX*6, Math.max(2, PX)), blink ? "#ffd0c8" : LED.on, "center", null, 12);
+    if (h > PX*40) drawPixelText("復活の課題", cx, y + h - PX*5, fitScale("復活の課題", 11, w - PX*6, Math.max(2, PX-2)), LED.text, "center", null, 11);
+  } else if (b.stage !== "out"){
+    drawPixelText("BARを狙え！", cx, y + h*0.13, fitScale("BARを狙え！", 12, w - PX*6, Math.max(2, PX)), "#dfe6ff", "center", null, 12);
+  }
+  ctx.fillStyle = "rgba(0,0,0,.18)"; for (let yy = y; yy < y + h; yy += PX*2) ctx.fillRect(x, snap(yy), w, PX);
+  ctx.restore();
+}
+/** 復活待ち → でっかいレバー → 下げる → 課題。毎フレーム */
+function stepPull(now){
+  const b = S.big;
+  if (!b) return;
+  if (b.stage === "out" && now - b.t0 > 520) b.stage = "ready";
+  if (b.stage === "pulled" && now - b.pulledAt > 420){
+    b.stage = "back"; b.backAt = now;
+    S.beat0 = now;
+    startAim("bar", S.deadReel);
+    sndServo(0.4);
+  }
+  if (b.stage === "back" && now - b.backAt > 450) S.big = null;
+}
+/** でっかいレバーを下げる。ready のときだけ */
+function pullBig(){
+  const b = S.big;
+  if (!b || b.stage !== "ready") return false;
+  b.stage = "pulled"; b.pulledAt = S.t;
+  sndLever(); setTimeout(() => { if (S.running) sndClank(true); }, 260);
+  S.shake = Math.max(S.shake, 0.6);
+  return true;
+}
+
+/** 復活の課題：窓を落として、**BARだけ不気味に光る**（本人 2026-09-04）。揃ったら白く点滅 */
+function drawBarGhost(i, reel){
+  const r = L.reels[i], R = L.drumR, spr = SPR_N * sprPx;
+  ctx.fillStyle = "rgba(4,6,14,.60)"; ctx.fillRect(r.x, r.y, r.w, r.h);
+  const e = S.extra, pulse = 0.5 + 0.5 * Math.sin(S.t / 140);
+  const win = e.stage !== "ready" && e.stage !== "play" && e.ok;
+  const base = Math.round(reel.pos);
+  for (let k = -3; k <= 3; k++){
+    const p = base + k;
+    if (STRIPS[i][mod(p, N)] !== "bar") continue;
+    const th = (reel.pos - p) * (2*Math.PI / N);
+    if (Math.abs(th) > 0.68) continue;
+    const y = L.payY + R * Math.sin(th), sc = Math.cos(th);
+    const w = spr, h = spr * sc, x = r.x + (r.w - w)/2, cx = x + w/2;
+    if (GLOW_BAR){
+      const gb = w * (GLOW_BAR.grid / SPR_N), gbh = h * (GLOW_BAR.grid / SPR_N);
+      ctx.globalAlpha = win ? (Math.floor(S.t / 90) % 2 ? 1 : 0.35) : 0.30 + 0.45 * pulse;
+      ctx.drawImage(GLOW_BAR, cx - gb/2, y - gbh/2, gb, gbh);
+    }
+    ctx.globalAlpha = 1;
+    ctx.drawImage(SPRITES.bar, x, y - h/2, w, h);
+    if (win && Math.floor(S.t / 90) % 2){ ctx.globalAlpha = 0.65; ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y - h/2, w, h); ctx.globalAlpha = 1; }
+  }
+}
+
+/** 垂れ幕。ステージ昇格で上パネルの上から布が降りて、2秒見せて巻き上がる。完全制覇でも */
+function drawBanner(){
+  const a = S.t - S.bannerAt;
+  if (a < 0 || a > 3000) return;
+  const p = L.topPanel;
+  const k = a < 400 ? 1 - Math.pow(1 - a/400, 3) : a < 2600 ? 1 : Math.max(0, 1 - (a - 2600)/400);
+  const h = snap(p.h * 0.62 * k);
+  if (h < PX*3) return;
+  ctx.save(); ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+  const x = p.x + PX*4, w = p.w - PX*8, y = p.y;
+  pRect(x, y, w, h, "#f4ead2");
+  pRect(x, y, w, PX, "#8e1216"); pRect(x, y + h - PX*3, w, PX*2, "#8e1216");
+  for (let xx = x + PX*3; xx < x + w - PX*3; xx += PX*8) pRect(xx, y + h - PX*5, PX*2, PX, "#c9b48a");   // 房
+  pRect(x - PX, y + h - PX, w + PX*2, PX*2, "#2c2f36");
+  if (k > 0.9){
+    const s1 = fitScale(S.bannerText, 12, w - PX*6, Math.max(2, PX));
+    drawPixelText(S.bannerText, p.x + p.w/2, y + h*0.38, s1, "#8e1216", "center", enFont(), 12);
+    if (S.bannerSub) drawPixelText(S.bannerSub, p.x + p.w/2, y + h*0.72, fitScale(S.bannerSub, 11, w - PX*6, Math.max(2, PX-1)), "#2c2f36", "center", null, 11);
+  }
+  ctx.restore();
+}
+
+/** V役物。Vストック発動で、上パネルの上から赤い板が降りて「V」が点滅する。その間、窓では外した1本が逆回転して7に座る */
+function drawVPlate(){
+  const a = S.t - S.vPlateAt;
+  if (a < 0 || a > 1500) return;
+  const p = L.topPanel;
+  const k = a < 200 ? a/200 : a < 1200 ? 1 : 1 - (a - 1200)/300;
+  const h = p.h, y = p.y - h * (1 - k);
+  ctx.save(); ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+  const blink = Math.floor(a / 110) % 2 === 0;
+  pBox(p.x, y, p.w, h, blink ? "#c8102e" : "#8e1216", "#ff6a58", "#4a0810", 2, true);
+  drawPixelText("V", p.x + p.w/2, y + h*0.44, Math.max(3, Math.floor(h * 0.6 / 16)), blink ? "#ffffff" : "#ffd0c8", "center", enFont(), 12);
+  const sub = STOCK_NAME + " 発動 ▶ 逆回転";
+  drawPixelText(sub, p.x + p.w/2, y + h*0.86, fitScale(sub, 11, p.w - PX*6, Math.max(2, PX-1)), "#ffe27a", "center", null, 11);
+  ctx.restore();
+}
+
+/** パトランプ。復活待ち（暗転）で本体の上、冠の両端から赤い回転灯がせり上がって回る。復活の課題の間も回り続ける */
+function drawPatLamp(){
+  const k = S.patOut;
+  if (k <= 0.01) return;
+  const u = L.u, cab = L.cab;
+  const rise = u * 0.06 * (1 - Math.pow(1 - k, 3));
+  ctx.save(); ctx.beginPath(); ctx.rect(-W, -H, W*3, H + cab.y + PX*2); ctx.clip();   // 冠より上だけ（本体の後ろから出てくる）
+  [[cab.x + u*0.12, 1], [cab.x + cab.w - u*0.12, -1]].forEach(([x, dir]) => {
+    const baseY = cab.y + u*0.03 - rise, r = u*0.028;
+    // 光の帯（回る）
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = Math.min(1, 0.45 * lightK) * k;
+    ctx.translate(x, baseY - r*0.4); ctx.rotate(dir * S.t / 150);
+    ctx.fillStyle = "rgba(255,60,40,1)";
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(u*0.30, -u*0.045); ctx.lineTo(u*0.30, u*0.045); ctx.closePath(); ctx.fill();
+    ctx.rotate(Math.PI); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(u*0.30, -u*0.045); ctx.lineTo(u*0.30, u*0.045); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // 台座と赤いドーム
+    pBox(x - r*1.2, baseY, r*2.4, r*1.6, "#6d727b", "#9aa0aa", "#3a3e45", 1, true);
+    pDisk(x, baseY - r*0.4, r*1.1, "#3a0a06");
+    pDisk(x, baseY - r*0.4, r, Math.floor(S.t / 110) % 2 ? "#ff4a3c" : "#c8102e");
+    pDisk(x - r*0.3, baseY - r*0.8, r*0.3, "#ffb0a0");
+  });
+  ctx.restore();
+}
+
 function drawCabinet(){
   const tier = S.phase === "over" ? 0 : tierOf(S.combo);
   ctx.save();
@@ -2278,6 +2558,10 @@ function drawCabinet(){
   drawShell();
   drawCrown(tier);
   drawTopPanel(tier);
+  drawNaviBig();               // 役物：上パネルに押し順（ナビ回）
+  drawRoulette();              // 役物：上から降りてくるルーレット
+  drawBanner();                // 役物：垂れ幕（ステージ昇格・完全制覇）
+  drawVPlate();                // 役物：上パネルに降りてくる「V」（Vストック発動。窓は逆回転を見せる）
   chromeBar(L.cab.x + PX*4, L.bezel.y - PX*4, L.cab.w - PX*8, PX*3);
   drawSides(tier);
   drawBezel(tier);
@@ -2445,7 +2729,18 @@ function drawCue(){
     if (L.wings && S.t - S.deadAt > 500) band(Math.floor(S.t/400) % 2 ? "レバーを叩け" + kb : "復活チャレンジ ▶ レバー", "#ff8a7a");
     return;
   }
+  if (S.phase === "pull"){
+    if (L.wings && S.big && S.big.stage === "ready") band("▼ 右のレバーを下げろ" + kb, "#ff8a7a");
+    return;
+  }
   if (S.phase === "ending"){ band(S.combo < 7777 ? "777 ▶ 完全制覇" : "7777 COMBO", "#fff3a0"); return; }
+  if (S.phase === "roulette"){
+    const r = S.roulette;
+    if (r && r.stage === "spin") band("ルーレット！ ▶ MAX BET か ボタンで止めろ", "#ffe07a");
+    else if (r && (r.stage === "show" || r.stage === "lift")) band("ルーレット ▶ " + S.rouletteText, "#fff3a0");
+    else band("ルーレット！", "#ffe07a");
+    return;
+  }
   if (S.phase !== "round") return;
   const cl = cueLevel(S.combo);
   for (const i of S.actives){
@@ -2472,12 +2767,15 @@ function drawCue(){
     }
   }
   else if (S.t - S.allJustAt < 1400){ text = "全ビタ！ +" + S.allJustN + " コンボ"; col = "#fff3a0"; }
-  else if (S.stageLv > 0 && S.t - S.stageAt < 1800){ text = "ステージ " + S.stageLv + " ▶ " + stageName(S.stageLv); col = "#fff3a0"; }
+  else if (S.stageLv > 0 && S.t - S.stageAt < 1800 && S.t - S.bannerAt > 3000){ text = "ステージ " + S.stageLv + " ▶ " + stageName(S.stageLv); col = "#fff3a0"; }
   else if (S.t - S.luckyAt < 1400){ text = "ラッキー 7 ▶ +777 コイン"; col = "#fff3a0"; }
+  else if (S.t - S.naviAt < 1400){ text = "ナビ達成！ +" + COMBO_NAVI + " コンボ"; col = "#fff3a0"; }
+  else if (S.t - S.rouletteAt < 1600){ text = "ルーレット ▶ " + S.rouletteText; col = "#fff3a0"; }
   else if (S.t - S.stockAt < 1400){ text = STOCK_NAME + " 発動 ▶ 残り " + S.vStock; col = "#fff3a0"; }
   else if (S.t - S.stockGotAt < 1200){ text = STOCK_NAME + " +1 ▶ 残り " + S.vStock; col = "#fff3a0"; }
   else if (S.roundKind && S.t - S.roundAt < 900){
     text = S.roundKind + "!";
+    if (S.roundKind === "ナビ") text = "ナビ！ ▶ 順に押せ";
     col = S.roundKind === "逆転" ? "#9ef1ff" : S.roundKind === "高速" ? "#ffc4a8" : S.roundKind === "ブラインド" ? "#c8d0ff" : "#ffe07a";
   }
   else if (S.combo < 4 && S.actives.length){ text = "つぎ " + REEL_NAME[S.actives[0]] + " ▶ 拍で押す"; }
@@ -2816,11 +3114,12 @@ function drawDark(hR){
   ctx.save();
   ctx.beginPath(); ctx.rect(-W, -H, W*3, H*3);
   if (L.wings && hR < 1){ const q = L.wings.gimScr, dx = -L.wings.hide.R * hR; ctx.rect(q.x + dx - PX*2, q.y - PX*2, q.w + PX*4, q.h + PX*4); }
+  if (!L.wings && S.big){ const p = L.topPanel; ctx.rect(p.x - PX*2, p.y - PX*2, p.w + PX*4, p.h + PX*4); }
   ctx.clip("evenodd");
   ctx.fillStyle = "rgba(0,0,0," + (S.dark * 0.66).toFixed(3) + ")";
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
-  if (S.phase === "dead") drawLever();
+  if (S.phase === "dead" || S.phase === "pull") drawLever();
 }
 
 function render(){
@@ -2848,6 +3147,7 @@ function render(){
   }
   drawCabinet();
   if (S.dark > 0.01) drawDark(hR);
+  drawPatLamp();               // 役物：暗転の上でも光る（復活待ち）
 
   // 前に出す光。リールの窓だけは必ず抜く（企画書8章の約束）
   ctx.save();
@@ -2919,6 +3219,16 @@ function gapAhead(i, pos, dir){
     `window.__NO_STAGES` を立てると単発だけ（検証用） */
 function pickRound(){
   const st = (typeof __NO_STAGES !== "undefined" && __NO_STAGES) ? 0 : stageOf(S.combo);
+  // **ナビ回**（本人 2026-09-04「ビタでナビが出て、達成できたらさらにコンボ」）：ビタの次の回は3本、押す順を上パネルに大きく出す。
+  // 7は押す順に来る。順どおりに全部7で止めれば +5
+  if (S.naviPending){
+    const order = [0, 1, 2];
+    for (let k = 2; k > 0; k--){ const j = Math.floor(Math.random() * (k + 1)); const t = order[k]; order[k] = order[j]; order[j] = t; }
+    const reels = [0, 1, 2];
+    const fast = (st >= 2 && Math.random() < 0.25) ? [Math.floor(Math.random() * 3)] : [];
+    const reverse = (st >= 4 && Math.random() < 0.30) ? [Math.floor(Math.random() * 3)] : [];
+    return { reels, fast, reverse, blind: [], navi: order, kind: "ナビ" };
+  }
   const r = Math.random();
   let n = 1;
   if (st >= 3 && r < 0.20) n = 3;
@@ -2933,7 +3243,7 @@ function pickRound(){
   const force = (typeof __FORCE_BLIND !== "undefined" && __FORCE_BLIND);
   const blind = (force || (st >= 3 && Math.random() < (st >= 5 ? 0.30 : 0.12))) ? [reels[Math.floor(Math.random()*reels.length)]] : [];
   const kind = n === 3 ? "トリプル" : n === 2 ? "ダブル" : reverse.length ? "逆転" : fast.length ? "高速" : blind.length ? "ブラインド" : "";
-  return { reels, fast, reverse, blind, kind };
+  return { reels, fast, reverse, blind, navi: null, kind };
 }
 
 /** 次の回を組む。**回すリールの最初の7が拍に来る**ように回り出しを逆算する。
@@ -2942,6 +3252,8 @@ function pickRound(){
 function nextRound(firstRound){
   setDifficulty();
   const rd = pickRound();
+  S.naviPending = false;
+  S.navi = rd.navi ? { order: rd.navi, k: 0, ok: true } : null;
   S.actives = rd.reels;
   S.prev = rd.reels[rd.reels.length - 1];
   const beat = beatMs();
@@ -2962,17 +3274,20 @@ function nextRound(firstRound){
     reel.state = "wait"; reel.spinning = false; reel.snap = null; reel.vNow = 0; reel.targets = null; reel.aim = null;
     reel.blind = rd.blind.includes(i);
     if (!reel.blind){ reel.blindAt = 0; reel.openAt = 0; }
+    reel.rescue = false;
   }
   // 前の7の拍から2拍あと。最初だけ、ひと呼吸おく
   let B = firstRound ? nextBeat(S.t + 700 + t7max) : nextBeat(S.dueBeat + beat*1.5);
   if (B - t7max < S.t + 30) B = nextBeat(S.t + 30 + t7max);
   const n = rd.reels.length;
-  rd.reels.forEach((i, k) => { const reel = S.reels[i]; reel.dueAt = B + beat * k / n; reel.spinAt = reel.dueAt - reel.t7; });
+  const seq = rd.navi || rd.reels;     // ナビ回は押す順に7が来る
+  seq.forEach((i, k) => { const reel = S.reels[i]; reel.dueAt = B + beat * k / n; reel.spinAt = reel.dueAt - reel.t7; });
   S.dueBeat = B + beat * (n - 1);     // 最後の1本を止める予定の拍
   S.roundKind = rd.kind; S.roundAt = S.t;
   if (rd.kind) sndKind(rd.kind);
   if (rd.kind === "ダブル") say("double"); else if (rd.kind === "トリプル") say("triple");
   else if (rd.kind === "高速") say("fast"); else if (rd.kind === "逆転") say("reverse"); else if (rd.kind === "ブラインド") say("blind");
+  else if (rd.kind === "ナビ") say("navi");
   S.phase = "round";
 }
 
@@ -3065,11 +3380,14 @@ function missTarget(i, pos, dir, win, list, symName){
 
 /** 止める。ここが全部 */
 function press(i){
+  if (S.phase === "roulette"){ S.pressFx[i] = 1; stopRoulette(); return; }
+  if (S.phase === "pull"){ S.pressFx[i] = 1; pullBig(); return; }      // でっかいレバーはどのボタンでも下がる
   if (S.phase === "intro"){ if (S.introStarted) pressIntro(i); return; }
   if (S.phase !== "round") return;
   const reel = S.reels[i];
   // 回っていないボタンを押しても「カチ」だけ鳴る（押せたことは伝える。何も起きない）
   if (!S.actives.includes(i) || reel.state !== "spin"){ sndClick(); S.pressFx[i] = 1; return; }
+  if (reel.rescue){ sndClick(); S.pressFx[i] = 1; return; }          // 逆回転の救済中は押せない
   if (!canPress(i)){ sndClick(); S.pressFx[i] = 1; return; }
   S.pressFx[i] = 1;
   // 課題なら、狙う絵柄を線へ持って来る停止位置を狙う（判定の幅は本編と同じ）
@@ -3081,6 +3399,7 @@ function press(i){
   if (!anySpinningExcept(i)) stopWhir();
   const to = ok ? hit : missTarget(i, reel.pos, reel.dir, winOf(reel), list, symName);
   if (ok) S.lastHitDd = (reel.pos - hit) * reel.dir;
+  reel.hitDd = ok ? (reel.pos - hit) * reel.dir : 9;   // ⚠️ リールごとに持つ。2本・3本で続けて押すと S.lastHitDd が上書きされ、先のビタが消えていた
   // **どこで押したか**を残す（ズレのメーター・リール窓の目印・結果画面）
   {
     const ref = ok ? hit : nearestIn(list || sevensNear(i, reel.pos, N), reel.pos);
@@ -3130,27 +3449,30 @@ function onReelStop(i, ok){
     if (S.vStock > 0){
       // **Vストック：1ミス無効。**7へ引き込んで当たり扱いで続ける（ビタにはしない）。使うまで持ち越し
       //（本人 2026-09-04「ペカりの効果を1ミス無効にしよう。1ミスするまでずっと持ち越せる」）
-      S.vStock--; S.stockAt = S.t; S.savedAt = S.t;
+      // その1本だけ**逆回転して7に座る**（本人 2026-09-04「SAOの目押しミスったときみたいに、その部分だけ逆回転して7がそろうやつ」）
+      S.vStock--; S.stockAt = S.t; S.savedAt = S.t; S.vPlateAt = S.t; S.justStreak = 0;
       S.peka = 1; S.flash = Math.max(S.flash, 0.5); S.shake = Math.max(S.shake, 0.5);
-      sndPeka(true); say("saved");
-      const to = nearestSevenOn(i, reel.pos);
-      reel.snap = { from: reel.pos, to, t0: S.t, dur: 160 + Math.abs(to - reel.pos) * 40, ok: true, backward: (to - reel.pos) * reel.dir < 0 };
-      reel.state = "snap"; reel.spinning = false;
-      S.lastHitDd = 9;
+      sndPeka(true); sndClank(true); say("saved");
+      reel.rescue = true; reel.rescueTo = sevensBefore(i, reel.pos - 8, 1)[0];   // 半回転以上戻ってから座る
+      reel.dir = -1; reel.v = S.v; reel.acc = accMs(reel.v); reel.limit = Infinity;
+      reel.state = "wait"; reel.spinAt = S.t + 280; reel.spinning = false; reel.snap = null; reel.vNow = 0;
+      setTimeout(() => { if (S.running) sndKind("逆転"); }, 280);
+      S.lastHitDd = 9; reel.hitDd = 9;
       return;
     }
     S.deadSym = STRIPS[i][mod(Math.round(reel.pos), N)];
     reel.state = "done";
     freezeOthers(i);
-    S.extraPending = false;
+    S.extraPending = false; S.navi = null; S.justStreak = 0;
     if (S.revive){ enterDead(i); return; }                // **復活が仕込まれている。**暗転して、レバーを待つ
     gameOver();
     return;
   }
   reel.state = "done";
+  if (S.navi){ if (S.navi.order[S.navi.k] === i) S.navi.k++; else S.navi.ok = false; }   // ナビの順どおりか
   // **ビタ押し。**7が線の上（±半コマ）で押していたら、**一気に4コンボ**＋コインが倍以上
   //（本人の指示・2026-09-03「ビタで4短縮」）。腕の見せどころ
-  const just = Math.abs(S.lastHitDd) < 0.5;
+  const just = Math.abs(reel.hitDd == null ? S.lastHitDd : reel.hitDd) < 0.5;
   const gain = just ? COMBO_JUST : 1;
   S.lastReel = i;
   S.hit = 1; S.segFlash = 1; S.peka = 1; S.kick = 1;
@@ -3158,12 +3480,15 @@ function onReelStop(i, ok){
   sndPeka(false);
   const tier = tierOf(S.combo + gain);
   if (!just && S.t - S.savedAt > 400){
-    const d = S.lastHitDd;
+    const d = reel.hitDd == null ? S.lastHitDd : reel.hitDd;
     if (Math.abs(d) < 1.0) say("near"); else if (d < -2.5) say("early"); else if (d > 1.5) say("late");
   }
+  if (!just) S.justStreak = 0;
   if (just){
-    S.justAt = S.t; S.justReel = i; S.justN++; S.roundJust++; sndJust(); S.shake = 1;
+    S.justAt = S.t; S.justReel = i; S.justN++; S.roundJust++; S.justStreak++; sndJust(S.justStreak); S.shake = 1;
     say("just");
+    S.naviPending = true;                                  // **次の回はナビ回**（本人 2026-09-04）
+    if (S.justStreak % 3 === 0) S.rouletteQueued = true;   // **ビタ3連続でルーレット**
     if (S.justN % 3 === 0){ S.vStock++; S.stockGotAt = S.t; say("stock"); }   // **Vストック**を1つためる（3ビタごと）
     // **脇の装置はビタで動く。**5回ごと：左のモニターが本体からガシャンと飛び出して（2回目からは打ち直し）、
     //   この回が終わったら「7を狙え！」。10回ごと：右の役物も飛び出して「復活」が仕込まれる
@@ -3192,8 +3517,15 @@ function onReelStop(i, ok){
   S.payFlash = 1;
   spawnCoins((just ? 30 : 14) + tier * 3);
   if (addCombo(gain)) return;                              // 777 に届いたらエンディング
-  // 全部止まったら次へ。**全部ビタなら「全ビタ」ボーナス。**課題が控えていればそちらへ
+  // 全部止まったら次へ。**ナビ達成・全ビタならボーナス。**ルーレット・課題が控えていればそちらへ
   if (S.actives.every(j => S.reels[j].state === "done")){
+    if (S.navi && S.navi.ok && S.navi.k === 3){
+      S.naviAt = S.t;
+      S.coins += 777; S.payFlash = 1; spawnCoins(40); S.flash = Math.max(S.flash, 0.6); S.shake = 1; S.mega = Math.max(S.mega, 0.7);
+      burst(100, 6); sndFanfare(5); say("naviOk");
+      if (addCombo(COMBO_NAVI)) return;
+    }
+    S.navi = null;
     if (S.actives.length >= 2 && S.roundJust === S.actives.length){
       const bonus = S.actives.length === 3 ? COMBO_ALLJUST3 : COMBO_ALLJUST2;
       S.allJustAt = S.t; S.allJustN = bonus;
@@ -3202,7 +3534,8 @@ function onReelStop(i, ok){
       burst(100, 6); sndFanfare(5); say("allJust");
       if (addCombo(bonus)) return;
     }
-    if (S.extraPending) startAim("seven");
+    if (S.rouletteQueued) startRoulette();
+    else if (S.extraPending) startAim("seven");
     else nextRound(false);
   }
 }
@@ -3243,7 +3576,7 @@ const END_SHOW = 1200, END_RUN = 8000, END_HOLD = 1800;
 function startEnding(){
   S.phase = "ending"; S.ending = true; S.endingAt = S.t; S.endClank = 0;
   S.combo = 777;
-  S.extra = null; S.extraPending = false; S.revive = false; S.lastMiss = null;
+  S.extra = null; S.extraPending = false; S.revive = false; S.lastMiss = null; S.navi = null; S.naviPending = false; S.roulette = null; S.rouletteQueued = false;
   S.reels.forEach((r, i) => { r.aim = null; r.state = "idle"; r.snap = null; r.spinning = false; r.vNow = 0; r.pos = nearestSevenOn(i, r.pos); if (r.blind && r.blindAt && !r.openAt) r.openAt = S.t; });
   S.actives = []; S.roundKind = "";
   stopWhir();
@@ -3272,6 +3605,7 @@ function stepEnding(now){
   }
   if (S.combo !== 7777){
     S.combo = 7777; S.milestone = "7777 COMBO"; S.milestoneAt = now; S.megaLv = 16; S.mega = 1;
+    S.bannerAt = now; S.bannerText = "7777"; S.bannerSub = "完全制覇"; sndCloth();
     S.flash = 1; S.shake = 1; S.peka = 1;
     burst(240, 7); rain(150); spawnCoins(120);
     sndFanfare(7); sndCheer();
@@ -3291,6 +3625,8 @@ function stageUp(){
   sndFanfare(7);
   sndCheer();
   say("stage");
+  S.bannerAt = S.t; S.bannerText = "STAGE " + S.stageLv; S.bannerSub = stageName(S.stageLv) + " 解禁";   // 役物：垂れ幕
+  setTimeout(() => { if (S.running) sndCloth(); }, 300);
   ART_CACHE.clear();          // パネルの色が変わる
 }
 
@@ -3315,19 +3651,20 @@ const LINES = [
 const COMBO_AIM_ALL = 10, COMBO_AIM_ONE = 2, COMBO_REVIVE = 10;
 const COMBO_ALLJUST2 = 6, COMBO_ALLJUST3 = 10, COIN_ALLJUST = 1000;   // 全ビタ（2本／3本）
 const STOCK_NAME = "Vストック";   // 名前はここだけ。商標が気になれば「ペカ」に（本人 2026-09-04）
+const COMBO_NAVI = 5;             // ナビ回を順どおり全部7で止めたとき
 
 /** 課題を始める。kind: "seven"（左）／"bar"（復活）。3本とも今の位置から回す */
 function startAim(kind, deadReel){
   const bar = kind === "bar";
   const line = bar ? LINES[1] : (S.aimLine || LINES[Math.floor(Math.random() * LINES.length)]);
-  S.extra = { kind, line, stage:"ready", t0:S.t, hits:0, ok:false, reward:0, deadReel: deadReel == null ? -1 : deadReel, resultAt:0 };
+  S.extra = { kind, line, stage:"ready", t0:S.t, hits:0, ok:false, reward:0, deadReel: deadReel == null ? -1 : deadReel, resultAt:0, step:0 };
   S.extraPending = false; S.roundKind = "";
   setDifficulty();
   const beat = beatMs();
   let t7max = 0;
   for (let i = 0; i < 3; i++){
     const reel = S.reels[i];
-    reel.dir = 1; reel.v = S.v; reel.limit = S.limit * LIMIT_SPECIAL; reel.acc = accMs(reel.v);
+    reel.dir = 1; reel.v = S.v * (bar ? 0.55 : 1); reel.limit = S.limit * LIMIT_SPECIAL; reel.acc = accMs(reel.v);   // 復活の課題は**ゆっくり**
     reel.aim = { sym: kind, row: line.rows[i] };
     reel.blind = false; reel.blindAt = 0; reel.openAt = 0;
     reel.t7 = timeTo7(aimsAfter(i, reel.aim, reel.pos + 0.5, 1)[0] - reel.pos, reel.v, reel.acc);
@@ -3366,11 +3703,11 @@ function resolveAim(){
   e.ok = e.hits === 3; e.stage = "result"; e.resultAt = S.t;
   if (e.kind === "bar"){
     if (e.ok){
+      // **豪華に**（本人 2026-09-04「それをそろえるとめっちゃ豪華な演出後復活」）：まずBARが白く点滅（stepAim で続く）
       e.reward = COMBO_REVIVE; S.revive = false;
-      bgmStart(1);
-      S.segFlash = 1; S.heat = 1; S.flash = 0.8; S.shake = 1; S.peka = 1; S.mega = 1;
-      burst(160, 7); rain(90); spawnCoins(60);
-      sndFanfare(7); sndCheer(); say("revived");
+      S.segFlash = 1; S.shake = 1; S.peka = 1;
+      sndClank(true); setTimeout(() => { if (S.running) sndClank(false); }, 200); setTimeout(() => { if (S.running) sndClank(false); }, 400);
+      say("revived");
     } else {
       bgmStop(); sndKind("逆転");
     }
@@ -3394,7 +3731,19 @@ function stepAim(now){
   const e = S.extra;
   if (!e) return;
   if (e.stage === "result"){
-    const wait = e.kind === "bar" ? (e.ok ? 1900 : 1300) : (e.ok ? 900 : 500);   // 7を狙え！は短く（テンポを崩さない）
+    if (e.kind === "bar" && e.ok){
+      // 復活の祝砲：0.6秒後に閃光・紙吹雪・コイン・垂れ幕・脇の打ち直し、1.5秒後にもう一発
+      const a = now - e.resultAt;
+      if (e.step < 1 && a > 600){
+        e.step = 1; S.dark = 0; bgmStart(1);
+        S.flash = 1; S.shake = 1; S.heat = 1; S.mega = 1; S.megaLv = Math.max(S.megaLv, 8);
+        rain(180); burst(280, 7); spawnCoins(160);
+        sndFanfare(7); sndCheer(); slamWing("L"); slamWing("R");
+        S.bannerAt = now; S.bannerText = "復活"; S.bannerSub = "REVIVAL"; sndCloth();
+      }
+      if (e.step < 2 && a > 1500){ e.step = 2; rain(120); spawnCoins(90); sndFanfare(6); sndCheer(); S.peka = 1; S.flash = Math.max(S.flash, 0.7); S.shake = 1; }
+    }
+    const wait = e.kind === "bar" ? (e.ok ? 3000 : 1300) : (e.ok ? 900 : 500);   // 7を狙え！は短く（テンポを崩さない）
     if (now - e.resultAt < wait) return;
     if (e.kind === "bar" && !e.ok){ S.extra = null; for (const r of S.reels) r.aim = null; gameOver(); return; }
     // 3本とも7へ戻す（BARの隣が7、線が違っても数コマ）。本編の停止と同じ滑りで
@@ -3432,6 +3781,7 @@ function enterDead(i){
 
 /** MAX BET。**最初の1回だけ**（本人 2026-09-03「一番最初だけ、マックスベットとレバーが必要なようにしよう」） */
 function pressMaxBet(){
+  if (S.running && S.phase === "roulette") return stopRoulette();
   if (!S.running || S.phase !== "bet") return false;
   S.betAt = S.t; sndBet();
   S.phase = "lever";
@@ -3452,12 +3802,15 @@ function pullLever(){
     return true;
   }
   if (S.phase === "dead" && S.t - S.deadAt > 500){
+    // 音を戻して、右の画面からでっかい下げレバーが出てくる。下げると課題（stepPull）
     reviveAudio();
     S.leverAt = S.t; sndLever(); say("lever");
-    S.beat0 = S.t;
-    startAim("bar", S.deadReel);
+    S.big = { t0: S.t, stage: "out", pulledAt: 0, backAt: 0 };
+    S.phase = "pull";
+    sndServo(0.5); setTimeout(() => { if (S.running) sndClank(true); }, 520);
     return true;
   }
+  if (S.phase === "pull") return pullBig();
   return false;
 }
 
@@ -3468,7 +3821,7 @@ function wantWing(k){
   if (!S.running || S.phase === "over") return false;
   if (S.phase === "ending") return true;
   if (k === "L") return S.leftOut;
-  return S.revive || S.phase === "dead" || !!(S.extra && S.extra.kind === "bar");
+  return S.revive || S.phase === "dead" || S.phase === "pull" || !!S.big || !!(S.extra && S.extra.kind === "bar");
 }
 
 /** 文字を枠の幅に収める倍率（上限 maxSc。はみ出すなら落とす）と、その高さ */
@@ -3696,6 +4049,15 @@ function whyText(){
   return nm + "が <b>" + k + "コマ</b>" + ms + "通り過ぎていた。<b>遅い。</b>" + nm + "が見えたときには、もう押す。";
 }
 
+/* 称号（本人の指定・2026-09-04。50コンボ刻みの「認定」、7777 は「称号：777COMBOを制覇せし者」） */
+const TITLES = [
+  [0,"設定L認定"], [50,"リプレイの申し子認定"], [100,"弱役に愛され認定"], [150,"たぶん高確認定"], [200,"たぶん設定4以上ある認定"],
+  [250,"前兆だけは一人前認定"], [300,"小役を数える者認定"], [350,"第三停止に祈る者認定"], [400,"赤い彗星認定"], [450,"ペカマスター認定"],
+  [500,"128の向こう側認定"], [550,"8192に選ばれし者認定"], [600,"有利を断つ者認定"], [650,"ART50連認定"], [700,"神認定"],
+  [750,"万の景色を夢見る者認定"], [777,"称号：777COMBOを制覇せし者"],
+];
+function titleOf(c){ let t = TITLES[0][1]; for (const [n, name] of TITLES) if (c >= n) t = name; return t; }
+
 function gameOver(){
   const fin = S.phase === "ending";                         // 777 のエンディング。静寂にはしない
   S.running = false;
@@ -3705,7 +4067,7 @@ function gameOver(){
   S.fx.length = 0;
   S.shake = 0; S.flash = 0; S.peka = 0; S.segFlash = 0; S.waves.length = 0; S.heat = 0; S.mega = 0; S.milestone = ""; S.kick = 0;
   S.roundKind = ""; S.stageAt = -9999;
-  S.extra = null; S.extraPending = false; S.dark = 0;
+  S.extra = null; S.extraPending = false; S.dark = 0; S.navi = null; S.roulette = null; S.big = null;
   for (const r of S.reels){ if (r.state === "wait") r.state = "idle"; r.aim = null; }
 
   const reached = S.combo;
@@ -3722,9 +4084,11 @@ function gameOver(){
   overTimers.push(setTimeout(() => {
     veil.classList.remove("bare");
     const LF = String.fromCharCode(10);
+    // 共有文：「○○ COMBO/○○ ビタ」「称号」「#777コンボ」＋URL（本人の指定・2026-09-04）
+    const title = titleOf(reached);
     const text = [
-      fin ? "『777コンボ』で 777 → 7777 COMBO。完全制覇。" : "『777コンボ』で " + reached + " COMBO。",
-      "777を揃え続けるだけのゲーム。",
+      reached + " COMBO/" + S.justN + " ビタ",
+      title,
       "#777コンボ"
     ].join(LF);
     const share = "https://x.com/intent/post?text=" + encodeURIComponent(text) +
@@ -3741,6 +4105,7 @@ function gameOver(){
     veil.innerHTML =
       '<div class="big">' + reached + '<small>COMBO</small></div>' +
       (fin ? '<p class="fade"><strong>完全制覇</strong>　777 を揃え切った。台が勝手に 7777 まで回った</p>' : '') +
+      '<p class="fade"><strong>' + title + '</strong></p>' +
       (isNew ? '<p class="fade"><strong>自己ベスト更新</strong></p>' : '') +
       sub +
       (why ? '<div class="why fade">' + why + '</div>' : '') +
@@ -3791,9 +4156,11 @@ function start(){
   S.leftOut = false; S.wingOut = { L:0, R:0 }; S.wingWant = { L:false, R:false }; S.slamAt = { L:-9999, R:-9999 };
   S.dark = 0; S.deadReel = -1; S.deadAt = -9999; S.leverAt = -9999; S.betAt = -9999;
   S.vStock = 0; S.stockAt = -9999; S.stockGotAt = -9999; S.savedAt = -9999; S.roundJust = 0; S.allJustAt = -9999; S.allJustN = 0;
+  S.naviPending = false; S.navi = null; S.naviAt = -9999; S.justStreak = 0; S.rouletteQueued = false; S.roulette = null; S.rouletteAt = -9999; S.rouletteText = "";
+  S.patOut = 0; S.vPlateAt = -9999; S.bannerAt = -9999; S.bannerText = ""; S.bannerSub = ""; S.big = null;
   S.say = null; S.ending = false; S.endingAt = -9999; S.endClank = 0; S.luckyAt = -9999;
   S.pressFx = [0,0,0];
-  for (const r of S.reels){ r.pos = 0; r.state = "idle"; r.spinning = false; r.v = 0; r.vNow = 0; r.dir = 1; r.snap = null; r.stopped = false; r.targets = null; r.aim = null; r.dueAt = 0; r.blind = false; r.blindAt = 0; r.openAt = 0; }
+  for (const r of S.reels){ r.pos = 0; r.state = "idle"; r.spinning = false; r.v = 0; r.vNow = 0; r.dir = 1; r.snap = null; r.stopped = false; r.targets = null; r.aim = null; r.dueAt = 0; r.blind = false; r.blindAt = 0; r.openAt = 0; r.rescue = false; }
 
   countPlay();
   S.v = 28;
@@ -3822,6 +4189,8 @@ function frame(now){
 
     if (S.extra) stepAim(now);
     if (S.phase === "ending") stepEnding(now);
+    if (S.phase === "roulette") stepRoulette(now, dt);
+    if (S.big) stepPull(now);
     if (S.phase === "round"){
       let koma = false, vmax = 0;
       const acts = S.actives.slice();          // 止まると nextRound で入れ替わるので写しを回す
@@ -3831,6 +4200,14 @@ function frame(now){
         if (reel.state === "spin"){
           if (advanceReel(reel, dt)) koma = true;
           vmax = Math.max(vmax, reel.vNow);
+          // Vストックの逆回転：戻した先の7に着いたら座る（当たり扱い）
+          if (reel.rescue && reel.pos <= reel.rescueTo + 0.35){
+            reel.rescue = false;
+            reel.snap = { from: reel.pos, to: reel.rescueTo, t0: now, dur: 90, ok: true, backward: false };
+            reel.state = "snap"; reel.spinning = false;
+            if (!anySpinningExcept(i)) stopWhir();
+            sndStop();
+          }
           if (now - reel.spinAt > (reel.limit || S.limit)) autoMissReel(i);
         }
         if (reel.state === "snap"){
@@ -3866,9 +4243,15 @@ function frame(now){
     const a0 = (now - dt) - S.slamAt[k], a1 = now - S.slamAt[k];
     if (a0 < 360 && a1 >= 360){ sndClank(true); S.shake = Math.max(S.shake, 0.7); }
   }
+  // パトランプ（復活待ちと復活の課題の間だけ出る）
+  {
+    const want = S.running && (S.phase === "dead" || S.phase === "pull" || !!(S.extra && S.extra.kind === "bar"));
+    S.patOut = want ? Math.min(1, S.patOut + dt / 500) : Math.max(0, S.patOut - dt / 400);
+  }
   // 暗転（復活待ちは真っ暗、復活の課題は薄暗い、あとは明るい）
   {
-    const target = S.phase === "dead" ? 1 : (S.extra && S.extra.kind === "bar") ? 0.45 : 0;
+    const won = S.extra && S.extra.kind === "bar" && S.extra.ok && S.extra.stage !== "play" && S.extra.stage !== "ready";
+    const target = (S.phase === "dead" || S.phase === "pull") ? 1 : (S.extra && S.extra.kind === "bar" && !won) ? 0.45 : 0;
     S.dark += (target - S.dark) * Math.min(1, dt / 240);
     if (Math.abs(S.dark - target) < 0.01) S.dark = target;
   }
@@ -3907,7 +4290,7 @@ addEventListener("keydown", (e) => {
       return;
     }
     e.preventDefault();
-    if (S.phase === "bet") pressMaxBet(); else pullLever();   // MAX BET → レバー。復活待ちもレバー
+    if (S.phase === "bet" || S.phase === "roulette") pressMaxBet(); else pullLever();   // MAX BET → レバー。復活待ちもレバー。ルーレットは止める
     return;
   }
   const i = KEYS[e.code];
@@ -3939,11 +4322,13 @@ function controlAt(x, y){
 }
 cv.addEventListener("pointerdown", (e) => {
   if (!S.running) return;
+  if (S.phase === "pull"){ e.preventDefault(); pullBig(); return; }     // でっかいレバーは画面のどこを押しても下がる
   if (S.phase === "bet" || S.phase === "lever" || S.phase === "dead"){
     const c = controlAt(e.clientX, e.clientY);
     if ((S.phase === "bet" && c === "bet") || (S.phase !== "bet" && c === "lever")){ e.preventDefault(); S.phase === "bet" ? pressMaxBet() : pullLever(); }
     return;
   }
+  if (S.phase === "roulette" && controlAt(e.clientX, e.clientY) === "bet"){ e.preventDefault(); stopRoulette(); return; }
   const i = buttonAt(e.clientX, e.clientY);
   if (i < 0) return;
   e.preventDefault();
