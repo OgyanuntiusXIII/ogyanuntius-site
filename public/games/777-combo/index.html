@@ -1717,10 +1717,10 @@ const SHADE = [0.34, 0.10, 0, 0.10, 0.34];
 
 function drawReel(i){
   const r = L.reels[i], reel = S.reels[i];
-  // 合間のブレ。**止まったところを見せる**ため、間隔の後ろ4割だけ回す（最初はほぼ止まって見える）
+  // 動いている間だけブレる（止めて見せている間はくっきり止まる）
   const gapMs = S.endNextAt - S.endStepAt, ageMs = S.t - S.endStepAt;
   const endBlur = S.phase === "ending" && S.endLine && !S.endDoneAt && gapMs > 0
-               && ageMs > gapMs * 0.60 && ageMs < gapMs - 10;   // 合間は爆速で回る（揃った瞬間は止まって見える）
+               && ageMs > gapMs * END_STOP && ageMs < gapMs - 8;   // 合間は爆速で回る（揃った瞬間は止まって見える）
   const spinning = reel.state === "spin" || reel.state === "snap" || endBlur;
   ctx.save();
   ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
@@ -3483,7 +3483,7 @@ function nextRound(firstRound){
   setDifficulty();
   const rd = pickRound();
   S.naviPending = false;
-  S.navi = rd.navi ? { order: rd.navi, k: 0, ok: true } : null;
+  S.navi = null;                       // 並べ替えのあとで作る（下の seq を使う）
   S.actives = rd.reels;
   S.prev = rd.reels[rd.reels.length - 1];
   const beat = beatMs();
@@ -3514,11 +3514,13 @@ function nextRound(firstRound){
   // 2本・3本は 1/n 拍ではなく **1拍ずつ**（3連は拍から外れて、リズムで乗れなかった）。
   // 高速リールがあれば、それを**いちばん最初**に（本人「早いリールが出た場合は、それを最優先で処理させる」）
   const n = rd.reels.length;
-  let seq = rd.navi || rd.reels.slice();
-  if (!rd.navi && rd.fast.length) seq = rd.fast.concat(seq.filter(i => !rd.fast.includes(i)));
+  let seq = (rd.navi || rd.reels).slice();
+  // 高速リールは**必ず1番目**。ナビ回でも同じ（ナビの番号と「高速を先に」が食い違っていた）
+  if (rd.fast.length) seq = rd.fast.concat(seq.filter(i => !rd.fast.includes(i)));
   S.order = seq.slice();
   seq.forEach((i, k) => { const reel = S.reels[i]; reel.dueAt = B + beat * k; reel.spinAt = reel.dueAt - reel.t7; });
   S.dueBeat = B + beat * (n - 1);     // 最後の1本を止める予定の拍
+  if (rd.navi) S.navi = { order: seq.slice(), k: 0, ok: true };
   S.roundKind = rd.kind; S.roundAt = S.t;
   if (rd.kind) sndKind(rd.kind);
   if (rd.fast.length) say("fast");
@@ -3842,6 +3844,7 @@ const END_LINES = [3, 1, 2, 0, 4];       // LINES の並び：右下がり → �
 /* 最初の5回は**きっちり止めて見せる**（1.0秒 → 0.62秒）。そこから指数で上がって、下限は8ms（1フレームに2回）。
    本人「777がそろった、そろった、そろった、からどんどんスピードアップしていく感覚」 */
 const END_SHOW_HOLD = [1000, 900, 800, 700, 620];
+const END_STOP = 0.55;             // 間隔のうち「止めて見せている」割合。残りで次の線へ回る
 function endInterval(k){
   if (k <= END_SHOW_HOLD.length) return END_SHOW_HOLD[k - 1];
   return Math.max(8, 620 * Math.pow(0.955, k - END_SHOW_HOLD.length));
@@ -3877,16 +3880,19 @@ function stepEnding(now){
   S.heat = 1; S.mega = Math.max(S.mega, 0.6);
   if (a - S.endClank * 180 >= 180){ S.endClank++; if (S.endClank % 2) sndClank(false); S.shake = Math.max(S.shake, 0.35); }
   if (a < END_SHOW) return;
-  if (S.endStep < endSteps()){
-    // 合間はリールが爆速で回る（線が変わるまで前へ送る）
+  if (S.combo < endTarget()){
+    // **止めて見せる → シャッと回る → カシャッと座る。**（本人 2026-09-04「流してるようにしか見えない。
+    // もっとカシャ、カシャって一回一回止まってほしい」）。間隔の前 END_STOP は完全に止まっている
     const gap = Math.max(1, S.endNextAt - S.endStepAt);
     const k = Math.min(1, (now - S.endStepAt) / gap);
-    if (S.endLine) S.reels.forEach((r, i) => { r.pos = r.endFrom + (r.endTo - r.endFrom) * k; });
+    if (S.endLine && S.reels[0].endTo != null){
+      const kk = k <= END_STOP ? 0 : (k - END_STOP) / (1 - END_STOP);
+      const e = 1 - Math.pow(1 - kk, 2);                       // 最後に減速して座る
+      S.reels.forEach((r) => { if (r.endFrom != null) r.pos = r.endFrom + (r.endTo - r.endFrom) * e; });
+    }
     if (now < S.endNextAt) return;
-    // 1本の線に、3本とも7を揃える。線ごとに +12（普通の回で最大の +4×3）。終盤は1フレームに何回も揃う
-    while (S.endStep < endSteps() && now >= S.endNextAt) endStepOnce(now);
-    if (!whir) startWhir();
-    whirSpeed(60 + 40 * Math.min(1, S.endStep / 140));
+    let guard = 0;
+    while (S.combo < endTarget() && now >= S.endNextAt && guard++ < 64) endStepOnce(now);
     return;
   }
   if (!S.endDoneAt){
@@ -3903,25 +3909,35 @@ function stepEnding(now){
   S.mega = 1; S.heat = 1; S.hit = Math.max(S.hit, 0.5 + 0.5 * Math.sin(now / 90)); S.lastReel = Math.floor(now / 150) % 3;
   if (fin >= END_HOLD) gameOver();
 }
+/** 1歩。**① いま向かっていた線に座る（＋12・カシャッ）→ ② 次の線を決めて、そこへ向かう** */
 function endStepOnce(now){
-    const line = LINES[END_LINES[S.endStep % END_LINES.length]];
-    S.reels.forEach((r, i) => {
-      const from = r.endTo != null ? r.endTo : r.pos;
-      const c = sevensAfter(i, from + 4, 1)[0];               // 次の7（4コマ以上先＝毎回ちゃんと回る）
-      r.endFrom = from; r.endTo = c + line.rows[i]; r.pos = r.endTo; r.state = "idle";
-    });
-    S.endLine = line;
-    S.combo = Math.min(endTarget(), S.combo + END_PER); S.endStep++; S.endStepAt = now;
-    S.endNextAt = Math.max(S.endNextAt + endInterval(S.endStep), now - 40);   // 予定を積む（8ms刻みなら1フレームに2回揃う）
+  // ① 座る
+  if (S.endLine && S.reels[0].endTo != null){
+    S.reels.forEach((r) => { r.pos = r.endTo; r.state = "idle"; });
+    S.combo = Math.min(endTarget(), S.combo + END_PER); S.endStep++;
     S.kick = 1; S.peka = 1;
     if (S.endStep % 4 === 0){ S.segFlash = 1; S.flash = Math.max(S.flash, 0.18); }
     if (S.endStep % 12 === 0) spawnCoins(8);
-    if (actx && !audioDead && (S.endStep < 40 || S.endStep % 3 === 0)){
-      const t = actx.currentTime, up = Math.pow(2, (S.endStep % 96) / 48);
-      tone(660 * up, t, 0.06, "square", 0.08); noise(t, 0.02, 0.14, 5200, 2.6);
-      if (S.endStep <= END_SHOW_HOLD.length){ sndStop(); sndKyuin(0, 0.05); }   // 最初は「ガコン」＋告知音でしっかり見せる
-      else if (S.endStep < 40) sndSeat();
+    if (actx && !audioDead){
+      if (S.endStep <= END_SHOW_HOLD.length){ sndStop(); sndKyuin(0, 0.04); }        // 最初はしっかり「ガコン」
+      else if (S.endStep < 60){ sndStop(); }                                          // しばらくは1回ずつ止まる音
+      else if (S.endStep % 3 === 0){
+        const t = actx.currentTime, up = Math.pow(2, (S.endStep % 96) / 48);
+        tone(660 * up, t, 0.05, "square", 0.08); noise(t, 0.02, 0.16, 5200, 2.6);
+      }
     }
+  }
+  if (S.combo >= endTarget()){ S.endNextAt = now; return; }
+  // ② 次の線へ
+  const line = LINES[END_LINES[S.endStep % END_LINES.length]];
+  S.endLine = line;
+  S.reels.forEach((r, i) => {
+    const from = r.pos;
+    const c = sevensAfter(i, from + 4, 1)[0];                 // 次の7（4コマ以上先＝毎回ちゃんと回る）
+    r.endFrom = from; r.endTo = c + line.rows[i];
+  });
+  S.endStepAt = now;
+  S.endNextAt = Math.max(now + endInterval(S.endStep + 1), now - 40);
 }
 
 /** ステージが上がった（30コンボごと）。台の色が変わり、調が上がり、いちばん大きい祝砲 */
