@@ -2087,10 +2087,12 @@ function drawLowPanel(tier){
       pRect(x + step*PX*4, p.y + p.h - PX*3, PX*2, PX, "rgba(255,230,120,.35)");
     }
   }
-  // **画面の広さによらず、ここは踊るモニター。**
-  // （2026-09-04 本人「スマホ版のしたパネルめちゃくちゃかわいいから、これPC版で逆輸入してほしい」。
-  //   前は広い画面だけ題字と銘の飾りだった。脇のモニターと同じ中身が、横長の構図で並ぶ）
-  drawMonitorScreen(p.x, p.y, p.w, p.h, false);
+  // **画面の広さによらず、ここはモニター。**
+  // （2026-09-04 本人「スマホ版のしたパネルめちゃくちゃかわいいから、これPC版で逆輸入してほしい」）
+  // **最初は消えていて、左の脇と同じ条件（5ビタ）で点く**（本人「最初は黒いモニターで、
+  //   左モニターの条件達成で、下パネルも点灯に変えてほしい」）。
+  // 広い画面では、脇が芝居・下パネルが数字と役割を分ける（本人「PC版は左モニターとしたモニターで変えてほしい」）
+  drawMonitorScreen(p.x, p.y, p.w, p.h, false, !S.leftOut ? "off" : (L.wings ? "data" : "all"));
   ctx.restore();
 }
 
@@ -2207,8 +2209,14 @@ function fighterFrame(){
 /* 赤の3段。**黒いモニターに赤いドットだけ**（本人 2026-09-03） */
 const LED = { on:"#ff3b2a", mid:"#a4180f", off:"#2a0806", text:"#ff6a58" };
 
-/** モニターの中身。x,y,w,h は画面（黒いガラスの内側）。big=脇の大きい方 */
-function drawMonitorScreen(x, y, w, h, big){
+/** モニターの中身。x,y,w,h は画面（黒いガラスの内側）。big=脇の大きい方。
+    mode（本人 2026-09-04「PC版は左モニターとしたモニターで内容を変えてほしい」）
+      "off"   … 消灯。まだ点いていない（下パネルは5ビタまでこれ）
+      "all"   … 全部乗せ（スマホの下パネル。脇が無いので、ここに全部出す）
+      "fight" … 立ち絵と木人の芝居（広い画面の**左の脇**）
+      "data"  … 数字の盤（広い画面の**下パネル**）。芝居は脇がやるので、こっちは数字 */
+function drawMonitorScreen(x, y, w, h, big, mode){
+  mode = mode || "all";
   const live = S.running && S.phase !== "dead" && S.phase !== "pull" && S.phase !== "over";
   const ph = live ? beatPhase(S.t) : 0.5;
   const kick = ph < 0.15 ? 1 - ph/0.15 : 0;
@@ -2221,16 +2229,22 @@ function drawMonitorScreen(x, y, w, h, big){
   blitLow(grid, x, y);
   ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(x, y, w, h);   // 格子は薄く
 
+  if (mode === "off"){ glassSheen(x, y, w, h); return; }   // 消灯：地とガラスだけ
+
   // 上の帯：ビタゲージ（役物が無い画面でもゲージは見える）。左そろえ：「ビタ」→ 5目盛
   const gN = S.justN % 5, full = S.t - S.gaugeFullAt < 1400;
   const gy = y + PX*3;
-  const lw = drawPixelText("ビタ", x + PX*3, gy + PX, Math.max(2, PX-2), LED.text, "left", null, 11);
-  const gx0 = x + PX*3 + lw + PX*3;
-  for (let i = 0; i < 5; i++){
-    const on = full || i < gN;
-    pRect(gx0 + i*PX*6, gy, PX*4, PX*2, on ? (full && Math.floor(S.t/90) % 2 ? "#ffd0c8" : LED.on) : LED.off);
+  if (mode !== "fight"){
+    const lw = drawPixelText("ビタ", x + PX*3, gy + PX, Math.max(2, PX-2), LED.text, "left", null, 11);
+    const gx0 = x + PX*3 + lw + PX*3;
+    for (let i = 0; i < 5; i++){
+      const on = full || i < gN;
+      pRect(gx0 + i*PX*6, gy, PX*4, PX*2, on ? (full && Math.floor(S.t/90) % 2 ? "#ffd0c8" : LED.on) : LED.off);
+    }
   }
   if (S.stageLv > 0) drawPixelText(stageName(S.stageLv), x + w - PX*3, gy + PX, Math.max(2, PX-2), LED.text, "right", null, 11);
+
+  if (mode === "data"){ drawDataBody(x, y, w, h); glassSheen(x, y, w, h); return; }
 
   // 立ち絵。頭の中心を画面の左寄り（3割）に、頭の上を帯の下にそろえる。拍で1ドット弾む。右に木人
   const set = big ? "b" : "s", f = fighterFrame();
@@ -2273,11 +2287,46 @@ function drawMonitorScreen(x, y, w, h, big){
   }
   // 復活が仕込まれている印（脇の無い画面ではここにしか出せない）
   if (S.revive && !big) drawPixelText("復活", x + w - PX*3, y + h - PX*4, Math.max(2, PX-2), Math.floor(S.t/400) % 2 ? "#ffd0c8" : LED.on, "right", null, 11);
-  // ガラスの走査線と照り
+  glassSheen(x, y, w, h);
+}
+
+/** ガラスの走査線と照り。消灯中も出す（画面が「そこにある」ことは見せる） */
+function glassSheen(x, y, w, h){
   ctx.fillStyle = "rgba(0,0,0,.18)";
   for (let yy = y; yy < y + h; yy += PX*2) ctx.fillRect(x, snap(yy), w, PX);
   ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fillRect(x, y, w, snap(h*0.08));
 }
+
+/** 広い画面の下パネル。**脇が芝居（木人と立ち絵）をやるので、こっちは拍で踊る等化器。**
+    ⚠️ COMBO と BEST はすぐ上の情報帯に出ている。ここに数字を置くと同じものが2つ並ぶだけだった。
+       字の大きさを幅だけで合わせると帯からはみ出すのも踏んだ（`fitScale` は幅しか見ない）ので、
+       数字はやめて、**音に合わせて跳ねる赤いドットの柱**にした */
+function drawDataBody(x, y, w, h){
+  const pad = PX*3, cell = Math.max(2, PX-2);
+  const live = S.running && S.phase !== "dead" && S.phase !== "pull" && S.phase !== "over";
+  const ph = live ? beatPhase(S.t) : 0.5;
+  const kick = ph < 0.15 ? 1 - ph/0.15 : 0;
+  const top = y + PX*8, base = y + h - PX*6;
+  const cols = 22, cw = Math.max(2, Math.floor(w / PX / cols)), maxH = Math.max(3, Math.floor((base - top) / PX));
+  for (let i = 0; i < cols; i++){
+    const wave = 0.34 + 0.26*Math.sin(S.t/110 + i*1.1) + 0.16*Math.sin(S.t/61 + i*0.55) + 0.12*Math.sin(S.t/37 + i*2.1);
+    const lvl = Math.round(Math.max(0.10, Math.min(1, wave*0.70 + kick*0.60 + (live ? 0 : -0.30))) * maxH);
+    for (let k = 0; k < maxH; k++){
+      const on = k < lvl;
+      pRect(x + PX*2 + i*cw*PX, base - (k+1)*PX, PX*(cw-1), PX-1,
+            on ? (k > maxH*0.78 ? "#ffd0c8" : k > maxH*0.50 ? LED.on : LED.mid) : LED.off);
+    }
+  }
+  const rowY = y + h - PX*3;
+  // 左端：Vストックを V の数だけ並べる
+  for (let i = 0; i < Math.min(S.vStock, 6); i++)
+    drawPixelText("V", x + pad + i*PX*4, rowY, cell,
+      (S.t - S.stockGotAt < 900 && i === S.vStock - 1 && Math.floor(S.t/90) % 2) ? "#ffd0c8" : LED.on, "left", enFont(), 11);
+  // 右端：復活が仕込まれているか
+  if (S.revive) drawPixelText("復活", x + w - pad, rowY, cell, Math.floor(S.t/400) % 2 ? "#ffd0c8" : LED.on, "right", null, 11);
+}
+
+
 
 /** 左の脇：黒い液晶の筐 */
 function drawMonitorWing(){
@@ -2286,7 +2335,7 @@ function drawMonitorWing(){
   glassFrame(m.x, m.y, m.w, m.h);
   ctx.save(); ctx.beginPath(); ctx.rect(m.x, m.y, m.w, m.h); ctx.clip();
   if ((S.extra && S.extra.kind === "seven") || S.extraPending) drawAimBoard(m.x, m.y, m.w, m.h);
-  else drawMonitorScreen(m.x, m.y, m.w, m.h, true);
+  else drawMonitorScreen(m.x, m.y, m.w, m.h, true, "fight");
   ctx.restore();
   // 筐の下にランプ3つ（拍で流れる）
   const step = Math.floor(S.lampT*3) % 3;
