@@ -1,5 +1,14 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  // ⚠️ ここに実験台・録画器の一時物を必ず入れる。**入れないと `astro check` が落ちる。**
+  //    2026-09-04：headless Chrome のプロファイル（拡張の巨大な JS が入る）が68個残っていて、
+  //    型チェックが全部読みに行き、8GBのヒープを使い切ってビルドが死んだ
+  "exclude": [
+    "dist",
+    "tools/lab777/chrome-profile-*",
+    "tools/rec777/chrome-profile",
+    "tools/rec777/game",
+    "tools/rec777/out"
+  ]
 }

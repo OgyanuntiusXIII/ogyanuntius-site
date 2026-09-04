@@ -14,49 +14,40 @@ coverNote: 今月プレイしたCoCのキャラ達。全員生きているが、
 magTitleJp: 月刊
 magTitleEn: OGYANUN
 coverLines:
+  - 777を、揃え続けろ。
   - デスクトップに、タコがいる。
-  - シナリオ制作、もっとラクしていい。
 headlines:
+  # ⚠️ **表紙に出す作品は3本まで**（本人・2026-09-04「トップに出すのは3つくらいに」）。
+  #    選び方は**ジャンルの代表を1本ずつ**。残りは目次のジャンル欄（/contents）で拾う。
+  #    足したくなったら、まずどれかを外す。増やすと表紙がまた埋まる。
+  #
+  # ⚠️ **`no:` は書かない。** 省くと目次の通し番号が自動で入る（src/lib/features.ts）。
+  #    作品を1本足すたびに 1〜8 を手で振り直す作業は要らない。
+  #    どうしても別の数字にしたいときだけ `no:` を書く。
+
+  # ツール・アプリの代表
   - ref: desk-takko
     collection: works
     slot: lead
-    no: 1
-  - ref: shinari-make
+
+  # ゲームの代表。いま出したばかりのもの
+  - ref: 777-combo
     collection: works
     slot: upper
-    no: 2
+    badge: NEW
+
+  # TRPGシナリオの代表
   - ref: amefuru-saigo-no-jikan-ni
     collection: scenarios
     slot: side
-    no: 3
-  - ref: kiki-kisaki
-    collection: works
-    slot: side
-    catch: キキ？キサキ？
-    no: 4
-  - ref: parry-aria-bpm
-    collection: works
-    slot: side
-    catch: アリアのケツで刻め！
-    no: 5
-  - ref: ai-stance
-    collection: works
-    slot: side
-    catch: 論点を揃えてから殴れ
-    no: 6
-  - ref: okoraretarakesu
-    collection: works
-    slot: side
-    badge: NEW
-    no: 7
+
+  # --- ここから下は作品ではなく、誌面の外への導線 ---
   - ref: /about
     collection: page
     catch: WHO IS OGYANUNTIUS XIII?
     slot: lower
-  - ref: /contents
-    collection: page
-    catch: 今月の制作物
-    slot: strip
+  # ⚠️ 「今月の制作物 → /contents」は 2026-09-04 に外した。
+  #    フットの CONTENTS と飛び先が同じで、右カラムの NEWS 欄とも名前が重なっていた
   - ref: /blog
     collection: page
     catch: クロウちゃんの愚痴
@@ -75,4 +66,5 @@ colophon:
   - X：@ogyanuntiusxiii
 ---
 
-創刊号。2026年9月号。作品は4つしかない。だから4つとも特集にした。
+創刊号。2026年9月号。ひと月で8本になった。
+表紙に出すのはジャンルの代表3本だけで、残りは目次のジャンル欄に並べてある。

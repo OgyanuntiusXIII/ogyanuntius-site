@@ -4,15 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>777コンボ</title>
-<meta name="description" content="777を揃えた、その次から始まる。1つだけ回り直すリールを7で止め続ける目押しゲーム。21コマ・毎分80回転、実機準拠。">
+<meta name="description" content="777が揃ったところから始まる目押しゲーム。揃うたびにリールが1つ回り直す。21コマ・毎分80回転、実機準拠。7は音の拍に乗って来る。">
 <link rel="icon" href="/favicon.svg">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="オギャヌンティウス十三世">
 <meta property="og:title" content="777コンボ">
 <meta property="og:description" content="777を、揃え続けろ。揃うたびに1つだけリールが回り直す。7で止め続けるだけのゲーム。">
 <meta property="og:url" content="https://ogyanuntiusxiii.com/games/777-combo">
-<!-- og:image は ogp.jpg を置いてから書く。無いパスを先に書かない -->
+<meta property="og:image" content="https://ogyanuntiusxiii.com/games/777-combo/ogp.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ogyanuntiusxiii.com/games/777-combo/ogp.jpg">
 <style>
 /* =========================================================
    『777コンボ』
@@ -260,6 +263,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;image-rendering:pi
           <li>左 <kbd>F</kbd><kbd>A</kbd><kbd>←</kbd> ／ 中 <kbd>G</kbd><kbd>S</kbd><kbd>↓</kbd> ／ 右 <kbd>H</kbd><kbd>D</kbd><kbd>→</kbd></li>
           <li>スマホは<b>3つのストップボタン</b>を押す。ボタン以外は効かない。MAX BET とレバーはその場所を押す。</li>
           <li>ゲーム中は右上の <b>⚙</b> で <b>BGM・SE・光の強さ</b>。記録と設定はこの端末に残る（サーバーへは送らない）。</li>
+          <li><b>高速のリールが出たら、それを最初に止める。</b>ほかの窓は暗くなる。高速で止めるとコンボは<b>倍</b>。</li>
         </ul>
       </section>
       <div class="gnav">
@@ -729,7 +733,7 @@ const S = {
   phase:"idle",      // idle / bet / lever / intro / round / dead / over
   introStarted:false, introAt:0,
   combo:0,
-  actives:[], prev:-1,             // いま回す（回っている）リールの番号
+  actives:[], order:[], prev:-1,   // いま回す（回っている）リールの番号と、7が来る順
   roundKind:"", roundAt:-9999,     // 今回の種類（ダブル／高速／トリプル／逆転）
   stageLv:0, stageAt:-9999,        // 30コンボごとのステージ
   v:28, win:5, back:2.6, limit:Infinity,
@@ -767,6 +771,8 @@ const S = {
   say:null,                        // モニターの一言 { text, at }
   ending:false, endingAt:-9999, endClank:0, luckyAt:-9999,   // 777のエンディングとラッキー7
   endStep:0, endStepAt:-9999, endNextAt:0, endLine:null, endDoneAt:0,   // エンディング：勝手に揃う線
+  pro:false,                       // 職人モード（裏）。リズムの補助（拍の音と光）を消す
+  proLever:0, proArmed:false, proSeq:[], proAt:-9999,   // 裏モードの入り方：レバー10回 → ボタンが光る → 合図の順
   lite:false,                      // 軽量描画（スマホ）
   pressFx:[0,0,0],
   t:0,
@@ -809,6 +815,13 @@ let actx = null, master = null, whir = null, whirGain = null, whirFilt = null;
 /* --- 設定：BGM・SE・光の強さ（本人 2026-09-03「BGM、SEを簡単に調整できるようにしてほしい。あと光の強さも」）。
    100 ＝ これまでの強さ。0〜150。この端末に残す（サーバーへは送らない） --- */
 const LS_OPT = "ogyanun.777combo.opt";
+/* 7777（完全制覇）を出したか。**出した人にだけ裏モードの入り口が見える**（本人 2026-09-04） */
+const LS_FIN = "ogyanun.777combo.finished";
+function finished(){ try { return localStorage.getItem(LS_FIN) === "1"; } catch (e){ return false; } }
+function markFinished(){ try { localStorage.setItem(LS_FIN, "1"); } catch (e){} }
+/* 裏モードの合図：レバー10回 → ボタンが光る → **右 左 右 左 右 右 右 中**（本人の指定） */
+const PRO_LEVER = 10, PRO_SEQ = [2, 0, 2, 0, 2, 2, 2, 1];
+const PRO_TARGET = 77777;          // 裏モードで777まで行ったときの最終コンボ
 const OPT = { bgm:100, se:100, light:100, muted:false };
 try { const o = JSON.parse(localStorage.getItem(LS_OPT) || "{}"); for (const k in OPT) if (typeof o[k] === typeof OPT[k]) OPT[k] = o[k]; } catch (e){}
 for (const k of ["bgm", "se", "light"]) OPT[k] = Math.max(0, Math.min(150, OPT[k]));
@@ -1258,7 +1271,7 @@ function bgNoise(t, dur, peak, freq, type){
 }
 
 function bgmStart(level){
-  if (!actx) return;
+  if (!actx || S.pro) return;      // 職人モードは無音（リズムの補助を消す）
   bgmOn = true; bgmLevel = level;
   bgmK = Math.ceil((S.t - S.beat0) / (beatMs()/4));
   if (level > 0) bgmBar = 0;
@@ -1765,7 +1778,7 @@ function shutterCover(reel){
 function drawPayline(){
   const a = L.reels[0], c = L.reels[2];
   const x0 = a.x - L.u*0.012, x1 = c.x + c.w + L.u*0.012;
-  const ph = S.running ? beatPhase(S.t) : 1;
+  const ph = (S.running && !S.pro) ? beatPhase(S.t) : 1;
   const flash = ph < 0.12 ? 1 - ph/0.12 : 0;
   const col = (S.hit > 0.3 || flash > 0.5) ? "#ffb0a0" : CAB.red;
   pRect(x0, L.payY - PX/2, x1 - x0, PX, col);
@@ -1825,7 +1838,7 @@ function drawCrown(tier){
   const idle = Math.floor(S.lampT * 3) % n;      // 何もないときも1つだけ流れる（客寄せ）
   for (let i = 0; i < n; i++){
     const on = hot || (tier >= 1 && (step + i) % 3 === 0)
-            || (tier === 0 && (S.running ? (beatPhase(S.t) < 0.12 && i % 2 === 0) : i === idle));
+            || (tier === 0 && (S.running && !S.pro ? (beatPhase(S.t) < 0.12 && i % 2 === 0) : i === idle));
     pLamp(x0 + (x1-x0)*(i/(n-1)), b.y + b.h/2, rad, on, hot ? CAB.goldHi : CAB.gold);
   }
   // 両端の大きいランプ（赤）。当たった瞬間だけ
@@ -1916,7 +1929,7 @@ function drawSides(tier){
     for (let i = 0; i < n; i++){
       const chase = tier >= 1 ? (step + i + k*3) % 3 === 0 : false;
       // 回っている間、拍で上から下へ流れる
-      const flow = S.phase === "round" && Math.floor(beatPhase(S.t) * n) === i;
+      const flow = !S.pro && S.phase === "round" && Math.floor(beatPhase(S.t) * n) === i;
       pLamp(c.x + c.w/2, y0 + (y1-y0)*(i/(n-1)), rad, hot || chase || flow, hot ? CAB.goldHi : CAB.gold);
     }
   }
@@ -1982,6 +1995,7 @@ function drawInfo(){
     ctx.drawImage(img, snap(cx - w/2), snap(cy - h/2), w, h);
   }
   if (S.vStock > 6) drawPixelText("+" + (S.vStock - 6), f.x + f.w*0.52 + PX*28, f.y + f.h*0.52, lab, "#ffe27a", "left", enFont(), 11);
+  if (S.pro) drawPixelText("職人", f.x + f.w*0.30, f.y + f.h*0.82, lab, "#9ef1ff", "center", null, 11);
   ctx.restore();
 }
 
@@ -2034,9 +2048,10 @@ function drawButtons(){
     const b = L.btns[i];
     const reel = S.reels[i];
     const inRound = S.phase === "round" && S.actives.includes(i);
-    const live = reel.state === "spin" && canPress(i) && (inRound || (S.phase === "intro" && S.introStarted));
+    const armed2 = S.proArmed && S.phase === "bet";
+    const live = armed2 || (reel.state === "spin" && canPress(i) && (inRound || (S.phase === "intro" && S.introStarted)));
     const armed = inRound && cueLevel(S.combo) >= 1 && (reel.state === "wait" || (reel.state === "spin" && !live));   // 加速中：うっすら
-    const flash = (inRound && live && timeLeftOf(i) < 0.22) ? (Math.floor(S.t/180) % 2 === 0) : true;
+    const flash = armed2 ? (Math.floor(S.t/140 + i) % 2 === 0) : (inRound && live && timeLeftOf(i) < 0.22) ? (Math.floor(S.t/180) % 2 === 0) : true;
     const down = S.pressFx[i] > 0.3 ? PX : 0;
     pBox(b.x, b.y, b.w, b.h + PX, "#0c0d10", "#4a4e56", "#000000", 1, false);
     const pad = PX*2;
@@ -2107,7 +2122,7 @@ const SAY = {
   stage:   ["台が変わる"], lucky: ["ラッキー"], stock: ["ストック", "貯めた"], saved: ["今のは無し"], ending: ["……完璧だ"],
   navi:    ["順に押せ"], naviOk: ["読めてる"], roulette: ["回せ"],
 };
-function say(key){ const a = SAY[key]; if (!a) return; S.say = { text: a[Math.floor(Math.random() * a.length)], at: S.t }; }
+function say(key){ if (S.pro) return; const a = SAY[key]; if (!a) return; S.say = { text: a[Math.floor(Math.random() * a.length)], at: S.t }; }
 
 /** 木人（もくじん）——の人形。左モニターの右に、台の上に立つ。**顔がある。**
     ビタ1回＝殴られて「><」の顔になり、胴にひび。3発目で右腕が落ちて床に転がり、5発で頭と胴が飛び散って柱だけ残り、
@@ -2415,6 +2430,17 @@ function drawTray(){
      垂れ幕（ステージ昇格）／V役物（窓に降りる・Vストック発動）／パトランプ（本体の上に出て回る・復活待ち）
    ========================================================================= */
 
+/** 高速の回のナビ。狙う窓の上に大きな矢印と「高速」。他の窓は暗く落ちている（drawCue 側） */
+function drawFastNavi(i){
+  const r = L.reels[i], p = L.topPanel;
+  const blink = Math.floor(S.t / 150) % 2 === 0;
+  const col = blink ? "#ffffff" : "#ffc4a8";
+  const cx = r.x + r.w/2, y = p.y + p.h - PX*7;
+  pTri(cx, y, PX*6, col, 1); pTri(cx, y, PX*6, col, -1);            // ▼ を三角2枚で
+  drawPixelText("高速", cx, y - PX*7, Math.max(2, PX-1), col, "center", null, 11);
+  drawPixelText("×2", cx, r.y + r.h + PX*4, Math.max(2, PX-1), col, "center", enFont(), 11);
+}
+
 /** 押し順ナビ（大）。上パネルに、リールの列ごとに大きな番号。次に押す番号が点滅、止めたら緑
     （本人 2026-09-04「パチスロみたいにリール下か上にでっかく出す」） */
 function drawNaviBig(){
@@ -2451,7 +2477,7 @@ function startRoulette(){
   S.rouletteQueued = false;
   const pick = Math.floor(Math.random() * ROULETTE.length);
   S.roulette = { stage:"drop", t0:S.t, ang:0, pick, spinAt:0, brakeAt:0, angBrake:0, angStop:0, showAt:0, liftAt:0 };
-  S.phase = "roulette"; S.actives = []; S.roundKind = "";
+  S.phase = "roulette"; S.actives = []; S.order = []; S.roundKind = "";
   sndServo(0.42); setTimeout(() => { if (S.running) sndClank(true); }, 420);
   say("roulette");
 }
@@ -2713,7 +2739,7 @@ function reelPhase(reel){
 }
 function drawReelFrame(i, strong){
   const r = L.reels[i], t = PX*2, reel = S.reels[i];
-  const ph = S.running ? reelPhase(reel) : 0.5;
+  const ph = (S.running && !S.pro) ? reelPhase(reel) : 0.5;
   const pulse = ph < 0.18 ? 1 - ph/0.18 : 0;
   const base = strong ? 0.9 : 0.55;
   const a = Math.min(1, base + pulse*0.5);
@@ -2819,7 +2845,7 @@ function drawJust(){
 }
 /* 予告の段。後半は予告そのものが消えていく（企画書7章）
    2: 枠もボタンも光る  1: ボタンだけ  0: なにも（回り出しを目で捕まえる） */
-function cueLevel(c){ return c < 100 ? 2 : c < 150 ? 1 : 0; }
+function cueLevel(c){ return S.pro ? 0 : c < 100 ? 2 : c < 150 ? 1 : 0; }
 
 /** 予告と案内 */
 function drawCue(){
@@ -2851,7 +2877,12 @@ function drawCue(){
   };
   const kb = (navigator.maxTouchPoints || 0) === 0 ? "（Space）" : "";
   // **最初だけ MAX BET → レバー。** 復活待ちはレバーだけ
-  if (S.phase === "bet"){ band("MAX BET を押せ" + kb, "#ffe07a"); return; }
+  if (S.phase === "bet"){
+    if (S.proArmed){ band("合図を入れろ　" + PRO_SEQ.slice(0, S.proSeq.length).map(() => "●").join("") + "".padEnd(0), "#9ef1ff"); return; }
+    if (S.pro){ band("職人モード ▶ MAX BET を押せ" + kb, "#9ef1ff"); return; }
+    if (finished() && S.proLever > 0){ band("レバー " + S.proLever + " / " + PRO_LEVER, "#9ef1ff"); return; }
+    band("MAX BET を押せ" + kb, "#ffe07a"); return;
+  }
   if (S.phase === "lever"){ band("レバーを叩け" + kb, "#ffe07a"); return; }
   if (S.phase === "dead"){
     if (L.wings && S.t - S.deadAt > 500) band(Math.floor(S.t/400) % 2 ? "レバーを叩け" + kb : "復活チャレンジ ▶ レバー", "#ff8a7a");
@@ -2871,7 +2902,7 @@ function drawCue(){
         ctx.fillRect(x, y, w, t); ctx.fillRect(x, y + h - t, w, t); ctx.fillRect(x, y, t, h); ctx.fillRect(x + w - t, y, t, h);
       }
       band(S.endLine.name + " ▶ +" + END_PER + "　×" + S.endStep, "#fff3a0");
-    } else band(S.combo < 7777 ? "777 ▶ 完全制覇" : "7777 COMBO", "#fff3a0");
+    } else band(S.combo < endTarget() ? "777 ▶ 完全制覇" : endTarget() + " COMBO", "#fff3a0");
     return;
   }
   if (S.phase === "roulette"){
@@ -2883,6 +2914,15 @@ function drawCue(){
   }
   if (S.phase !== "round") return;
   const cl = cueLevel(S.combo);
+  // **高速リールがあるときは、そこだけ明るく残して他を落とす**（本人 2026-09-04「ナビを出して、他の照明を暗くする」）
+  const fastIdx = S.actives.find(i => S.reels[i].v > S.v * 1.1 && S.reels[i].state !== "done");
+  if (fastIdx != null){
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,.55)";
+    for (const i of S.actives){ if (i === fastIdx) continue; const r = L.reels[i]; ctx.fillRect(r.x, r.y, r.w, r.h); }
+    ctx.restore();
+    drawFastNavi(fastIdx);
+  }
   const nextReel = (S.navi && S.navi.k < 3) ? S.navi.order[S.navi.k] : -1;
   for (const i of S.actives){
     const r = S.reels[i];
@@ -3450,14 +3490,21 @@ function nextRound(firstRound){
   // 前の7の拍から2拍あと。最初だけ、ひと呼吸おく
   let B = firstRound ? nextBeat(S.t + 700 + t7max) : nextBeat(S.dueBeat + beat*1.5);
   if (B - t7max < S.t + 30) B = nextBeat(S.t + 30 + t7max);
+  // **止めるものは毎回、拍ちょうどに来る**（本人 2026-09-04「リズム感があれば乗り切れるようにする。
+  // 次に止めるものを毎回リズムに乗るようにする。テンポ感をひたすら大事にする」）。
+  // 2本・3本は 1/n 拍ではなく **1拍ずつ**（3連は拍から外れて、リズムで乗れなかった）。
+  // 高速リールがあれば、それを**いちばん最初**に（本人「早いリールが出た場合は、それを最優先で処理させる」）
   const n = rd.reels.length;
-  const seq = rd.navi || rd.reels;     // ナビ回は押す順に7が来る
-  seq.forEach((i, k) => { const reel = S.reels[i]; reel.dueAt = B + beat * k / n; reel.spinAt = reel.dueAt - reel.t7; });
+  let seq = rd.navi || rd.reels.slice();
+  if (!rd.navi && rd.fast.length) seq = rd.fast.concat(seq.filter(i => !rd.fast.includes(i)));
+  S.order = seq.slice();
+  seq.forEach((i, k) => { const reel = S.reels[i]; reel.dueAt = B + beat * k; reel.spinAt = reel.dueAt - reel.t7; });
   S.dueBeat = B + beat * (n - 1);     // 最後の1本を止める予定の拍
   S.roundKind = rd.kind; S.roundAt = S.t;
   if (rd.kind) sndKind(rd.kind);
-  if (rd.kind === "ダブル") say("double"); else if (rd.kind === "トリプル") say("triple");
-  else if (rd.kind === "高速") say("fast"); else if (rd.kind === "逆転") say("reverse"); else if (rd.kind === "ブラインド") say("blind");
+  if (rd.fast.length) say("fast");
+  else if (rd.kind === "ダブル") say("double"); else if (rd.kind === "トリプル") say("triple");
+  else if (rd.kind === "逆転") say("reverse"); else if (rd.kind === "ブラインド") say("blind");
   else if (rd.kind === "ナビ") say("navi");
   S.phase = "round";
 }
@@ -3551,6 +3598,20 @@ function missTarget(i, pos, dir, win, list, symName){
 
 /** 止める。ここが全部 */
 function press(i){
+  // 裏モードの合図。**右 左 右 左 右 右 右 中**（本人の指定）。間違えたら最初から
+  if (S.proArmed && S.phase === "bet"){
+    S.pressFx[i] = 1;
+    S.proSeq.push(i);
+    const k = S.proSeq.length - 1;
+    if (PRO_SEQ[k] !== i){ S.proSeq = []; S.proLever = 0; S.proArmed = false; sndKind("逆転"); return; }
+    sndPeka(false);
+    if (S.proSeq.length === PRO_SEQ.length){
+      S.pro = true; S.proArmed = false; S.proAt = S.t;
+      bgmStop(); sndPremium(); sndTettere(0.4, true);
+      S.flash = 1; S.shake = 1; S.peka = 1; ART_CACHE.clear();
+    }
+    return;
+  }
   if (S.phase === "roulette"){ S.pressFx[i] = 1; stopRoulette(); return; }
   if (S.phase === "pull"){ S.pressFx[i] = 1; pullBig(); return; }      // でっかいレバーはどのボタンでも下がる
   if (S.phase === "intro"){ if (S.introStarted) pressIntro(i); return; }
@@ -3645,7 +3706,9 @@ function onReelStop(i, ok){
   // **ビタ押し。**7が線の上（±半コマ）で押していたら、**一気に4コンボ**＋コインが倍以上
   //（本人の指示・2026-09-03「ビタで4短縮」）。腕の見せどころ
   const just = Math.abs(reel.hitDd == null ? S.lastHitDd : reel.hitDd) < 0.5;
-  const gain = just ? COMBO_JUST : 1;
+  // 高速リールは難しいぶん倍（本人 2026-09-04「早いリールはむずいのでコンボ数を今の倍にする」）
+  const fastReel = reel.v > S.v * 1.1;
+  const gain = (just ? COMBO_JUST : 1) * (fastReel ? 2 : 1);
   S.lastReel = i;
   S.hit = 1; S.segFlash = 1; S.peka = 1; S.kick = 1;
   sndHit(S.combo + gain);
@@ -3753,7 +3816,9 @@ function addCombo(n){
    7777が揃ったあとは一番演出を頑張って、脳汁の音を大量に、めっちゃ派手に」
    → 間隔は 600ms × 0.97^k（指数で縮む）、下限 8ms（1フレームに2回揃う）。142回目で下限、全体で約23秒。
      揃い切ったら6秒の大団円（FINALE：音と光を段階的に重ねる。粒の上限も3倍） */
-const END_SHOW = 1200, END_PER = 12, END_STEPS = Math.ceil((7777 - 777) / END_PER), END_HOLD = 6000;
+const END_SHOW = 1200, END_PER = 12, END_HOLD = 6000;
+function endTarget(){ return S.pro ? PRO_TARGET : 7777; }
+function endSteps(){ return Math.ceil((endTarget() - 777) / END_PER); }
 const END_LINES = [3, 1, 2, 0, 4];       // LINES の並び：右下がり → 中段 → 下段 → 上段 → 右上がり
 function endInterval(k){ return Math.max(8, 600 * Math.pow(0.97, k)); }
 const FINALE = [
@@ -3773,7 +3838,7 @@ function startEnding(){
   S.combo = 777;
   S.extra = null; S.extraPending = false; S.revive = false; S.lastMiss = null; S.navi = null; S.naviPending = false; S.roulette = null; S.rouletteQueued = false;
   S.reels.forEach((r, i) => { r.aim = null; r.state = "idle"; r.snap = null; r.spinning = false; r.vNow = 0; r.pos = nearestSevenOn(i, r.pos); if (r.blind && r.blindAt && !r.openAt) r.openAt = S.t; });
-  S.actives = []; S.roundKind = "";
+  S.actives = []; S.order = []; S.roundKind = "";
   stopWhir();
   S.milestone = "777 COMBO"; S.milestoneAt = S.t; S.megaLv = 16; S.mega = 1; S.heat = 1;
   S.flash = 0.9; S.shake = 1; S.peka = 1; S.segFlash = 1;
@@ -3787,23 +3852,24 @@ function stepEnding(now){
   S.heat = 1; S.mega = Math.max(S.mega, 0.6);
   if (a - S.endClank * 180 >= 180){ S.endClank++; if (S.endClank % 2) sndClank(false); S.shake = Math.max(S.shake, 0.35); }
   if (a < END_SHOW) return;
-  if (S.endStep < END_STEPS){
+  if (S.endStep < endSteps()){
     // 合間はリールが爆速で回る（線が変わるまで前へ送る）
     const gap = Math.max(1, S.endNextAt - S.endStepAt);
     const k = Math.min(1, (now - S.endStepAt) / gap);
     if (S.endLine) S.reels.forEach((r, i) => { r.pos = r.endFrom + (r.endTo - r.endFrom) * k; });
     if (now < S.endNextAt) return;
     // 1本の線に、3本とも7を揃える。線ごとに +12（普通の回で最大の +4×3）。終盤は1フレームに何回も揃う
-    while (S.endStep < END_STEPS && now >= S.endNextAt) endStepOnce(now);
+    while (S.endStep < endSteps() && now >= S.endNextAt) endStepOnce(now);
     if (!whir) startWhir();
     whirSpeed(60 + 40 * Math.min(1, S.endStep / 140));
     return;
   }
   if (!S.endDoneAt){
-    S.combo = 7777; S.endDoneAt = now; S.endLine = null; S.endFin = 0; S.fxBoost = true; stopWhir();
+    S.combo = endTarget(); S.endDoneAt = now; S.endLine = null; S.endFin = 0; S.fxBoost = true; stopWhir();
     S.reels.forEach((r, i) => { r.pos = nearestSevenOn(i, r.pos); r.endFrom = r.endTo = null; });
-    S.milestone = "7777 COMBO"; S.milestoneAt = now; S.megaLv = 16; S.mega = 1;
-    S.bannerAt = now; S.bannerText = "7777"; S.bannerSub = "完全制覇"; sndCloth();
+    markFinished();                                   // 次から裏モードの入り口が見える
+    S.milestone = S.combo + " COMBO"; S.milestoneAt = now; S.megaLv = 16; S.mega = 1;
+    S.bannerAt = now; S.bannerText = String(S.combo); S.bannerSub = S.pro ? "職人・完全制覇" : "完全制覇"; sndCloth();
     S.peka = 1;
   }
   // 大団円：段階的に重ねる
@@ -3820,7 +3886,7 @@ function endStepOnce(now){
       r.endFrom = from; r.endTo = c + line.rows[i]; r.pos = r.endTo; r.state = "idle";
     });
     S.endLine = line;
-    S.combo = Math.min(7777, S.combo + END_PER); S.endStep++; S.endStepAt = now;
+    S.combo = Math.min(endTarget(), S.combo + END_PER); S.endStep++; S.endStepAt = now;
     S.endNextAt = Math.max(S.endNextAt + endInterval(S.endStep), now - 40);   // 予定を積む（8ms刻みなら1フレームに2回揃う）
     S.kick = 1; S.peka = 1;
     if (S.endStep % 4 === 0){ S.segFlash = 1; S.flash = Math.max(S.flash, 0.18); }
@@ -3995,7 +4061,7 @@ function enterDead(i){
   S.fx.length = 0; S.waves.length = 0;
   S.shake = 0; S.flash = 0; S.peka = 0; S.segFlash = 0; S.heat = 0; S.mega = 0; S.milestone = ""; S.kick = 0; S.hit = 0;
   S.roundKind = ""; S.stageAt = -9999; S.gim = null;
-  S.actives = [];
+  S.actives = []; S.order = [];
   S.dark = 1;
   say("dead");
 }
@@ -4004,6 +4070,7 @@ function enterDead(i){
 function pressMaxBet(){
   if (S.running && S.phase === "roulette") return stopRoulette();
   if (!S.running || S.phase !== "bet") return false;
+  if (S.proArmed) return false;             // 合図の受付中は MAX BET を殺す（間違えて始めないように）
   S.betAt = S.t; sndBet();
   S.phase = "lever";
   return true;
@@ -4011,6 +4078,16 @@ function pressMaxBet(){
 /** レバーを叩く。最初の1回（MAX BET のあと）と、復活待ちのときだけ効く */
 function pullLever(){
   if (!S.running) return false;
+  if (S.phase === "bet" && finished() && !S.pro){
+    // **裏モードの入り口。**ベットせずにレバーを10回叩くとボタンが光る（7777を出した端末だけ）
+    S.leverAt = S.t; sndLever();
+    if (!S.proArmed){
+      S.proLever++;
+      if (S.proLever >= PRO_LEVER){ S.proArmed = true; S.proSeq = []; S.proAt = S.t; sndKyuin(1); sndJakin(0.2); }
+      else if (S.proLever >= 6) sndPeka(false);
+    }
+    return true;
+  }
   if (S.phase === "lever"){
     S.leverAt = S.t; sndLever();
     // 拍の格子はここで切る。**最初の7が拍に来る**ように回り出しを置く
@@ -4277,10 +4354,12 @@ const TITLES = [
   [500,"128の向こう側認定"], [550,"8192に選ばれし者認定"], [600,"有利を断つ者認定"], [650,"ART50連認定"], [700,"神認定"],
   [750,"万の景色を夢見る者認定"], [777,"称号：777COMBOを制覇せし者"],
 ];
+const TITLE_PRO = "称号：777コンボを終えた人";     // 裏モード（職人）で777まで行った人
 function titleOf(c){ let t = TITLES[0][1]; for (const [n, name] of TITLES) if (c >= n) t = name; return t; }
 
 function gameOver(){
   const fin = S.phase === "ending";                         // 777 のエンディング。静寂にはしない
+  S.proWas = S.pro;
   S.running = false;
   S.phase = "over";
   bgmStop();
@@ -4306,7 +4385,7 @@ function gameOver(){
     veil.classList.remove("bare");
     const LF = String.fromCharCode(10);
     // 共有文：「○○ COMBO/○○ ビタ」「称号」「#777コンボ」＋URL（本人の指定・2026-09-04）
-    const title = titleOf(reached);
+    const title = (fin && S.proWas) ? TITLE_PRO : titleOf(reached);
     const text = [
       reached + " COMBO/" + S.justN + " ビタ",
       title,
@@ -4362,7 +4441,7 @@ function start(){
   S.paused = false;
   S.combo = 0;
   S.lastOff = null;
-  S.prev = -1; S.actives = []; S.lastReel = -1;
+  S.prev = -1; S.actives = []; S.order = []; S.lastReel = -1;
   S.roundKind = ""; S.roundAt = -9999; S.stageLv = 0; S.stageAt = -9999;
   ART_CACHE.clear();
   S.fx.length = 0;
@@ -4376,6 +4455,7 @@ function start(){
   S.extra = null; S.extraPending = false; S.aimLine = null; S.revive = false; S.reviveAt = -9999;
   S.leftOut = false; S.wingOut = { L:0, R:0 }; S.wingWant = { L:false, R:false }; S.slamAt = { L:-9999, R:-9999 };
   S.dark = 0; S.deadReel = -1; S.deadAt = -9999; S.leverAt = -9999; S.betAt = -9999;
+  S.proLever = 0; S.proArmed = false; S.proSeq = [];     // ⚠️ S.pro は消さない（リロードするまで裏モード）
   S.vStock = 0; S.stockAt = -9999; S.stockGotAt = -9999; S.savedAt = -9999; S.roundJust = 0; S.allJustAt = -9999; S.allJustN = 0;
   S.naviPending = false; S.navi = null; S.naviAt = -9999; S.justStreak = 0; S.rouletteQueued = false; S.roulette = null; S.rouletteAt = -9999; S.rouletteText = "";
   S.patOut = 0; S.vPlateAt = -9999; S.bannerAt = -9999; S.bannerText = ""; S.bannerSub = ""; S.big = null;
@@ -4587,7 +4667,7 @@ document.addEventListener("visibilitychange", () => {
     if (S.extra.kind === "bar"){ S.revive = false; S.dark = 0; bgmStart(1); }
     S.extra = null;
     S.reels.forEach((r, i) => { r.aim = null; r.pos = nearestSevenOn(i, r.pos); r.state = "idle"; r.spinning = false; r.snap = null; r.vNow = 0; r.dir = 1; });
-    S.actives = [];
+    S.actives = []; S.order = [];
   }
   for (const i of S.actives){
     const reel = S.reels[i];
