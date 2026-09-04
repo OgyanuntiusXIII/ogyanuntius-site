@@ -35,7 +35,9 @@ def main():
         for b in bad:
             print("   ", b)
 
-    out_dir = os.path.join(ROOT, "dist")
+    # ⚠️ `dist/` は **Astro のビルド出力**。ここへ置くと `npm run build` で消えるうえ、
+    #    消えなかった場合は**サイトに公開されてしまう**（2026-09-04 に実際に踏んだ）
+    out_dir = os.path.join(ROOT, "packaged")
     os.makedirs(out_dir, exist_ok=True)
     dst = os.path.join(out_dir, slug + ".zip")
 
