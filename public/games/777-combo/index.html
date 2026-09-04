@@ -10,7 +10,7 @@
 <meta property="og:site_name" content="オギャヌンティウス十三世">
 <meta property="og:title" content="777コンボ">
 <meta property="og:description" content="777を、揃え続けろ。揃うたびに1つだけリールが回り直す。7で止め続けるだけのゲーム。">
-<meta property="og:url" content="https://ogyanuntiusxiii.com/games/777-combo">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/games/777-combo/">
 <meta property="og:image" content="https://ogyanuntiusxiii.com/games/777-combo/ogp.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -2087,22 +2087,10 @@ function drawLowPanel(tier){
       pRect(x + step*PX*4, p.y + p.h - PX*3, PX*2, PX, "rgba(255,230,120,.35)");
     }
   }
-  if (L.wings){
-    // 広い画面：装飾。題字と銘（胴の切り身はやめた。本人「下半身ちぎれてるように見える」）
-    if (LOGO_IMG){
-      const sc = Math.max(1, Math.floor(p.h*0.55 / LOGO_IMG.height / PX)) * PX;
-      const lw = LOGO_IMG.width / PX * sc, lh = LOGO_IMG.height / PX * sc;
-      ctx.drawImage(LOGO_IMG, snap(p.x + p.w*0.5 - lw/2), snap(p.y + p.h*0.42 - lh/2), lw, lh);
-    }
-    drawPixelText("OGYANUNTIUS XIII", p.x + p.w*0.5, p.y + p.h*0.84, Math.max(2, PX-2), "rgba(255,225,170,.6)", "center", enFont(), 11);
-    ctx.fillStyle = "rgba(255,255,255,.05)";
-    ctx.fillRect(p.x, p.y, p.w, snap(p.h*0.10));
-    const dim = (1 - litLevel()) * 0.32;
-    if (dim > 0.01){ ctx.fillStyle = "rgba(6,2,4," + dim.toFixed(3) + ")"; ctx.fillRect(p.x, p.y, p.w, p.h); }
-  } else {
-    // 狭い画面：ここが踊るモニター
-    drawMonitorScreen(p.x, p.y, p.w, p.h, false);
-  }
+  // **画面の広さによらず、ここは踊るモニター。**
+  // （2026-09-04 本人「スマホ版のしたパネルめちゃくちゃかわいいから、これPC版で逆輸入してほしい」。
+  //   前は広い画面だけ題字と銘の飾りだった。脇のモニターと同じ中身が、横長の構図で並ぶ）
+  drawMonitorScreen(p.x, p.y, p.w, p.h, false);
   ctx.restore();
 }
 
@@ -4446,9 +4434,11 @@ function gameOver(){
     const LF = String.fromCharCode(10);
     // 共有文：「○○ COMBO/○○ ビタ」「称号」「#777コンボ」＋URL（本人の指定・2026-09-04）
     const title = (fin && S.proWas) ? TITLE_PRO : titleOf(reached);
+    // 7777 と裏モードの称号は元から「称号：」で始まる。二重に付けない
+    const label = title.indexOf("称号：") === 0 ? title : "称号：" + title;
     const text = [
       reached + " COMBO/" + S.justN + " ビタ",
-      title,
+      label,
       "#777コンボ"
     ].join(LF);
     const share = "https://x.com/intent/post?text=" + encodeURIComponent(text) +
@@ -4660,19 +4650,22 @@ addEventListener("keydown", (e) => {
   press(i);
 }, { passive:false });
 
-/* **ストップボタンの上だけ効く。**それ以外の場所は何もしない（本人の指示・2026-09-03）。
-   当たりはボタンの絵より広く、台座の高さいっぱい＋左右に少し（指で押すため）。
+/* **ストップボタンの帯と、その下の下パネルが効く。**それ以外の場所は何もしない
+   （2026-09-03 は「ボタンの上だけ」だったが、2026-09-04 に本人「スマホでプレイしたとき、
+     したパネルの左、右、中を押してもボタンが反応するようにしておこう」で下へ広げた）。
    canvas は画面いっぱいなので clientX/Y がそのまま版面の座標 */
 function buttonAt(x, y){
   if (!L) return -1;
-  // ボタンの列の帯（上下に少し余裕）。**帯の中なら左右は画面の端まで3分割**——
+  // 帯は「台座の少し上」から「下パネルの下端」まで。**帯の中なら左右は画面の端まで3分割**——
   // スマホは右ボタンのすぐ隣が MAX BET と投入口で、そこに指が落ちて無反応になっていた
-  const top = L.deck.y - L.deck.h * 0.35, bottom = L.deck.y + L.deck.h * 1.35;
+  const top = L.deck.y - L.deck.h * 0.35;
+  const bottom = (L.lowPanel ? L.lowPanel.y + L.lowPanel.h : L.deck.y + L.deck.h * 1.35);
   if (y < top || y > bottom) return -1;
   const cx = L.btns.map(b => b.x + b.w/2);
   return x < (cx[0] + cx[1]) / 2 ? 0 : x < (cx[1] + cx[2]) / 2 ? 1 : 2;
 }
-/** MAX BET とレバーの当たり。ボタンの帯の、左端（レバー）と右端（MAX BET）。押す番のときだけ効く */
+/** MAX BET とレバーの当たり。**台座の帯のまま**（下パネルまで広げると、
+    下パネルの左右を押しただけでレバーやベットが暴発する）。押す番のときだけ効く */
 function controlAt(x, y){
   if (!L) return null;
   const top = L.deck.y - L.deck.h * 0.35, bottom = L.deck.y + L.deck.h * 1.35;
