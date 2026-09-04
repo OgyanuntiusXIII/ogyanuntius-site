@@ -12,7 +12,8 @@
     phase: "init", err: null, bytes: 0, combo: 0, coins: 0, w: 0, h: 0, step: 0,
   });
   const TITLE_MS = Number(new URLSearchParams(location.search).get("title") || 1500);
-  // j=ビタ n=普通 m=わざと外す（Vストックがあれば逆回転で救われる。無くて復活が仕込まれていれば暗転→でっかいレバー）
+  // j=ビタ n=普通 m=わざと外す（Vストックがあれば逆回転で救われる）
+  // M=Vストックを捨ててから外す（**復活の演出を撮るため**。暗転→でっかいレバー→BARを狙え！へ進む）
   // 台本は CDP から window.__SCRIPT で差し替えられる。"long" は 7777 まで（j j n の繰り返し：ビタで登り、3連続を避けてルーレットに寄り道しない。外さない）
   const getScript = () => String(window.__SCRIPT || "jjjmjjnmjjjmjjmmmnnjnm");
 
@@ -28,13 +29,15 @@
   const aheadOf = (i) => { const r = S.reels[i]; return r.aim ? aimsAfter(i, r.aim, r.pos - 1, 3) : (r.dir < 0 ? sevensBefore(i, r.pos + 1, 3) : sevensAfter(i, r.pos - 1, 3)); };
   // 押す位置（進む向きで見た狙いとの差）：ビタは線の直前、普通は少し手前で滑らせる、外すのは通り過ぎてから
   const wantD = (style) => style === "j" ? [-0.48, -0.02] : style === "n" ? [-2.6, -1.2] : [3.3, 4.2];
+  const isMiss = (style) => style === "m" || style === "M";
 
   const pending = {};   // reel -> style（そのリールに決めた押し方）
   function tryPress(i, style){
     const r = S.reels[i];
     if (r.state !== "spin" || !canPress(i) || r.rescue) return false;
     const [lo, hi] = wantD(style);
-    if (style === "m"){
+    if (isMiss(style)){
+      if (style === "M") S.vStock = 0;        // 救済を捨てて、確実に復活の演出へ
       // 通り過ぎてから押す。いちばん近い（すぐ後ろの）狙いを見る
       const behind = r.dir < 0 ? sevensAfter(i, r.pos - 0.5, 1)[0] : sevensBefore(i, r.pos + 0.5, 1)[0];
       if (behind == null) return false;
@@ -114,7 +117,7 @@
       if (S.justN !== lastJust){ lastJust = S.justN; if (S.justN) mark("just", { n: S.justN, combo: S.combo }); }
       if (S.phase !== lastPhase){ lastPhase = S.phase; mark("phase", { p: S.phase, combo: S.combo }); }
       const ek = S.extra ? S.extra.kind : "";
-      if (ek !== lastExtra){ lastExtra = ek; if (ek) mark("extra", { kind: ek, combo: S.combo }); }
+      if (ek !== lastExtra){ lastExtra = ek; if (ek) mark("extra", { aim: ek, combo: S.combo }); }   // ⚠️ kind は mark 側で使うので aim に入れる
       if (S.vStock < lastStock) mark("rescue", { combo: S.combo });
       lastStock = S.vStock;
       if (S.phase === "ending" && S.endStep !== lastEndStep && (S.endStep === 1 || S.endStep === 200 || S.endStep >= endSteps())){

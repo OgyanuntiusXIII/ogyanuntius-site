@@ -2513,11 +2513,11 @@ function stepRoulette(now, dt){
   if (r.stage === "drop"){ if (now - r.t0 > 420){ r.stage = "spin"; r.spinAt = now; sndSpin(); } return; }
   if (r.stage === "spin"){
     const a0 = r.ang; r.ang += 0.20 * dt / 16.7; tickSec(a0, r.ang);
-    if (now - r.spinAt > 4000) stopRoulette();
+    if (now - r.spinAt > 2200) stopRoulette();      // 押さなければ2.2秒で自動。幕間を短く（リズムを切らない）
     return;
   }
   if (r.stage === "brake"){
-    const t = Math.min(1, (now - r.brakeAt) / 1400);
+    const t = Math.min(1, (now - r.brakeAt) / 1000);
     const a0 = r.ang; r.ang = r.angBrake + (r.angStop - r.angBrake) * (1 - Math.pow(1 - t, 3)); tickSec(a0, r.ang);
     if (t >= 1){
       r.stage = "show"; r.showAt = now;
@@ -2533,13 +2533,14 @@ function stepRoulette(now, dt){
     }
     return;
   }
-  if (r.stage === "show"){ if (now - r.showAt > 1300){ r.stage = "lift"; r.liftAt = now; sndServo(0.35); } return; }
+  if (r.stage === "show"){ if (now - r.showAt > 850){ r.stage = "lift"; r.liftAt = now; sndServo(0.35); } return; }
   if (r.stage === "lift"){
-    if (now - r.liftAt < 420) return;
+    if (now - r.liftAt < 300) return;
     S.roulette = null;
     S.phase = "round";
+    // ⚠️ 拍の格子は**切らない**（S.dueBeat をいじらない）。nextDue が2拍ずつ足して合わせる
     if (S.extraPending) startAim("seven");
-    else { S.dueBeat = nextBeat(now); nextRound(true); }
+    else nextRound(false);
   }
 }
 function drawRoulette(){
@@ -3476,6 +3477,18 @@ function pickRound(){
   return { reels, fast, reverse, blind, navi: null, kind };
 }
 
+/* **止める間隔は常に2拍。**（本人 2026-09-04「常に一定のリズムで目押しし続けられるのが理想。どんなアクションとるにしても」）
+   間に合わないときは 2拍ずつ足す。1拍ずつ足すと「2拍・3拍・2拍…」と揺れて、リズムが切れる。
+   課題（7を狙え！／BARを狙え！）やルーレットを挟んでも、この格子は動かさない */
+const ROUND_GAP_BEATS = 2;
+function nextDue(t7max, firstBeats){
+  const beat = beatMs();
+  let B = S.dueBeat + beat * (firstBeats || ROUND_GAP_BEATS);
+  let guard = 0;
+  while (B - t7max < S.t + 40 && guard++ < 512) B += beat * ROUND_GAP_BEATS;
+  return B;
+}
+
 /** 次の回を組む。**回すリールの最初の7が拍に来る**ように回り出しを逆算する。
     2本・3本は **7が来る時刻を 1/n 拍ずつずらす**——同時押しは通らない。左から順に止める
     （本人 2026-09-03「一緒のタイミングでリール回ったら同時押しできちゃうから、実機みたいな感じでずらそう」） */
@@ -3506,9 +3519,8 @@ function nextRound(firstRound){
     if (!reel.blind){ reel.blindAt = 0; reel.openAt = 0; }
     reel.rescue = false;
   }
-  // 前の7の拍から2拍あと。最初だけ、ひと呼吸おく
-  let B = firstRound ? nextBeat(S.t + 700 + t7max) : nextBeat(S.dueBeat + beat*1.5);
-  if (B - t7max < S.t + 30) B = nextBeat(S.t + 30 + t7max);
+  // **前に止めた拍のちょうど2拍あと。**（最初＝導入の777の直後だけ4拍＝1小節おく。それも格子の上）
+  const B = nextDue(t7max, firstRound ? 4 : ROUND_GAP_BEATS);
   // **止めるものは毎回、拍ちょうどに来る**（本人 2026-09-04「リズム感があれば乗り切れるようにする。
   // 次に止めるものを毎回リズムに乗るようにする。テンポ感をひたすら大事にする」）。
   // 2本・3本は 1/n 拍ではなく **1拍ずつ**（3連は拍から外れて、リズムで乗れなかった）。
@@ -4000,10 +4012,10 @@ function startAim(kind, deadReel){
     reel.state = "wait"; reel.spinning = false; reel.snap = null; reel.vNow = 0; reel.targets = null; reel.stopped = false;
   }
   S.actives = [0, 1, 2]; S.prev = 2;
-  // **7を狙え！は普通の回と同じ拍で回り出す**（本人 2026-09-04「テンポロスしたくない。リズムは常に一定」）。
-  // 線は5ビタの瞬間からモニターに出ている。復活の課題だけは、暗転のあとなので一呼吸おく
-  let B = bar ? nextBeat(S.t + 900 + t7max) : nextBeat(S.dueBeat + beat*1.5);
-  if (B - t7max < S.t + 30) B = nextBeat(S.t + 30 + t7max);
+  // **課題も普通の回とまったく同じ格子。**線は5ビタの瞬間からモニターに出ているので、読む間は要らない。
+  // 復活の課題だけは、直前に暗転とレバーがあって拍を切り直しているので、そこから2拍
+  if (bar) S.dueBeat = S.t;
+  const B = nextDue(t7max);
   // 狙いは **1拍ずつ**（本人 2026-09-04「一列そろえろ系も、ナビ通りにやればリズム通りに行けるように」）。
   // ⚠️ **押すのをやめると永久に回り続けて、課題が終わらなかった**（＝結果画面が出ない。本人が踏んだ）。
   //    本編は時間制限なしのままでよいが、課題は終わらないと先へ進めない。狙いが来てから4秒で自動的に止める
@@ -4079,7 +4091,7 @@ function stepAim(now){
       }
       if (e.step < 2 && a > 1500){ e.step = 2; rain(120); spawnCoins(90); sndFanfare(6); sndCheer(); sndPremium(); S.peka = 1; S.flash = Math.max(S.flash, 0.7); S.shake = 1; }
     }
-    const wait = e.kind === "bar" ? (e.ok ? 3000 : 1300) : (e.ok ? 900 : 500);   // 7を狙え！は短く（テンポを崩さない）
+    const wait = e.kind === "bar" ? (e.ok ? 3000 : 1300) : (e.ok ? 700 : 400);   // 7を狙え！は短く（テンポを崩さない）
     if (now - e.resultAt < wait) return;
     if (e.kind === "bar" && !e.ok){ S.extra = null; for (const r of S.reels) r.aim = null; gameOver(); return; }
     // 3本とも7へ戻す（BARの隣が7、線が違っても数コマ）。本編の停止と同じ滑りで
@@ -4098,8 +4110,7 @@ function stepAim(now){
     if (moving) return;
     const kind = e.kind;
     S.extra = null;
-    if (kind === "bar"){ S.dueBeat = nextBeat(now); nextRound(true); }
-    else { S.dueBeat = lastBeat(now); nextRound(false); }      // 拍を切らずに次へ
+    nextRound(false);          // **どちらも格子はそのまま。**nextDue が2拍ずつ足して合わせる
   }
 }
 
