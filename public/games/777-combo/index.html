@@ -241,7 +241,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;image-rendering:pi
         <h2>3. 台の変化</h2>
         <ul>
           <li><b>30コンボごとにステージ</b>：30 ダブル（2本）／60 高速／90 トリプル（3本）／120 逆転／150 無双。パネルの色と曲の調が変わる。</li>
-          <li><b>2本・3本は7が来る間がずれる。</b>同時押しは効かない。左から順に来る。</li>
+          <li><b>2本・3本は7が1拍ずつずれて来る。</b>同時押しは効かない。上パネルの<b>ナビの番号どおり</b>に押せば、拍に乗るだけで揃う。</li>
           <li><b>ビタの次の回はナビ回</b>：3本回って、上パネルに<b>押す順</b>が大きく出る。順どおりに全部7で止めれば <b>+5</b>。</li>
           <li>90コンボからは<b>ブラインド</b>：1本にシャッターが降りて<b>中段だけ見える</b>。枠の脈と拍で押す。</li>
         </ul>
@@ -2443,18 +2443,30 @@ function drawFastNavi(i){
 
 /** 押し順ナビ（大）。上パネルに、リールの列ごとに大きな番号。次に押す番号が点滅、止めたら緑
     （本人 2026-09-04「パチスロみたいにリール下か上にでっかく出す」） */
+/** いま出す押し順。**2本以上ならいつでも出す**（ナビ回だけでなく、ダブル・トリプル・課題も）
+    本人 2026-09-04「ダブル、トリプル、一列そろえろ系も、ナビ出して、ナビ通りにやればリズム通りに行けるように」 */
+function naviOrder(){
+  if (S.phase !== "round") return null;
+  const ord = (S.navi && S.navi.order) || S.order;
+  return (ord && ord.length >= 2) ? ord : null;
+}
+/** 次に押すもの（順のうち、まだ止まっていない最初の1本） */
+function naviNext(ord){
+  for (const i of ord) if (S.reels[i].state !== "done") return i;
+  return -1;
+}
 function drawNaviBig(){
-  const nv = S.navi;
-  if (!nv || S.phase !== "round") return;
+  const ord = naviOrder();
+  if (!ord) return;
   const p = L.topPanel;
   ctx.save(); ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
   // **リールのすぐ上**（上パネルの下端）に置く。本人 2026-09-04「プレイしてるときにまず見えない。もっとリールに近い位置」
   const sz = Math.max(PX*9, snap(p.h*0.34)), cy = p.y + p.h - sz/2 - PX*2;
   ctx.fillStyle = "rgba(0,0,0,.62)"; ctx.fillRect(p.x, snap(cy - sz/2 - PX*2), p.w, sz + PX*4);
   const blink = Math.floor(S.t / 180) % 2 === 0;
-  const nextReel = nv.k < 3 ? nv.order[nv.k] : -1;
-  for (let i = 0; i < 3; i++){
-    const k = nv.order.indexOf(i) + 1;
+  const nextReel = naviNext(ord);
+  for (const i of ord){
+    const k = ord.indexOf(i) + 1;
     const r = L.reels[i], x = r.x + r.w/2;
     const done = S.reels[i].state === "done";
     const isNext = i === nextReel;
@@ -2745,7 +2757,8 @@ function drawReelFrame(i, strong){
   const a = Math.min(1, base + pulse*0.5);
   const g = Math.round(150 + 70*pulse);
   // ナビ回の「次に押す窓」は白く点滅。逆転は水色、高速は白っぽい橙。普段は金
-  if (S.navi && S.navi.k < 3 && S.navi.order[S.navi.k] === i && Math.floor(S.t / 160) % 2) ctx.fillStyle = "rgba(255,255,255," + Math.min(1, a + 0.1).toFixed(2) + ")";
+  const ordF = naviOrder();
+  if (ordF && naviNext(ordF) === i && Math.floor(S.t / 160) % 2) ctx.fillStyle = "rgba(255,255,255," + Math.min(1, a + 0.1).toFixed(2) + ")";
   else if (reel.dir < 0) ctx.fillStyle = "rgba(" + Math.round(90 + 80*pulse) + ",230,255," + a.toFixed(2) + ")";
   else if (reel.v > S.v * 1.1) ctx.fillStyle = "rgba(255," + Math.round(210 + 40*pulse) + "," + Math.round(160 + 90*pulse) + "," + a.toFixed(2) + ")";
   else ctx.fillStyle = "rgba(255," + g + "," + (40 + Math.round(120*pulse)) + "," + a.toFixed(2) + ")";
@@ -2869,7 +2882,7 @@ function drawCue(){
     const p = L.topPanel;
     const bandH = Math.max(PX*6, snap(L.u*0.10));
     // ナビ回は下端を大きな番号が使うので、札は上パネルの上の方へ
-    const cy = (S.navi && S.phase === "round") ? p.y + p.h*0.48 : L.cueY;
+    const cy = naviOrder() ? p.y + p.h*0.48 : L.cueY;
     ctx.fillStyle = "rgba(0,0,0,.72)";
     ctx.fillRect(snap(p.x), snap(cy - bandH/2), snap(p.w), bandH);
     // 長い札は幅に合わせて縮める（「ペカ！ ▶ どこで押しても 7」が両端で切れていた）
@@ -2923,18 +2936,19 @@ function drawCue(){
     ctx.restore();
     drawFastNavi(fastIdx);
   }
-  const nextReel = (S.navi && S.navi.k < 3) ? S.navi.order[S.navi.k] : -1;
+  const ordCue = naviOrder();
+  const nextReel = ordCue ? naviNext(ordCue) : -1;
   for (const i of S.actives){
     const r = S.reels[i];
-    if (r.state === "wait"){ if (cl >= 2 || S.extra || S.navi) drawReelFrame(i, false); }
-    else if (r.state === "spin"){ if (cl >= 1 || S.extra || S.navi) drawReelFrame(i, S.navi ? i === nextReel : canPress(i)); }
+    if (r.state === "wait"){ if (cl >= 2 || S.extra || ordCue) drawReelFrame(i, false); }
+    else if (r.state === "spin"){ if (cl >= 1 || S.extra || ordCue) drawReelFrame(i, ordCue ? i === nextReel : canPress(i)); }
     else if (r.state === "snap") drawReelFrame(i, false);
   }
-  // ナビ回：窓の左上に番号の札。次に押す窓は白く点滅、止めた窓は緑
-  if (S.navi){
+  // 窓の左上に番号の札。次に押す窓は白く点滅、止めた窓は緑
+  if (ordCue){
     const blink = Math.floor(S.t / 160) % 2 === 0;
-    for (let i = 0; i < 3; i++){
-      const k = S.navi.order.indexOf(i) + 1, r = L.reels[i], done = S.reels[i].state === "done";
+    for (const i of ordCue){
+      const k = ordCue.indexOf(i) + 1, r = L.reels[i], done = S.reels[i].state === "done";
       const bx = r.x + PX*5, by = r.y + PX*5, br = PX*3.5;
       const col = done ? "#3ec8a0" : (i === nextReel ? (blink ? "#ffffff" : "#ffd15a") : "#8a6a10");
       pDisk(bx, by, br + PX, "#0b0c0f"); pDisk(bx, by, br, col);
@@ -3289,7 +3303,7 @@ function drawMilestone(){
   const sh  = bakePixelText(S.milestone, 20, "#b81410", enFont());
   const pop = 1 + (1 - a) * 0.25;
   // ナビ回は下端の番号と重ならないよう、小さく上に
-  const nav = S.navi && S.phase === "round";
+  const nav = !!naviOrder();
   const sc = Math.max(2, Math.round(Math.min(p.w * 0.92 / img.width, p.h * (nav ? 0.30 : 0.62) / img.height) * pop));
   const w = img.width * sc, h = img.height * sc;
   const x = snap(p.x + p.w/2 - w/2), y = snap(p.y + p.h*(nav ? 0.17 : 0.50) - h/2);
@@ -3950,7 +3964,7 @@ function startAim(kind, deadReel){
   let t7max = 0;
   for (let i = 0; i < 3; i++){
     const reel = S.reels[i];
-    reel.dir = 1; reel.v = S.v * (bar ? 0.55 : 1); reel.limit = S.limit * LIMIT_SPECIAL; reel.acc = accMs(reel.v);   // 復活の課題は**ゆっくり**
+    reel.dir = 1; reel.v = S.v * (bar ? 0.55 : 1); reel.acc = accMs(reel.v);   // 復活の課題は**ゆっくり**
     reel.aim = { sym: kind, row: line.rows[i] };
     reel.blind = false; reel.blindAt = 0; reel.openAt = 0;
     reel.t7 = timeTo7(aimsAfter(i, reel.aim, reel.pos + 0.5, 1)[0] - reel.pos, reel.v, reel.acc);
@@ -3962,7 +3976,14 @@ function startAim(kind, deadReel){
   // 線は5ビタの瞬間からモニターに出ている。復活の課題だけは、暗転のあとなので一呼吸おく
   let B = bar ? nextBeat(S.t + 900 + t7max) : nextBeat(S.dueBeat + beat*1.5);
   if (B - t7max < S.t + 30) B = nextBeat(S.t + 30 + t7max);
-  [0, 1, 2].forEach((i, k) => { const reel = S.reels[i]; reel.dueAt = B + beat * k / 3; reel.spinAt = reel.dueAt - reel.t7; });
+  // 狙いは **1拍ずつ**（本人 2026-09-04「一列そろえろ系も、ナビ通りにやればリズム通りに行けるように」）。
+  // ⚠️ **押すのをやめると永久に回り続けて、課題が終わらなかった**（＝結果画面が出ない。本人が踏んだ）。
+  //    本編は時間制限なしのままでよいが、課題は終わらないと先へ進めない。狙いが来てから4秒で自動的に止める
+  [0, 1, 2].forEach((i, k) => {
+    const reel = S.reels[i];
+    reel.dueAt = B + beat * k; reel.spinAt = reel.dueAt - reel.t7;
+    reel.limit = reel.t7 + 4000;
+  });
   S.dueBeat = B + beat * 2;
   S.phase = "round";
   if (bar) bgmStart(0);          // 拍だけ鳴らす（暗い中で7…ではなくBARを待つ）
