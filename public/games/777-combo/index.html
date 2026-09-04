@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>777コンボ</title>
 <meta name="description" content="777が揃ったところから始まる目押しゲーム。揃うたびにリールが1つ回り直す。21コマ・毎分80回転、実機準拠。7は音の拍に乗って来る。">
-<link rel="icon" href="/favicon.svg">
+<link rel="icon" href="https://ogyanuntiusxiii.com/favicon.svg">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="オギャヌンティウス十三世">
 <meta property="og:title" content="777コンボ">
@@ -276,7 +276,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;image-rendering:pi
   </div>
 
   <div id="note">
-    <a href="/">← オギャヌンティウス十三世</a>
+    <a href="https://ogyanuntiusxiii.com/">← オギャヌンティウス十三世</a>
   </div>
 </div>
 
@@ -805,6 +805,9 @@ function countPlay(){
   const now = Date.now();
   if (now - lastCount < 3000) return;
   lastCount = now;
+  // プレイ数は**自分のサイトに置かれているときだけ**数える。
+  // zip で配ると `/api/plays` は相手のサイトに無く、遊ぶたびに404を投げるだけになる
+  if (!/(^|\.)ogyanuntiusxiii\.com$/.test(location.hostname) && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") return;
   try { fetch("/api/plays?g=" + PLAY_SLUG, { method:"POST", keepalive:true }).catch(() => {}); } catch (e){}
 }
 
