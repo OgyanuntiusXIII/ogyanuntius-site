@@ -753,6 +753,7 @@ const S = {
   extraPending:false,              // 5ビタ目の回が終わったら「7を狙え！」
   aimLine:null,                    // その課題の線（5ビタの瞬間に決めて、モニターに先に出す）
   revive:false, reviveAt:-9999,    // 右に「復活」が仕込まれているか
+  naviCount:0,                     // ナビ回までのビタの数（ナビ回の中のビタは数えない）
   leftOut:false,                   // 左のモニターが飛び出しているか（5ビタで出て、以後は出たまま）
   wingOut:{ L:0, R:0 },            // 脇が本体から出ている量 0〜1（0 は本体の中に隠れている）
   wingWant:{ L:false, R:false },   // 出ていてほしいか（変わった瞬間に音）
@@ -3792,7 +3793,14 @@ function onReelStop(i, ok){
   if (just){
     S.justAt = S.t; S.justReel = i; S.justN++; S.roundJust++; S.justStreak++; sndJust(S.justStreak); S.shake = 1;
     say("just");
-    S.naviPending = true;                                  // **次の回はナビ回**（本人 2026-09-04）
+    // **ナビ回はビタ3回に1回**（本人 2026-09-04「ビタ3回でいいんじゃないかな」）。
+    // ⚠️ **ナビ回の中のビタは数えない。**ナビ回は3本なので、数えると「3回」がその回のうちに貯まって
+    //    次もナビ回になり、永久に続く。前はビタ1回で立てていて、実測で777まで45回中43回がナビ回、
+    //    「3回」に直しただけでも24回中21回がナビ回だった（ダブル・トリプル・ブラインドが出てこない）
+    if (S.roundKind !== "ナビ"){
+      S.naviCount++;
+      if (S.naviCount >= 3){ S.naviPending = true; S.naviCount = 0; }
+    }
     if (S.justStreak % 3 === 0) S.rouletteQueued = true;   // **ビタ3連続でルーレット**
     if (S.justN % 3 === 0){ S.vStock++; S.stockGotAt = S.t; say("stock"); sndSparkle(0.05, 8); }   // **Vストック**を1つためる（3ビタごと）
     // **脇の装置はビタで動く。**5回ごと：左のモニターが本体からガシャンと飛び出して（2回目からは打ち直し）、
@@ -4048,18 +4056,23 @@ function startAim(kind, deadReel){
     t7max = Math.max(t7max, reel.t7);
     reel.state = "wait"; reel.spinning = false; reel.snap = null; reel.vNow = 0; reel.targets = null; reel.stopped = false;
   }
-  S.actives = [0, 1, 2]; S.prev = 2;
+  // ⚠️ **S.order も必ず入れ直す。**課題は S.actives だけ入れ替えていたので、
+  //    ナビ（`naviOrder()` は S.order を読む）が**前の回の押し順のまま**出ていた。
+  //    課題の7は下の forEach で 0→1→2 の順に1拍ずつ来るので、順もそれに合わせる
+  S.actives = [0, 1, 2]; S.order = [0, 1, 2]; S.prev = 2;
   // **課題も普通の回とまったく同じ格子。**線は5ビタの瞬間からモニターに出ているので、読む間は要らない。
   // 復活の課題だけは、直前に暗転とレバーがあって拍を切り直しているので、そこから2拍
   if (bar) S.dueBeat = S.t;
   const B = nextDue(t7max);
   // 狙いは **1拍ずつ**（本人 2026-09-04「一列そろえろ系も、ナビ通りにやればリズム通りに行けるように」）。
-  // ⚠️ **押すのをやめると永久に回り続けて、課題が終わらなかった**（＝結果画面が出ない。本人が踏んだ）。
-  //    本編は時間制限なしのままでよいが、課題は終わらないと先へ進めない。狙いが来てから4秒で自動的に止める
+  // **時間制限は無い**（本人 2026-09-04「時間制限は全撤廃して。いつでもゆっくり押せるように」）。
+  // ⚠️ 一度ここに「狙いが来てから4秒」を入れていた。「BARを失敗しても結果画面が出ない」を塞ぐためだったが、
+  //    本当の原因は**3本止まるまで結果に進まない**こと（`onAimStop` → `resolveAim`）で、
+  //    3本とも押せば失敗でも結果は出る。押すのをやめたら待ち続けるのが正しい姿。
   [0, 1, 2].forEach((i, k) => {
     const reel = S.reels[i];
     reel.dueAt = B + beat * k; reel.spinAt = reel.dueAt - reel.t7;
-    reel.limit = reel.t7 + 4000;
+    reel.limit = Infinity;
   });
   S.dueBeat = B + beat * 2;
   S.phase = "round";
@@ -4552,7 +4565,7 @@ function start(){
   S.justAt = -9999; S.justReel = -1; S.justN = 0;
   S.gim = null; S.gaugeFullAt = -9999;
   S.extra = null; S.extraPending = false; S.aimLine = null; S.revive = false; S.reviveAt = -9999;
-  S.leftOut = false; S.wingOut = { L:0, R:0 }; S.wingWant = { L:false, R:false }; S.slamAt = { L:-9999, R:-9999 };
+  S.naviCount = 0; S.leftOut = false; S.wingOut = { L:0, R:0 }; S.wingWant = { L:false, R:false }; S.slamAt = { L:-9999, R:-9999 };
   S.dark = 0; S.deadReel = -1; S.deadAt = -9999; S.leverAt = -9999; S.betAt = -9999;
   S.proLever = 0; S.proArmed = false; S.proSeq = [];     // ⚠️ S.pro は消さない（リロードするまで裏モード）
   S.vStock = 0; S.stockAt = -9999; S.stockGotAt = -9999; S.savedAt = -9999; S.roundJust = 0; S.allJustAt = -9999; S.allJustN = 0;
