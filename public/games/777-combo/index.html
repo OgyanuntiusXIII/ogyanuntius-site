@@ -1717,7 +1717,10 @@ const SHADE = [0.34, 0.10, 0, 0.10, 0.34];
 
 function drawReel(i){
   const r = L.reels[i], reel = S.reels[i];
-  const endBlur = S.phase === "ending" && S.endLine && !S.endDoneAt && (S.t - S.endStepAt) > 12 && (S.t - S.endStepAt) < (S.endNextAt - S.endStepAt) - 12;   // 合間は爆速で回る（揃った瞬間は止まって見える）
+  // 合間のブレ。**止まったところを見せる**ため、間隔の後ろ4割だけ回す（最初はほぼ止まって見える）
+  const gapMs = S.endNextAt - S.endStepAt, ageMs = S.t - S.endStepAt;
+  const endBlur = S.phase === "ending" && S.endLine && !S.endDoneAt && gapMs > 0
+               && ageMs > gapMs * 0.60 && ageMs < gapMs - 10;   // 合間は爆速で回る（揃った瞬間は止まって見える）
   const spinning = reel.state === "spin" || reel.state === "snap" || endBlur;
   ctx.save();
   ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
@@ -2914,7 +2917,9 @@ function drawCue(){
         ctx.fillStyle = blink ? "#ffffff" : "#ffe14a";
         ctx.fillRect(x, y, w, t); ctx.fillRect(x, y + h - t, w, t); ctx.fillRect(x, y, t, h); ctx.fillRect(x + w - t, y, t, h);
       }
-      band(S.endLine.name + " ▶ +" + END_PER + "　×" + S.endStep, "#fff3a0");
+      band(S.endStep <= END_SHOW_HOLD.length
+           ? "そろった！　" + S.endLine.name + " ▶ +" + END_PER
+           : S.endLine.name + " ▶ +" + END_PER + "　×" + S.endStep, "#fff3a0");
     } else band(S.combo < endTarget() ? "777 ▶ 完全制覇" : endTarget() + " COMBO", "#fff3a0");
     return;
   }
@@ -3834,7 +3839,13 @@ const END_SHOW = 1200, END_PER = 12, END_HOLD = 6000;
 function endTarget(){ return S.pro ? PRO_TARGET : 7777; }
 function endSteps(){ return Math.ceil((endTarget() - 777) / END_PER); }
 const END_LINES = [3, 1, 2, 0, 4];       // LINES の並び：右下がり → 中段 → 下段 → 上段 → 右上がり
-function endInterval(k){ return Math.max(8, 600 * Math.pow(0.97, k)); }
+/* 最初の5回は**きっちり止めて見せる**（1.0秒 → 0.62秒）。そこから指数で上がって、下限は8ms（1フレームに2回）。
+   本人「777がそろった、そろった、そろった、からどんどんスピードアップしていく感覚」 */
+const END_SHOW_HOLD = [1000, 900, 800, 700, 620];
+function endInterval(k){
+  if (k <= END_SHOW_HOLD.length) return END_SHOW_HOLD[k - 1];
+  return Math.max(8, 620 * Math.pow(0.955, k - END_SHOW_HOLD.length));
+}
 const FINALE = [
   [0,    () => { S.flash = 1; S.shake = 1; burst(600, 7); rain(500); spawnCoins(300); sndPremium(); sndTettere(0.5, true); sndCheer(); }],
   [500,  () => { sndKyuin(2); slamWing("L"); slamWing("R"); spawnCoins(200); rain(300); S.flash = Math.max(S.flash, 0.7); }],
@@ -3908,7 +3919,8 @@ function endStepOnce(now){
     if (actx && !audioDead && (S.endStep < 40 || S.endStep % 3 === 0)){
       const t = actx.currentTime, up = Math.pow(2, (S.endStep % 96) / 48);
       tone(660 * up, t, 0.06, "square", 0.08); noise(t, 0.02, 0.14, 5200, 2.6);
-      if (S.endStep < 40) sndSeat();                          // 最初はきっちり止まる音も
+      if (S.endStep <= END_SHOW_HOLD.length){ sndStop(); sndKyuin(0, 0.05); }   // 最初は「ガコン」＋告知音でしっかり見せる
+      else if (S.endStep < 40) sndSeat();
     }
 }
 

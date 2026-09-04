@@ -158,6 +158,11 @@ while (Date.now() - t0 < TIMEOUT_MS){
   if (o.phase === "done" || o.phase === "error") break;
 }
 const final = JSON.parse(await evalJs("JSON.stringify(window.__REC)").catch(() => '{"phase":"lost"}'));
-console.log("FINAL", JSON.stringify(final));
+// 見せ場の時刻表を隣に置く。**編集はこれを見て切る**（当てずっぽうで切らない）
+try {
+  fs.writeFileSync(path.join(OUT, NAME + ".marks.json"), JSON.stringify(final.marks || [], null, 1));
+  console.log("marks:", (final.marks || []).length);
+} catch (e){ console.log("marks write failed", e.message); }
+console.log("FINAL", JSON.stringify({ ...final, marks: undefined }));
 await sleep(700);
 shutdown(final.phase === "done" && saved ? 0 : 2);

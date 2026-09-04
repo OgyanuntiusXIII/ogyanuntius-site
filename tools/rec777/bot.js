@@ -101,6 +101,29 @@
   /* ---- 収録 ------------------------------------------------------------ */
   let recorder = null;
   const chunks = [];
+  /* 見せ場の時刻表。**収録開始からの秒数**で残す。編集はこれを見て切る */
+  let t0 = 0;
+  REC.marks = [];
+  const mark = (kind, extra) => { if (!t0) return; REC.marks.push({ t: +((performance.now() - t0) / 1000).toFixed(2), kind, ...(extra || {}) }); };
+  (function watchMarks(){
+    let lastJust = -1, lastCombo = 0, lastPhase = "", lastExtra = "", lastStock = 0, lastEndStep = -1;
+    setInterval(() => {
+      // ⚠️ ゲーム側の S は const 宣言なので **window.S にはならない**（var と関数だけが window に載る）。
+      //    window.S で見張っていたら、時刻表が空のまま1本撮ってしまった
+      if (!t0 || typeof S === "undefined") return;
+      if (S.justN !== lastJust){ lastJust = S.justN; if (S.justN) mark("just", { n: S.justN, combo: S.combo }); }
+      if (S.phase !== lastPhase){ lastPhase = S.phase; mark("phase", { p: S.phase, combo: S.combo }); }
+      const ek = S.extra ? S.extra.kind : "";
+      if (ek !== lastExtra){ lastExtra = ek; if (ek) mark("extra", { kind: ek, combo: S.combo }); }
+      if (S.vStock < lastStock) mark("rescue", { combo: S.combo });
+      lastStock = S.vStock;
+      if (S.phase === "ending" && S.endStep !== lastEndStep && (S.endStep === 1 || S.endStep === 200 || S.endStep >= endSteps())){
+        lastEndStep = S.endStep; mark("end", { step: S.endStep, combo: S.combo });
+      }
+      if (S.combo >= 100 && lastCombo < 100) mark("combo100", { combo: S.combo });
+      lastCombo = S.combo;
+    }, 50);
+  })();
 
   async function upload(){
     try {
@@ -131,6 +154,7 @@
       upload();
     };
     recorder.start(1000);
+    t0 = performance.now();
     REC.phase = "recording";
     REC.w = innerWidth; REC.h = innerHeight;
   }
