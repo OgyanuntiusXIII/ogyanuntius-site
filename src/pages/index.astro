@@ -55,9 +55,13 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
              rail は中身を左右へ散らすので、別々に置くと定価が真ん中へ押し出される。 */}
       <span class="cover__railright">
         <span class="cover__price">定価 ¥0</span>
-        {/* 表紙に来た人の数。D1が繋がっていないときは出ない */}
+        {/* 来た人の数と、**サイト内の移動まで含めた総PV**。
+               ⚠️ **人とPVは必ず並べて出す。** PVだけを出すと訪問者数と読み違えられる
+                  （2026-09-06・本人の指示「人と、総PVと出しときたい」）。
+               D1が繋がっていないときは出ない */}
         <span class="cover__views" id="viewBox" hidden>
-          本日 <b id="viewToday"></b>　累計 <b id="viewTotal"></b> <span class="cover__viewsUnit">view</span>
+          <span class="cover__viewsSet">本日 <b id="viewToday"></b>人 <b id="pvToday"></b><span class="cover__viewsUnit">PV</span></span>
+          <span class="cover__viewsSet">累計 <b id="viewTotal"></b>人 <b id="pvTotal"></b><span class="cover__viewsUnit">PV</span></span>
         </span>
         <ThemeToggle />
       </span>
@@ -247,9 +251,17 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     flex-wrap: wrap; justify-content: flex-end;
   }
   /* 定価の右。誌面の情報なので、主張させず罫の一部として置く */
-  .cover__views { color: var(--ink-mid, #7a7a86); letter-spacing: .04em; white-space: nowrap; }
+  .cover__views {
+    color: var(--ink-mid, #7a7a86); letter-spacing: .04em;
+    /* 「本日 …／累計 …」の2組。狭い端末では組ごと折り返す（組の中では折らない） */
+    display: inline-flex; flex-wrap: wrap; gap: .2em 1.1em;
+  }
+  /* ⚠️ display を書いた時点で hidden 属性が効かなくなる（UAの display:none を上書きする）。
+        D1未接続のとき空の枠が出てしまうので、ここで明示的に消す */
+  .cover__views[hidden] { display: none; }
+  .cover__viewsSet { white-space: nowrap; }
   .cover__views b { font-family: var(--font-en); font-weight: 700; color: var(--ink); }
-  .cover__viewsUnit { font-family: var(--font-en); letter-spacing: .1em; }
+  .cover__viewsUnit { font-family: var(--font-en); letter-spacing: .1em; padding-left: .15em; }
 
   .cover__title { margin: 0; }
   .cover__title-jp {

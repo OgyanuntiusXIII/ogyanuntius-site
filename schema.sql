@@ -5,7 +5,14 @@ CREATE TABLE IF NOT EXISTS plays (
   n INTEGER NOT NULL DEFAULT 0
 );
 
--- サイト全体の閲覧数。行は 'site' の1つだけ
+-- サイト全体の閲覧数。**「人」と「総PV」を別々の行で持つ**（2026-09-06 から）。
+--   site               人・累計（延べ。1つのブラウザにつき1日1回）
+--   day:YYYY-MM-DD     人・その日
+--   pv                 総PV・累計（ページ表示のたび。サイト内の移動・ゲームも含む）
+--   pv:day:YYYY-MM-DD  総PV・その日
+-- ⚠️ **鍵はサーバ側でしか作らない。** ページ別PVを足すなら、先に許可するパスの一覧を持つこと。
+-- ⚠️ **人とPVを混ぜて出さない**（PVを訪問者数として見せるのは誇張）。
+-- 日付の行は消さない。**日別の履歴はここにしか無い。**
 CREATE TABLE IF NOT EXISTS views (
   k TEXT PRIMARY KEY,
   n INTEGER NOT NULL DEFAULT 0

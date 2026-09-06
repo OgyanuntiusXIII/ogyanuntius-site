@@ -2136,5 +2136,10 @@ document.getElementById("startBtn").onclick = () => {
 };
 resize(); drawLife(); drawHud(); frame();
 </script>
+<!-- 総PVに1足すだけのビーコン（2026-09-06）。ここは Astro を通らないので、
+     表紙側の仕組みでは数えられない。**新しいゲームを置いたら、この2行も入れる。**
+     ⚠️ 公式サイトのときだけ撃つ。zip で配ったぶん・ローカルでは何もしない。
+     ⚠️ 「人」は数えない（?v=1 を付けない）。人の判定は表紙側が持っている。 -->
+<script>if(location.hostname.endsWith("ogyanuntiusxiii.com"))fetch("/api/views",{method:"POST"}).catch(function(){});</script>
 </body>
 </html>

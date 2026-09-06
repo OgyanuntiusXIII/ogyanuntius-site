@@ -267,16 +267,27 @@ const structuredDataJson = structuredData
       });
     </script>
     <script is:inline>
-      /* 公式サイトTOP（表紙）の閲覧数。
-         ⚠️ **1人1日1回しか数えない。** 更新するたびに増えると数字が実態より膨らむので、
-            ブラウザに「最後に数えた日」を持たせて、同じ日の2回目以降は数えない
-            （表示は毎回する）。日付は**日本時間**でサーバ側と揃える。
-            シークレットウィンドウ・別ブラウザ・履歴削除は別人として数える。
-            そこはIPを見れば潰せるが、個人サイトの数字に個人情報を持ち出すのは
-            釣り合わないので採らなかった（本人と相談のうえ・2026-08-30）。
-         ⚠️ このサイトは ClientRouter を使っているので、
-            インラインscriptは**最初の1回しか走らない**。astro:page-load を併用する
-            （プレイ回数のほうで実際にそれを踏んだ）。
+      /* 閲覧数のビーコン。**「人」と「総PV」の2本立て**（2026-09-06）。
+
+         ・**総PV** … ページを表示するたびに1。**サイト内を移動した分も数える**ので、
+                      表紙以外のページでも撃つ。これが「回遊しているか」を示す数字になる。
+         ・**人**   … 1人1日1回だけ。更新するたびに増えると数字が実態より膨らむので、
+                      ブラウザに「最後に数えた日」を持たせる。日付は**日本時間**でサーバ側と揃える。
+                      シークレットウィンドウ・別ブラウザ・履歴削除は別人として数える。
+                      そこはIPを見れば潰せるが、個人サイトの数字に個人情報を持ち出すのは
+                      釣り合わないので採らなかった（本人と相談のうえ・2026-08-30）。
+
+         ⚠️ **人とPVを混ぜて出さない。** PVを訪問者数として見せたら、ただの誇張になる。
+
+         ⚠️ **1回の表示で2回撃たない。** このサイトは ClientRouter を使っているので、
+            初回表示のとき「その場の呼び出し」と「astro:page-load（window の load で発火）」の
+            **両方が走る**。armed で1回に絞り、遷移が始まったところで撃てるように戻す。
+            人の印（localStorage）も**送る前に**立てる。あとで立てると、
+            2発が競り合って同じ人を2回数えうる。
+
+         ⚠️ ゲーム（public/games/*）とツール（public/tools/*）は Astro を通らないので、
+            ここでは数えられない。各 index.html に置いた1行のビーコンが撃っている。
+
          D1が繋がっていないときは204が返るので、その場合は何も出さない。 */
       (() => {
         const KEY = 'ogyanun.viewed';
@@ -284,33 +295,36 @@ const structuredDataJson = structuredData
         function jstDay(){
           return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
         }
+        /** 表紙にだけ置いてある枠へ流し込む。無いページでは何も起きない */
         function show(d){
           const box = document.getElementById('viewBox');
-          const t = document.getElementById('viewToday');
-          const a = document.getElementById('viewTotal');
-          if (!box || !t || !a || !d || typeof d.total !== 'number') return;
-          t.textContent = d.today.toLocaleString('ja-JP');
-          a.textContent = d.total.toLocaleString('ja-JP');
+          if (!box || !d || !d.people || !d.pv) return;
+          const put = (id, n) => {
+            const el = document.getElementById(id);
+            if (el && typeof n === 'number') el.textContent = n.toLocaleString('ja-JP');
+          };
+          put('viewToday', d.people.today);
+          put('viewTotal', d.people.total);
+          put('pvToday', d.pv.today);
+          put('pvTotal', d.pv.total);
           box.hidden = false;
         }
+        let armed = true;   // この表示でまだ撃っていない
         function tick(){
-          if (location.pathname !== '/' && location.pathname !== '/index.html') return;
-          if (!document.getElementById('viewBox')) return;
+          if (!armed) return;
+          armed = false;
           const today = jstDay();
           let seen = null;
           try { seen = localStorage.getItem(KEY); } catch (e) {}
-          // 今日まだ数えていなければ1増やす。数えていれば読むだけ
-          const first = seen !== today;
-          fetch('/api/views', first ? { method: 'POST' } : {})
+          const first = seen !== today;                       // 今日まだ「人」として数えていない
+          if (first) { try { localStorage.setItem(KEY, today); } catch (e) {} }
+          fetch(first ? '/api/views?v=1' : '/api/views', { method: 'POST' })
             .then((r) => (r.ok && r.status !== 204 ? r.json() : null))
-            .then((d) => {
-              if (!d) return;
-              if (first) { try { localStorage.setItem(KEY, today); } catch (e) {} }
-              show(d);
-            })
+            .then((d) => { if (d) show(d); })
             .catch(() => {});
         }
         tick();
+        document.addEventListener('astro:before-preparation', () => { armed = true; });
         document.addEventListener('astro:page-load', tick);
       })();
     </script>
