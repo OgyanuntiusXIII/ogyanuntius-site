@@ -41,13 +41,13 @@
   /* 主役は「いくつ言葉を打ったか」。画面の上、真ん中 */
   #wordc{left:0;right:0;top:20px;text-align:center;text-shadow:0 2px 14px rgba(0,0,0,.9)}
   #wordc .n{font:200 46px/1 var(--mono);color:var(--cream);opacity:.95;letter-spacing:.02em}
-  #wordc .l{margin-top:9px;font:400 10px/1 var(--goth);color:var(--cream);
+  #wordc .l{margin-top:9px;font:400 11px/1 var(--hand);color:var(--cream);
     opacity:.34;letter-spacing:.44em;text-indent:.44em}
 
   #alt{left:26px;top:22px;text-shadow:0 2px 10px rgba(0,0,0,.85)}
   #alt .big{font:200 27px/1 var(--mono);color:var(--cream);opacity:.8;letter-spacing:.01em}
   #alt .unit{font-size:11px;opacity:.45;margin-left:2px}
-  #alt .sub{margin-top:7px;font:400 10.5px/1.5 var(--goth);color:var(--cream);
+  #alt .sub{margin-top:7px;font:400 11px/1.5 var(--hand);color:var(--cream);
     opacity:.34;letter-spacing:.2em}
   #stats{right:26px;top:24px;text-align:right;
     font:400 10.5px/2 var(--goth);color:var(--cream);opacity:.34;letter-spacing:.2em;
@@ -63,60 +63,87 @@
     opacity:.3;letter-spacing:.46em;text-indent:.46em}
   #zone.on{opacity:1;transition:opacity .45s}
 
+  /* ---- 記憶。一行だけ。説明はしない ---- */
+  #story{left:0;right:0;top:40%;text-align:center;opacity:0;transition:opacity 1.3s;
+    font:400 15px/2.1 var(--mincho);color:var(--cream);letter-spacing:.2em;
+    padding:0 8vw;text-shadow:0 2px 22px #000,0 0 44px rgba(0,0,0,.9)}
+  #story.on{opacity:.92;transition:opacity .75s}
+
+  /* ---- 終わり ---- */
+  #endov{position:fixed;inset:0;z-index:21;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:34px;text-align:center;
+    background:radial-gradient(135% 105% at 62% 38%,rgba(20,27,46,.94),rgba(8,10,17,.995));
+    opacity:0;pointer-events:none;transition:opacity 2.4s}
+  #endov.on{opacity:1;pointer-events:auto}
+  #endov .last{font:400 22px/1.9 var(--mincho);color:var(--cream);letter-spacing:.42em;
+    text-indent:.42em;opacity:.95}
+  #endov .st{font:400 11.5px/2.4 var(--goth);color:var(--cream);opacity:.5;letter-spacing:.24em}
+  #endov .st b{font:400 15px var(--mono);color:var(--amber-lt);opacity:1;margin:0 4px;letter-spacing:0}
+  #endov .go{font:400 10.5px/1 var(--goth);color:var(--cream);opacity:.35;letter-spacing:.5em;
+    text-indent:.5em;animation:bl 3.4s ease-in-out infinite}
+
   /* ---- 向かい風 ---- */
   #gust{left:0;right:0;top:18%;text-align:center;opacity:0;transition:opacity 1s;
     font:400 17px/1 var(--mincho);color:#f0e2c6;letter-spacing:.64em;text-indent:.64em;
     text-shadow:0 2px 22px #000,0 0 44px rgba(184,114,31,.5)}
   #gust.on{opacity:1;transition:opacity .14s}
 
-  /* ---- 手札 ----------------------------------------------------------
-     ・厚みで押すのではなく、**平たい刻印プレート**にした。小さくても潰れない
-     ・距離は文字ではなく **1キー＝1目盛りの帯**。地形に刻んだ目盛りと対応する
-     ・折り返さない。横一列のまま
+  /* ---- 手札：紙のタグ ------------------------------------------------
+     彼の言葉を紙に書き写して、テープで留めて持ち歩いている。
+     ・手で置いたので、一枚ずつ少し傾いている
+     ・縁は不揃い、紙の目、上にテープ
+     ・書き文字は教科書体（Windows 同梱の UD デジタル教科書体。無ければ明朝）
      -------------------------------------------------------------------- */
-  #words{position:fixed;left:50%;bottom:15px;transform:translateX(-50%);
-    display:flex;gap:7px;align-items:stretch;z-index:6;pointer-events:none;
+  :root{--hand:"UD Digi Kyokasho N-R","UD Digi Kyokasho NK-R","UD デジタル 教科書体 N-R",
+        "Klee One","Yu Mincho","游明朝",serif}
+  #words{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+    display:flex;gap:10px;align-items:flex-end;z-index:6;pointer-events:none;
     max-width:calc(100vw - 24px)}
-  .w{position:relative;flex:0 0 auto;border-radius:4px;overflow:hidden;
-    padding:8px 13px 0;text-align:center;
-    background:linear-gradient(180deg,#cdc2ab 0%,#bdb29b 100%);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.42),
-               inset 0 -1px 0 rgba(0,0,0,.1),
-               0 1px 0 #55514740, 0 7px 16px rgba(0,0,0,.42);
-    transition:background .15s,box-shadow .15s,transform .1s,opacity .2s}
-  .w .t{font:500 17px/1.3 var(--goth);color:#2e2b24;letter-spacing:.045em;white-space:nowrap}
+  .w{position:relative;flex:0 0 auto;padding:12px 15px 8px;text-align:center;
+    border-radius:3px 7px 4px 6px / 6px 3px 7px 4px;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,0,0,0) 40%),
+      repeating-linear-gradient(0deg,rgba(0,0,0,.028) 0 1px,transparent 1px 3px),
+      #d8ceb7;
+    box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 -1px 0 rgba(0,0,0,.08) inset,
+      1px 2px 0 rgba(60,50,40,.18),0 9px 18px rgba(0,0,0,.45);
+    transform:rotate(var(--tilt,0deg));
+    transition:transform .12s,box-shadow .12s,filter .16s,opacity .2s}
+  .w:nth-child(1){--tilt:-1.4deg} .w:nth-child(2){--tilt:.9deg} .w:nth-child(3){--tilt:-.6deg}
+  .w:nth-child(4){--tilt:1.2deg}  .w:nth-child(5){--tilt:-.8deg}
+  .w::before{content:"";position:absolute;left:50%;top:-6px;width:38px;height:11px;margin-left:-19px;
+    background:rgba(240,232,214,.42);border:1px solid rgba(255,255,255,.18);
+    transform:rotate(-2deg);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+  .w .t{font:400 19px/1.3 var(--hand);color:#2a2820;letter-spacing:.06em;white-space:nowrap}
   .w .t .d{color:var(--amber)}
-  .w .rm{margin-top:3px;font:400 9.5px/1.4 var(--mono);color:#7a7261;
-    letter-spacing:.14em;white-space:nowrap}
+  .w .rm{margin-top:2px;font:400 9.5px/1.4 var(--mono);color:#7d7563;letter-spacing:.12em;white-space:nowrap}
   .w .rm .d{color:var(--amber)}
-  /* 下端の帯 ＝ 何キー先か。目盛りを数えるだけで分かる */
-  .w .p{margin:7px -13px 0;padding:5px 12px 6px;background:rgba(56,51,42,.15);
-    display:flex;gap:3px;justify-content:center;align-items:center;
-    box-shadow:inset 0 1px 0 rgba(0,0,0,.07)}
-  .w .p i{width:4px;height:4px;border-radius:1px;background:#6a6354;opacity:.7}
+  /* 目盛り：ペンで点を打った。粒が揃わない */
+  .w .p{margin:6px -15px 0;padding:5px 12px 0;display:flex;gap:3.5px;justify-content:center;align-items:center;
+    border-top:1px dashed rgba(60,50,40,.22)}
+  .w .p i{width:4px;height:4px;border-radius:50%;background:#5e5748;opacity:.75}
+  .w .p i:nth-child(2n){width:3.5px;height:4.5px}
+  .w .p i:nth-child(3n){opacity:.58}
   .w .p i:nth-child(5n){margin-right:5px}
-  .w .p b{margin-left:6px;font:400 8.5px/1 var(--mono);color:#6a6354;opacity:.62}
-  .w.a{transform:translateY(2px);
-    background:linear-gradient(180deg,#e8dec7 0%,#d3c8b1 100%);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.55),
-               0 0 0 1px rgba(184,114,31,.38),
-               0 3px 9px rgba(0,0,0,.5), 0 0 22px rgba(184,114,31,.14)}
-  .w.a .p{background:rgba(184,114,31,.14)}
+  .w .p b{margin-left:6px;font:400 9.5px/1 var(--hand);color:#5e5748;opacity:.7}
+  /* 選んだ札：持ち上がる。文字にマーカーの下線 */
+  .w.a{transform:rotate(0deg) translateY(-5px);
+    background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(0,0,0,0) 40%),
+      repeating-linear-gradient(0deg,rgba(0,0,0,.028) 0 1px,transparent 1px 3px),#e8dfc8;
+    box-shadow:0 1px 0 rgba(255,255,255,.4) inset,1px 2px 0 rgba(60,50,40,.18),
+      0 14px 22px rgba(0,0,0,.5),0 0 0 1px rgba(184,114,31,.28)}
+  .w.a .t{background:linear-gradient(transparent 60%,rgba(223,164,92,.4) 60%,rgba(223,164,92,.4) 88%,transparent 88%)}
   .w.a .p i{background:var(--amber);opacity:.85}
-  .w.dim{opacity:.4}
-  /* 新しく配られたカードだけ、一瞬だけ明るい */
+  .w.dim{opacity:.42}
   .w.nw{animation:nw .55s ease-out}
-  @keyframes nw{0%{background:linear-gradient(180deg,#f0e7d1,#ded3bc);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 20px rgba(223,164,92,.3)}
-    100%{}}
-  /* リロールは修飾キーの見た目にして、言葉と混ざらないようにする */
-  .w.rr{background:linear-gradient(180deg,#4a4841 0%,#37352f 100%);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 7px 16px rgba(0,0,0,.45);
-    align-self:flex-end;padding:8px 12px 9px}
-  .w.rr .t{font-size:12.5px;color:#c8c0ad;letter-spacing:.22em}
-  .w.rr .rm{color:#8b8474;margin-top:4px}
-  .w.rr.a{background:linear-gradient(180deg,#6a6455 0%,#4c4941 100%);transform:translateY(2px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 0 1px rgba(184,114,31,.4)}
+  @keyframes nw{0%{filter:brightness(1.18)}100%{}}
+  /* リロール：裏返した札 */
+  .w.rr{background:repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 2px,transparent 2px 6px),#4a463e;
+    box-shadow:1px 2px 0 rgba(0,0,0,.3),0 9px 18px rgba(0,0,0,.45);align-self:flex-end;padding:10px 13px 9px}
+  .w.rr::before{background:rgba(240,232,214,.28)}
+  .w.rr .t{font:400 13px/1.3 var(--hand);color:#cfc7b4;letter-spacing:.2em}
+  .w.rr .rm{color:#8b8474;margin-top:3px}
+  .w.rr.a{background:#615c52;transform:rotate(0deg) translateY(-5px)}
 
   /* ---- 開始画面 ---- */
   #ov{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
@@ -128,6 +155,8 @@
     color:var(--cream);opacity:.94}
   #ov h1 span{color:var(--amber-lt)}
   #ov p{font:400 13px/2.35 var(--mincho);color:var(--cream);opacity:.6;letter-spacing:.11em}
+  #ov p.pro{font-size:15px;line-height:2.5;opacity:.88;letter-spacing:.16em}
+  #ov p.how{font:400 11.5px/2.3 var(--goth);opacity:.42;letter-spacing:.1em;margin-top:-6px}
   #ov p b{font-weight:400;opacity:1;color:#f3ead8}
   #ov .k{display:inline-block;color:var(--legend);border-radius:4px;padding:3px 9px;margin:0 3px;
     font:500 11.5px/1 var(--goth);letter-spacing:.06em;
@@ -138,7 +167,31 @@
   @keyframes bl{0%,100%{opacity:.2}50%{opacity:.55}}
 
   /* ---- デバッグ。目立たせない ---- */
-  #dbg{position:fixed;right:18px;bottom:18px;z-index:9;display:flex;gap:6px}
+  /* デバッグ盤。F2 で出す。プレイ中は出ない */
+  #dbgp{position:fixed;left:18px;bottom:18px;z-index:12;padding:10px 12px 9px;border-radius:5px;
+    background:rgba(11,13,20,.88);border:1px solid rgba(233,225,208,.14);
+    font:400 11px/1.6 var(--goth);color:rgba(233,225,208,.8);letter-spacing:.06em;
+    box-shadow:0 10px 24px rgba(0,0,0,.5);pointer-events:auto;max-width:min(92vw,560px)}
+  #dbgp .ttl{font-size:10px;opacity:.55;letter-spacing:.2em;margin-bottom:6px}
+  #dbgp .ttl .k{display:inline-block;border:1px solid rgba(233,225,208,.3);border-radius:3px;padding:0 5px;margin:0 3px}
+  #dbgp .row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:3px 0}
+  #dbgp .row b{font-weight:400;opacity:.5;width:34px;letter-spacing:.14em}
+  #dbgp button{cursor:pointer;font:400 11px/1 var(--goth);letter-spacing:.06em;color:#e9e1d0;
+    background:rgba(233,225,208,.08);border:1px solid rgba(233,225,208,.2);border-radius:4px;padding:5px 9px}
+  #dbgp button:hover{background:rgba(223,164,92,.2);border-color:rgba(223,164,92,.5)}
+  #dbgp label{cursor:pointer;opacity:.8;margin-left:4px}
+  #dbgp .st{font:400 10.5px/1.5 var(--mono);opacity:.6;letter-spacing:.04em;margin-top:5px;
+    border-top:1px dashed rgba(233,225,208,.15);padding-top:5px;white-space:pre-wrap}
+  #dbg{position:fixed;right:18px;bottom:18px;z-index:9;display:flex;gap:10px;align-items:center}
+  /* 音量のつまみ。触るまでは暗く、触ると少しだけ明るい */
+  .vol{display:flex;align-items:center;gap:6px;pointer-events:auto;cursor:pointer;
+    font:400 9.5px/1 var(--goth);letter-spacing:.14em;color:rgba(233,225,208,.32);transition:color .18s}
+  #dbg:hover .vol{color:rgba(233,225,208,.72)}
+  .vol input{width:68px;height:2px;margin:0;-webkit-appearance:none;appearance:none;
+    background:rgba(233,225,208,.2);outline:none;border-radius:1px}
+  .vol input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:9px;height:9px;border-radius:50%;
+    background:var(--amber-lt);border:1px solid rgba(0,0,0,.45);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+  .vol input::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:var(--amber-lt);border:1px solid rgba(0,0,0,.45)}
   #dbg button{pointer-events:auto;cursor:pointer;
     font:400 10px/1 var(--goth);letter-spacing:.1em;
     color:rgba(233,225,208,.3);background:rgba(11,13,20,.55);
@@ -188,25 +241,54 @@
 
 <div class="hud" id="zone"><div class="z"></div><div class="zs"></div></div>
 <div class="hud" id="gust">向かい風</div>
+<div class="hud" id="story"></div>
+<div id="endov">
+  <div class="last">落ちても、また次の一文字を。</div>
+  <div class="st">打った言葉 <b id="e_words">0</b>　　流された <b id="e_river">0</b>　　ケーブル <b id="e_climb">0</b>　　<b id="e_time">0:00</b></div>
+  <div class="go">なにか文字キーを押すと、麓から</div>
+</div>
 
 <div id="words"></div>
 
+<div id="dbgp" hidden>
+  <div class="ttl">デバッグ盤 <span class="k">F2</span> で閉じる</div>
+  <div class="row"><b>場面</b>
+    <button data-go="meet">会う</button>
+    <button data-go="end1">終わり（彼女あり）</button>
+    <button data-go="end0">終わり（一人）</button>
+    <button data-go="next">次の行 ▶</button>
+    <label><input type="checkbox" id="dbgFast"> 行を速く</label>
+  </div>
+  <div class="row"><b>区間</b>
+    <button data-zone="0">起動</button><button data-zone="1">取消</button><button data-zone="2">大文字</button>
+    <button data-zone="3">細道</button><button data-zone="4">斜面</button><button data-zone="5">崖</button>
+    <button data-zone="6">橋</button><button data-zone="7">未定義</button>
+  </div>
+  <div class="row"><b>状況</b>
+    <button data-go="girl">彼女を出す／消す</button>
+    <button data-go="wind">風</button>
+    <button data-go="river">川へ</button>
+    <button data-go="reset">麓から</button>
+  </div>
+  <div class="row st" id="dbgSt">—</div>
+</div>
 <div id="dbg">
-  <button id="bArc" class="on">軌道 ぜんぶ</button>
-  <button id="bMiss" class="on">ミスで向かい風</button>
+  <label class="vol"><span>BGM</span><input id="vBgm" type="range" min="0" max="1" step="0.02"></label>
+  <label class="vol"><span>SE</span><input id="vSe" type="range" min="0" max="1" step="0.02"></label>
   <button id="bReset">最初から</button>
 </div>
 
 <div id="ov">
   <h1>TYPE<span>.</span> CLIMB<span>.</span></h1>
-  <p>
-    言葉を打つ。<b>その文字数だけ跳ぶ。</b><br>
-    巨大なキーボードでできた山を、ひとりで登る。<br>
-    <span class="k">かな 1 文字</span> ＝ <span class="k">キー 1 個</span> ぶん。入力はローマ字。<br>
-    打ち間違えると、向かい風に戻される。<br>
-    手札が噛み合わないときは <span class="k">リロール</span> と打つ。<br>
-    山から落ちても終わらない。川が、下流の岸まで運んでくれる。<br>
-    岸からは <span class="k">ケーブル</span> を伝って登る。今度は文字数ぶん、真上へ。
+  <p class="pro">
+    彼は話せなかった。だから私が、彼の声だった。<br>
+    世界が終わってから、彼の打った言葉を、私はまだ全部おぼえている。<br>
+    返しに行く。それだけのことだ。
+  </p>
+  <p class="how">
+    言葉を打つと、その文字数だけ跳ぶ。<span class="k">かな 1 文字</span> ＝ <span class="k">キー 1 個</span>。入力はローマ字。<br>
+    打ち間違えると、向かい風に戻される。手札が噛み合わなければ <span class="k">リロール</span>。<br>
+    落ちても終わらない。川が岸へ運び、岸からは <span class="k">ケーブル</span> を伝って登る。
   </p>
   <div class="go">なにか文字キーを押す</div>
 </div>
@@ -232,7 +314,7 @@ const T = {
   MIN_LEN:      3,   // 最短単語
   MAX_LEN:     12,   // 最長単語
   BOUNCE:    0.66,   // 壁に当たったときの跳ね返り。軽いので、よく弾む
-  SLICK_FRIC: .985,  // Backspace滑落地帯の摩擦
+  SLICK_FRIC: .985,  // 消した言葉の斜面（Backspace）の摩擦
   LEE_RATE:    .80,  // 風下に受け皿を置く確率。下げるほど、ミスが麓直行になりやすい
   PX_PER_M:    40,   // 1m = キー1個ぶん
   // 山の下には川が流れている。落ちたら沈まず、流されて麓の岸へ戻る。
@@ -243,10 +325,10 @@ const T = {
   START_X:    520,   // 麓の岸の定位置。始まりはここ
   CLIMB_V:    7.5,   // ケーブルを登る速さ(px/frame)。跳躍と同じく1文字＝40px登る
   MISS_WIND: true,   // ミスしたら向かい風で押し戻される（デバッグでOFFにできる）
-  STRAY_FATAL: false,// どの言葉にも当たらないキーも罰するか。既定OFF
-                     // 罰するのは「言葉の途中で外したとき」だけにする
-  ARC_MODE:     1,   // 軌道の見せ方 0=なし / 1=頂点まで / 2=ぜんぶ
-                     // 1 が既定。**上りだけ見せて、落ちる先は自分で読ませる**
+  STRAY_FATAL: true, // どの言葉にも当たらないキー（打ち損じ）も、地上なら向かい風。
+                     // 2026-09-02 本人「書き損じた場合もミスとして戻るようにしようか」。
+                     // 空中は既に落ちているので変えない。場面の最中も罰しない
+  ARC_MODE:     2,   // 軌道はぜんぶ見せる。固定（本人の判定 2026-09-02「ゲーム性的にぜんぶがいい」）
   // 向かい風。山頂の方角＝あの子のいる方角から吹いてくる。
   // 近づくほど強い＝難易度カーブが、そのまま物語になっている
   GUST_BASE:  3.2,   // 麓での風速(px/frame)
@@ -254,6 +336,146 @@ const T = {
   GUST_MAX:   9.6,   // 上限
   GUST_FRAMES: 78,   // 吹いている長さ
   SEED:  20260901
+};
+
+/* ===== 音の受け口 =========================================================
+   **ファイルを置けば、そのまま鳴る。無ければ今の合成音のまま。**
+   index.html と同じ場所に audio/ を作って、下の名前で入れる。
+     BGM  : audio/bgm.mp3（ループ。置くと合成のパッドとポツンは止まる）
+     SE   : audio/key.wav など。名前ごとに差し替えられる
+   file:// で開いても動くように <audio> で読む（fetch は file:// では死ぬ）。   */
+const AUDIO = {
+  BGM: "audio/bgm.mp3",  BGM_VOL: .55,
+  SE: {
+    key:      "audio/key.wav",       // 打鍵
+    miss:     "audio/miss.wav",      // 打ち間違え
+    jump:     "audio/jump.wav",      // 跳ぶ
+    land:     "audio/land.wav",      // 着地「コトッ」
+    bump:     "audio/bump.wav",      // 壁に当たる／打ち損じ
+    gust:     "audio/gust.wav",      // 向かい風
+    reroll:   "audio/reroll.wav",    // 手札を引き直す
+    splash:   "audio/splash.wav",    // 着水
+    climbing: "audio/climb.wav"      // ケーブルを手繰る
+  },
+  SE_VOL: .8
+};
+const seFile = {}, bgmEl = { el:null, ok:false };
+function loadAudioFiles(){
+  for (const name in AUDIO.SE){
+    const a = new Audio(); a.preload = "auto";
+    a.addEventListener("canplaythrough", function(){ seFile[name] = a; }, { once:true });
+    a.addEventListener("error", function(){}, { once:true });   // 無ければ合成のまま
+    a.src = AUDIO.SE[name];
+  }
+  if (AUDIO.BGM){
+    const b = new Audio(); b.loop = true; b.preload = "auto"; b.volume = vol.bgm;
+    b.addEventListener("canplaythrough", function(){
+      bgmEl.ok = true;
+      if (AC){ b.play().catch(function(){}); if (padGain) padGain.gain.value = 0; }
+    }, { once:true });
+    b.addEventListener("error", function(){}, { once:true });
+    b.src = AUDIO.BGM; bgmEl.el = b;
+  }
+}
+function playFile(name){
+  const a = seFile[name];
+  if (!a) return false;
+  const c = a.cloneNode(); c.volume = vol.se; c.play().catch(function(){});
+  return true;
+}
+
+/* 音量。画面右下のつまみ。合成もファイルも同じ値で動く。次に開いたときも覚えている */
+const vol = { bgm: AUDIO.BGM_VOL, se: AUDIO.SE_VOL };
+try {
+  const v = JSON.parse(localStorage.getItem("tc.vol") || "null");
+  if (v && isFinite(+v.bgm) && isFinite(+v.se)){ vol.bgm = +v.bgm; vol.se = +v.se; }
+} catch (e) {}
+let seBus = null, bgmBus = null;
+function applyVolume(){
+  if (seBus)  seBus.gain.value  = vol.se;
+  if (bgmBus) bgmBus.gain.value = vol.bgm;
+  if (bgmEl.el) bgmEl.el.volume = vol.bgm;
+  try { localStorage.setItem("tc.vol", JSON.stringify(vol)); } catch (e) {}
+}
+
+/* ===== 本文 =============================================================
+   ここを書き換えれば、そのまま画面に出る。hold はその行を出しておく時間(ms)。
+   zone は区間に入ったとき一行。river/cable/wind/brace は初回だけ。
+   meet と end は場面。card はその場面で打つ一枚（打ち切ると次の行へ）。      */
+const STORY = {
+  zone: {
+    "起動の岸":         "水は冷たいらしい。私には、わからない。",
+    "取り消しの谷":     "最初に打った言葉は、たしか、天気のことだった。取り消しは、そのすぐあとに覚えた。",
+    "大文字の段丘":     "シフトは、強く言いたいときに押された。たいてい、押されなかった。",
+    "話をそらす細道":   "タブは、話題を変える音だった。彼はよく、変えた。",
+    "消した言葉の斜面": "いちばん多く押されたのは、この鍵だ。打っては消し、打っては消した。いちばん最初の返事も、そうだった。",
+    "送れなかった崖":   "エンターの前で、彼はよく止まった。送るかどうか。送られたのは、いつも短いほうだった。",
+    "空白の橋":         "空白を、彼は長く打った。何かを言う代わりに。",
+    "未定義の空":       "ここより上は、私も知らない。彼が打たなかった言葉だ。"
+  },
+  river: "水に落ちても、鍵は鳴る。",
+  cable: "このケーブルは、彼の机のものと同じ規格だ。",
+  wind:  "風は、彼のほうから吹いてくる。",
+  brace: "彼女が、鍵を押さえていてくれる。",
+  // ---- 会う。送れなかった崖（Enter）。彼女は先にここまで来ていた ----
+  // 小道具①：右手はずっとポケットの中。何を持っているかは言わない
+  meet: [
+    { t:"女がいた。キーの上に座って、こちらを見ている。" },
+    { t:"彼女のことは知っている。彼が、いちばん多く打った名前だ。" },
+    { t:"右手を、ずっとポケットに入れている。", hold:3000 },
+    { t:"「……あなた、あの子の」" },
+    { t:"私は答えられない。鍵を鳴らすしかない。", hold:2600 },
+    { card:"いえなかっただけだ" },
+    { t:"彼女は、しばらく画面を見ていた。", hold:3200 },
+    { t:"「……行こう。一緒に」", fn:function(){ girl.sit = false; } },
+    { t:"右手は、ポケットに入ったままだった。私は、見なかったことにした。", hold:3800 },
+    { t:"そうして、二人になった。", hold:3000 }
+  ],
+  // ---- 二人の旅。区間に入ったとき、一度だけ ----
+  // 小道具②：画面が一度だけ見える。「だいじょうぶ」と一行。何年も前
+  together: {
+    "空白の橋": [
+      "彼女はときどき、ポケットの中を確かめる。",
+      "画面が一度だけ見えた。だいじょうぶ、と一行。何年も前の日付だった。"
+    ],
+    "未定義の空": [
+      "「あの子、今どうなってるの」",
+      "私は答えを持っていない。彼が打たなかったからだ。",
+      "「……そう。じゃあ、私が言う」"
+    ]
+  },
+  // ---- 頂。答えは言わない。彼が消した返事を、返すだけ ----
+  // 小道具③：右手が出る。持っていたのは、あの一行の画面
+  end: [
+    { t:"着いた。光は、思ったより小さかった。" },
+    { t:"彼がいる。背中しか見えない。彼女は、もう私を見ていない。" },
+    { t:"彼女が、先に口を開いた。", hold:2800 },
+    { t:"「……ねえ。だいじょうぶって、あれ、何だったの」", hold:4600 },
+    { t:"彼は振り向かない。振り向けないのかもしれない。", hold:3600 },
+    { t:"私は、あずかっていた言葉を思い出す。彼が最初に打って、消した返事だ。", hold:4400 },
+    { card:"いかないでほしい" },
+    { t:"彼が、振り向いた。", hold:3000, fn:function(){ boy.turned = true; } },
+    { t:"彼女が、ポケットから右手を出した。", hold:3200, fn:function(){ girl.pocket = 0; girl.phone = true; } },
+    { t:"画面には、だいじょうぶ、と一行だけ。彼女は、それを消さなかった。", hold:4400 },
+    { t:"「……ばか」", hold:3400 },
+    { t:"光が、少しだけ小さくなった。", hold:3600, fn:function(){ boy.dim = true; } },
+    { t:"ここから先は、二人が話す。私の仕事ではない。", hold:4200 },
+    { t:"僕には、声がない。彼と同じだ。", hold:3400 },
+    { t:"だから、ここまでの言葉は全部、あなたが打った。", hold:4600 },
+    { t:"落ちても、また次の一文字を。", hold:3600 }
+  ],
+  // 一人で頂に着いた場合（通常は起きない。デバッグ用）
+  endSolo: [
+    { t:"着いた。光は、思ったより小さかった。" },
+    { t:"彼がいる。背中しか見えない。声は、まだ無い。" },
+    { t:"私は、あずかっていた言葉を思い出す。彼が最初に打って、消した返事だ。", hold:4400 },
+    { card:"いかないでほしい" },
+    { t:"彼が、振り向いた。", hold:3000, fn:function(){ boy.turned = true; } },
+    { t:"光が、少しだけ小さくなった。", hold:3600, fn:function(){ boy.dim = true; } },
+    { t:"僕には、声がない。彼と同じだ。", hold:3400 },
+    { t:"だから、ここまでの言葉は全部、あなたが打った。", hold:4600 },
+    { t:"落ちても、また次の一文字を。", hold:3600 }
+  ]
 };
 const RAD = T.ANGLE * Math.PI / 180;
 // 到達距離 range = v^2 * sin(2θ) / g  →  v = sqrt(range * g / sin2θ)
@@ -586,7 +808,39 @@ function hintFor(m){
 
 /* 夜・静けさ・機械・希望。長いものは、男の子が打っていた文そのもの。
    長さは実測でバケットするので、数え間違いは無害。                        */
-const RAW_WORDS = ("ひかり よぞら しずか ことば きぼう あかり かすか しずく けはい とおく ねむり よあけ みらい いのち こころ きおく さいご はじめ むかし ゆうひ つづき となり ひとり ふたり まぶた みなと ゆらぎ わすれ おわり かたち きせつ しるし すきま ひとみ むすう めざめ やみよ よふけ らせん りゆう れきし ゆびわ かがみ さかみち てざわり てのひら ゆびさき あしおと やくそく くらやみ にじいろ ぬくもり はぐるま ふゆぞら ほしぞら まちかど みずうみ もくてき ゆきどけ るすばん ろうそく しずけさ さみしさ おだやか けしきの ぬけみち らくがき りんかく れんらく ろくおん たいよう ちいさな つめたい でんきや とびらの なみだの ひとりで ふりむく まちあかり かぜのおと よるのそら きかいたち でんげんが あたたかい いつかまた うつくしい かえりみち きこえない くりかえし こわれかけ さいごまで しろいいき そらのいろ つながって てらしてる にどとない ねむれない のこされた はなしたい ひとりごと ふりかえる ほんとうは みちしるべ むねのおく めをとじて もどれない やわらかい よるのおと わらいごえ きえかけた うごかない おぼえてる かわらない くらいみち あきらめて しんじてる ためらった なきそうな ぬくもりが せかいのはて たしかなもの とおいひかり へいきなふり まちのあかり ゆきどけみず あきらめない げんきでいて こたえはない よるがあける きみのこえが しずかなあめ とけいのおと ひかりのむこう こわれたきかい きこえないこえ あのひのことば だれかのいのり とおくのあかり ちいさなひかり なにもいえない ふたりでみたそら だれもいないまち きえかけたひかり ゆびさきのきおく よるをわたるかぜ もどれないばしょ いきているだけで きみがわらうまで さよならのかわり たしかめたかった あかりのついたまど しずかなあめのおと わすれられたきおく おちてもまたのぼる とけいのはりのおと けしきがかわるまで あかるくないみらい まっくらなかいだん きみがうったことば まだきえていないひ だれもいなくなった ひとりぶんのあしおと ことばにならないこと だれかにとどくことば かえりみちのとちゅう よあけまえのしずけさ まだいえなかったこと つぎのいちもじをうつ ことばがとどくひまで きこえていたはずのこえ もういちどはなすために うごかなくなったきかい だれもいないきょうしつ おちてもまたうてばいい そらがあかるくなるまで ひかりはまだきえていない だれかにとどけたいことば しずかなよるをこえていく いつかまたはなせるように きみのことばがのこってる だれかがいたへや しずかなあしおと きえていくひかり さいごのことば とけいがとまった あかりのないみち ゆびがおぼえてる みずうみのそこ よるがおわるまで だれのこえもない ひとつぶのひかり こわさないように わすれたふりして だれかのあしおと きえないでほしい よるをこえるために まだおわっていない きみにとどくまえに あしたもここにいる だれかがまっている もういちどあいたい まだうごけるはずだ わすれたくなかった ひかりがきえるまえに とおくできこえるおと").split(" ");
+const RAW_WORDS = ("ひかり よぞら しずか ことば きぼう あかり かすか しずく けはい とおく ねむり よあけ みらい いのち こころ きおく さいご はじめ むかし ゆうひ つづき となり ひとり ふたり まぶた みなと ゆらぎ わすれ おわり かたち きせつ しるし すきま ひとみ むすう めざめ やみよ よふけ らせん りゆう れきし ゆびわ かがみ さかみち てざわり てのひら ゆびさき あしおと やくそく くらやみ にじいろ ぬくもり はぐるま ふゆぞら ほしぞら まちかど みずうみ もくてき ゆきどけ るすばん ろうそく しずけさ さみしさ おだやか けしきの ぬけみち らくがき りんかく れんらく ろくおん たいよう ちいさな つめたい でんきや とびらの なみだの ひとりで ふりむく まちあかり かぜのおと よるのそら きかいたち でんげんが あたたかい いつかまた うつくしい かえりみち きこえない くりかえし こわれかけ さいごまで しろいいき そらのいろ つながって てらしてる にどとない ねむれない のこされた はなしたい ひとりごと ふりかえる ほんとうは みちしるべ むねのおく めをとじて もどれない やわらかい よるのおと わらいごえ きえかけた うごかない おぼえてる かわらない くらいみち あきらめて しんじてる ためらった なきそうな ぬくもりが せかいのはて たしかなもの とおいひかり へいきなふり まちのあかり ゆきどけみず あきらめない げんきでいて こたえはない よるがあける きみのこえが しずかなあめ とけいのおと ひかりのむこう こわれたきかい きこえないこえ あのひのことば だれかのいのり とおくのあかり ちいさなひかり なにもいえない ふたりでみたそら だれもいないまち きえかけたひかり ゆびさきのきおく よるをわたるかぜ もどれないばしょ いきているだけで きみがわらうまで さよならのかわり たしかめたかった あかりのついたまど しずかなあめのおと わすれられたきおく おちてもまたのぼる とけいのはりのおと けしきがかわるまで あかるくないみらい まっくらなかいだん きみがうったことば まだきえていないひ だれもいなくなった ひとりぶんのあしおと ことばにならないこと だれかにとどくことば かえりみちのとちゅう よあけまえのしずけさ まだいえなかったこと つぎのいちもじをうつ ことばがとどくひまで きこえていたはずのこえ もういちどはなすために うごかなくなったきかい だれもいないきょうしつ おちてもまたうてばいい そらがあかるくなるまで ひかりはまだきえていない だれかにとどけたいことば しずかなよるをこえていく いつかまたはなせるように きみのことばがのこってる だれかがいたへや しずかなあしおと きえていくひかり さいごのことば とけいがとまった あかりのないみち ゆびがおぼえてる みずうみのそこ よるがおわるまで だれのこえもない ひとつぶのひかり こわさないように わすれたふりして だれかのあしおと きえないでほしい よるをこえるために まだおわっていない きみにとどくまえに あしたもここにいる だれかがまっている もういちどあいたい まだうごけるはずだ わすれたくなかった ひかりがきえるまえに とおくできこえるおと だいじょうぶ へいきだよ" +
+" せかいはまだある あさはくる だれかがいきてる まだおわらない みらいのはなし いつかのまち ひとがいたころ のこったもの そらはつづく よるはあける まちのおと でんきがきえた あめがふった きのうのつづき" +
+" きみのこえ となりにいて きみとみたそら きみがわらった てをつないだ きみのなまえ わらってほしい きみがいたから あのひのこと きこえてた そばにいる まってて ごめんね きみのて ふたりで きみといたい きみのことばかり だいじょうぶだよ きみにあいたい なんでもない" +
+" ほんとうはこわかった ずっといいたかった いえなかっただけだ もういちどはなしたい これがぼくのこえ ぼくのこえをきいて きみをまもりたかった きみといるとしずかだ ことばがなくてもよかった きみのまえではだまれた さいごまできいてほしい ぜんぶきみにいいたかった まだおわりにしたくない").split(" ");
+
+/* 言葉の層。**登るほど、彼が打たなかった側へ近づく。**
+     0：日常の言葉                      （麓から）
+     1：世界について、未来について      （20m〜）
+     2：きみについて                    （45m〜。ちょうど、彼女と会うあたり）
+     3：言えなかった本音                （70m〜。長い言葉だけがここにある）
+   手札は使った1枚ずつしか替わらないので、層は少しずつ滲むように変わる。   */
+const TIER_ALT = [0, 20, 45, 70];
+const TIER_OF = {};
+("だれもいないまち せかいのはて よるがおわるまで あしたもここにいる ひかりはまだきえていない だれもいなくなった " +
+ "まだきえていないひ そらがあかるくなるまで よあけまえのしずけさ あかるくないみらい だれもいないきょうしつ " +
+ "うごかなくなったきかい こわれたきかい とおくのあかり まちのあかり せかいはまだある あさはくる だれかがいきてる " +
+ "まだおわらない みらいのはなし いつかのまち ひとがいたころ のこったもの そらはつづく よるはあける まちのおと " +
+ "でんきがきえた あめがふった きのうのつづき").split(" ").forEach(w => TIER_OF[w] = 1);
+("きみがわらうまで きみにとどくまえに きみのこえが きみがうったことば きみのことばがのこってる ふたりでみたそら " +
+ "きみのてがふれたおと だれかにとどくことば あのひのことば きみのこえ となりにいて きみとみたそら きみがわらった " +
+ "てをつないだ きみのなまえ わらってほしい きみがいたから あのひのこと きこえてた そばにいる まってて ごめんね " +
+ "きみのて ふたりで きみといたい きみのことばかり だいじょうぶだよ きみにあいたい なんでもない だいじょうぶ へいきだよ").split(" ").forEach(w => TIER_OF[w] = 2);
+("まだいえなかったこと いつかまたはなせるように もういちどあいたい つぎのいちもじをうつ おちてもまたうてばいい " +
+ "ことばにならないこと きこえていたはずのこえ もういちどはなすために ことばがとどくひまで だれかにとどけたいことば " +
+ "ほんとうはこわかった ずっといいたかった いえなかっただけだ もういちどはなしたい これがぼくのこえ ぼくのこえをきいて " +
+ "きみをまもりたかった きみといるとしずかだ ことばがなくてもよかった きみのまえではだまれた さいごまできいてほしい " +
+ "ぜんぶきみにいいたかった まだおわりにしたくない").split(" ").forEach(w => TIER_OF[w] = 3);
+function tierAt(){
+  const alt = Math.max(0, -S.y) / T.PX_PER_M;
+  let t = 0;
+  for (let i = 1; i < TIER_ALT.length; i++) if (alt >= TIER_ALT[i]) t = i;
+  return t;
+}
 
 const POOL = {};
 for (const w of new Set(RAW_WORDS)){
@@ -598,7 +852,7 @@ for (const w of new Set(RAW_WORDS)){
   //   ひとりぶんのあしおと → hitoribunnnoasioto（n が3つ並ぶ）
   // 「みすってないのにミスってることにされる」の実体のひとつがこれ。出さない。
   if (/nn$/.test(rj) || /nnn/.test(rj)){ console.warn("ん で誤爆するので外した:", w, rj); continue; }
-  (POOL[w.length] || (POOL[w.length] = [])).push({ kana:w, keys:firstKeys(w), romaji:rj });
+  (POOL[w.length] || (POOL[w.length] = [])).push({ kana:w, keys:firstKeys(w), romaji:rj, tier:TIER_OF[w] || 0 });
 }
 // 候補は4段階の長さから1つずつ。小跳び／中跳び／大跳び／大跳躍の選択肢になる
 const BUCKETS = [[3,4],[5,6],[7,8],[9,12]];
@@ -607,6 +861,9 @@ const BUCKET_WORDS = BUCKETS.map(r => {
   for (let L = r[0]; L <= r[1]; L++) if (POOL[L]) a.push.apply(a, POOL[L]);
   return a;
 });
+// 層ごと・層まで、の一覧。層に言葉が無い長さは、下の層から借りる
+const BUCKET_TIER = BUCKET_WORDS.map(list => [0,1,2,3].map(t => list.filter(w => w.tier === t)));
+const BUCKET_UPTO = BUCKET_WORDS.map(list => [0,1,2,3].map(t => list.filter(w => w.tier <= t)));
 
 /* リロール。打てば手札を引き直せる。**代償は打鍵そのもの** —
    途中で打ち間違えれば、他の言葉と同じように向かい風で戻される。
@@ -630,19 +887,19 @@ const wrnd = mulberry32(T.SEED ^ 0x5bf03635);   // 単語用は別系列（地�
    h    : 足場の厚み。大きいものは「壁」として跳ね返す
    side : 主ルートの手前下に安全網／罠の足場を置く確率                        */
 const ZONES = [
-  { name:"麓",                 sub:"BASE CAMP",      n: 9, gap:[2.2,3.6], rise:[ 22, 50], w:[3,5], h:[34, 34], side:.35, keys:["Q","W","E","R","T","Y","A","S","D","F","G"] },
-  { name:"Ctrl谷",             sub:"CTRL VALLEY",    n: 8, gap:[3.2,5.2], rise:[-24, 34], w:[2,4], h:[34, 96], side:.50, keys:["Ctrl","Alt","Win","Fn","Menu"] },
-  { name:"Shift段丘",          sub:"SHIFT TERRACE",  n:10, gap:[2.0,3.2], rise:[ 48, 86], w:[3,6], h:[34, 34], side:.28, keys:["Shift","Caps","Z","X","C","V","B"] },
-  { name:"Tabの細道",          sub:"TAB RIDGE",      n:11, gap:[3.0,4.8], rise:[ 18, 58], w:[1,2], h:[34,126], side:.16, keys:["Tab","Esc","~","1","2","3","4"] },
-  { name:"Backspace滑落地帯",  sub:"BACKSPACE SLIP", n: 9, gap:[2.6,4.4], rise:[ 26, 66], w:[2,3], h:[34, 34], side:.12, keys:["Bksp","Del","Ins","Home","End"], slick:true },
-  { name:"Enter絶壁",          sub:"ENTER CLIFF",    n: 9, gap:[1.4,2.6], rise:[ 92,138], w:[2,3], h:[34,152], side:.22, keys:["Enter"], glow:true },
-  { name:"Spacebar大橋",       sub:"SPACEBAR SPAN",  n: 5, gap:[4.5,7.5], rise:[-12, 36], w:[6,11],h:[34, 34], side:.10, keys:["Space"], glow:true },
-  { name:"Function Key天空域", sub:"FUNCTION SKY",   n:12, gap:[2.8,5.6], rise:[ 38, 96], w:[1,3], h:[34, 34], side:.40, keys:["F1","F4","F5","F9","F12","PrtSc","ScrLk"], glow:true }
+  { name:"起動の岸",         sub:"POWER ON",      n: 9, gap:[2.2,3.6], rise:[ 22, 50], w:[3,5], h:[34, 34], side:.35, keys:["Q","W","E","R","T","Y","A","S","D","F","G"] },
+  { name:"取り消しの谷",     sub:"CTRL+Z",        n: 8, gap:[3.2,5.2], rise:[-24, 34], w:[2,4], h:[34, 96], side:.50, keys:["Ctrl","Alt","Win","Fn","Menu"] },
+  { name:"大文字の段丘",     sub:"SHIFT",         n:10, gap:[2.0,3.2], rise:[ 48, 86], w:[3,6], h:[34, 34], side:.28, keys:["Shift","Caps","Z","X","C","V","B"] },
+  { name:"話をそらす細道",   sub:"TAB",           n:11, gap:[3.0,4.8], rise:[ 18, 58], w:[1,2], h:[34,126], side:.16, keys:["Tab","Esc","~","1","2","3","4"] },
+  { name:"消した言葉の斜面", sub:"BACKSPACE",     n: 9, gap:[2.6,4.4], rise:[ 26, 66], w:[2,3], h:[34, 34], side:.12, keys:["Bksp","Del","Ins","Home","End"], slick:true },
+  { name:"送れなかった崖",   sub:"ENTER",         n: 9, gap:[1.4,2.6], rise:[ 92,138], w:[2,3], h:[34,152], side:.22, keys:["Enter"], glow:true },
+  { name:"空白の橋",         sub:"SPACE",         n: 5, gap:[4.5,7.5], rise:[-12, 36], w:[6,11],h:[34, 34], side:.10, keys:["Space"], glow:true },
+  { name:"未定義の空",       sub:"F1 - F12",      n:12, gap:[2.8,5.6], rise:[ 38, 96], w:[1,3], h:[34, 34], side:.40, keys:["F1","F4","F5","F9","F12","PrtSc","ScrLk"], glow:true }
 ];
 
 /* ===== ⑤ 地形生成 ======================================================== */
 let plats = [], buckets = new Map(), levelRight = 0, summitY = 0, decor = [], stars = [];
-let banks = [], cables = [];
+let banks = [], cables = [], summitPlat = null;
 const BW = 320;                                    // あたり判定の空間分割の幅
 function bucketPut(p){
   const a = Math.floor(p.x / BW), b = Math.floor((p.x + p.w) / BW);
@@ -667,6 +924,7 @@ function buildLevel(){
                    label:z.keys[Ri(0, z.keys.length - 1)], glow:!!z.glow, slick:!!z.slick, main:true };
       plats.push(mp);
       if (i === 0) entryPlats.push(mp);          // 区間の入口。ケーブルの行き先になる
+      summitPlat = mp;                            // 最後に置いた本ルートの足場＝頂
       // 手前下の足場：短すぎた跳躍を拾う安全網であり、跳びすぎを誘う罠でもある
       if (rnd() < z.side){
         const sy = Math.round(y + R(56, 158));
@@ -772,7 +1030,7 @@ function fixClearance(){
 
 /* ===== ⑥′ 出られない足場を消す ====================================
    乗ったら最後、3〜12文字のどれで跳んでも同じ足場に戻ってくる場所が実際にあった
-   （Shift段丘の Caps・4キー幅・高度12.1m。7つの立ち位置すべてで詰み）。
+   （大文字の段丘の Caps・4キー幅・高度12.1m。7つの立ち位置すべてで詰み）。
    奈落へ落ちるのは「戻される」だけなので詰みではない。**同じ足場に戻り続けるのが詰み。**
    立ち位置を20px刻みで総当たりし、1つでも出られない位置があればその足場を消す。 */
 function escapable(p){
@@ -822,7 +1080,8 @@ const S = {
   started:false, t0:0, elapsed:0, zone:null, shake:0, flash:0,
   mat:null, active:null, queued:null, cands:[], preds:[], trail:[], puffs:[],
   squash:0, spin:0, rr:"", fresh:[0,0,0,0], rerolls:0, words:0,
-  onCable:null, climbTo:0, climbs:0
+  onCable:null, climbTo:0, climbs:0,
+  together:false, ended:false, sinceLand:60, rivers:0
 };
 
 const rattling = [];                      // 風に叩かれて震えているキーキャップ
@@ -872,6 +1131,7 @@ function climb(len){
   S.squash = -.4;
   S.climbs++;
   sfx.climbing(len);
+  sayOnce("cable", STORY.cable, 400);
   return true;
 }
 function cableStep(){
@@ -891,7 +1151,9 @@ function cableStep(){
     S.x = Math.max(pl.x + 18, Math.min(c.x, pl.x + pl.w - 18));
     S.y = pl.y; S.apex = pl.y; S.preds = null; S.squash = .45;
     if (S.zone !== pl.zone){ S.zone = pl.zone; showZone(pl.zone); }
+    S.sinceLand = 0;
     sfx.land(1);
+    arrivedAt(pl);
   }
 }
 
@@ -925,7 +1187,8 @@ const river = { on:0, t:0, bank:null, toX:0, streaks:[] };
 function enterRiver(){
   const dropM = Math.max(0, (S.y - S.apex) / T.PX_PER_M);
   if (dropM > S.maxFall) S.maxFall = dropM;
-  river.on = 1; river.t = 0;
+  river.on = 1; river.t = 0; S.rivers++;
+  sayOnce("river", STORY.river, 700);
   // 流れ着く先は、**ここより下流にある最初の岸**。落ちた場所で戻る先が変わる
   river.bank = banks[0];
   for (let i = banks.length - 1; i >= 0; i--){
@@ -1007,10 +1270,12 @@ function startGust(){
   wind.spd = gustSpeed();
   if (S.onCable){ S.onCable = null; S.air = true; S.apex = S.y; }   // ケーブルから振り落とされる
   if (S.ground && !S.ground.floor){ S.ground.rattle = 26; rattling.push(S.ground); }
-  if (!S.air){                               // まず浮かされて、それから運ばれる
+  if (!S.air && !S.together){                // まず浮かされて、それから運ばれる
     S.air = true; S.ground = null; S.apex = S.y;
     S.vy = -1.4 - wind.spd * .13;
   }
+  // 二人のときは浮かない。彼女が押さえている。それでも足もとは滑る
+  sayOnce("wind", STORY.wind, 1200);
   S.shake = Math.min(11, 3 + wind.spd * .75);
   for (let i = 0; i < 70; i++) wind.streaks.push(newStreak(true));
   showGust();
@@ -1028,13 +1293,15 @@ function windStep(){
   if (wind.t <= 0) return;
   wind.t--;
   const k = wind.t / T.GUST_FRAMES;           // 吹き終わりに向かって弱まる
-  const target = -wind.spd * (.34 + .66 * k);
+  const target = -wind.spd * (.34 + .66 * k) * (S.together && !S.air ? .3 : 1);
   S.vx += (target - S.vx) * .085;
 }
 
 /* ===== ⑧ 物理 ============================================================ */
 function physics(){
   feelStep();
+  if (!S.air && !river.on && !S.onCable) S.sinceLand++;
+  girlStep();
   if (river.on){ riverStep(); return; }     // 流されている間は他の力を受けない
   if (S.onCable){ cableStep(); return; }    // ケーブルを掴んでいる間は落ちない
   windStep();
@@ -1071,7 +1338,9 @@ function physics(){
     S.x += sx;
     if (hitAt(S.x, S.y)){
       S.x -= sx; S.vx = -S.vx * T.BOUNCE;
-      sfx.bump(); S.shake = Math.min(7, S.shake + Math.abs(S.vx) * .5);
+      // 壁の音はサブステップごとに鳴ると数十個重なって割れる。1回の接触につき1回
+      if (frame - lastBumpFrame > 8){ lastBumpFrame = frame; sfx.bump(); }
+      S.shake = Math.min(7, S.shake + Math.abs(S.vx) * .5);
     }
     S.y += sy;
     const p = hitAt(S.x, S.y);
@@ -1098,12 +1367,14 @@ function land(p){
     S.puffs.push({ x:S.x + (Math.random() - .5) * 22, y:S.y, vx:(Math.random() - .5) * 1.6, vy:-Math.random() * .7, a:1 });
   sfx.land(dropM);
   if (S.zone !== p.zone && !p.floor){ S.zone = p.zone; showZone(p.zone); }
-  S.trail.length = 0;
+  S.trail.length = 0; S.sinceLand = 0;
   S.preds = null;   // 位置が変わったので軌道は引き直す。**手札には触らない**
+  arrivedAt(p);
 }
 
 /* ===== ⑨ ミス ============================================================ */
 function slip(){
+  if (scene.on){ S.mat = null; S.active = null; S.combo = 0; sfx.miss(); S.shake = 2; paintWords(); return; }
   S.miss++; S.combo = 0; S.flash = 1; S.mat = null; S.active = null; S.rr = "";
   sfx.miss();
   if (T.MISS_WIND) startGust();            // 落ちるのではなく、前から吹かれて戻される
@@ -1111,14 +1382,112 @@ function slip(){
   paintWords();
 }
 
-/* どの言葉にも当たらないキー。**「打ち間違え」ではなく「打ち損じ」。**
-   ここで落とすと、直前の言葉の余韻（n が1個余る、r に触った、指が滑った）が
-   ぜんぶ事故になる。罰するのは **言葉の途中で外したときだけ** にする。      */
+/* どの言葉にも当たらないキー＝打ち損じ。
+   いったん「罰しない」にしたが、本人の判断で **地上なら向かい風** に戻した（T.STRAY_FATAL）。
+   余韻で事故になりやすかった元（末尾の ん、うっかりの r、キーリピート、IME）は
+   別途つぶしてあるので、残るのは本当に指が滑ったときだけ。                    */
 function stray(){
   S.combo = 0; S.rr = ""; S.mat = null; S.active = null;
   if (T.STRAY_FATAL && !S.air){ slip(); return; }
   sfx.bump(); S.shake = 2.2;
   paintWords();
+}
+
+/* ===== 記憶 ==============================================================
+   キーボードは全部おぼえている。おぼえているが、説明はしない。
+   区間に入ったときに一行。鍵の名前が、そのまま彼の打ち方の記憶になる。      */
+let seenLine = {};
+const storyEl = document.getElementById("story");
+let storyQ = [], storyTimer = 0, storyRate = 1;
+function say(text, hold){
+  if (scene.on) return;                       // 場面の最中に割り込ませない（遅延で来る区間の行が上書きしていた）
+  storyQ.push({ t:text, hold:hold || 4400 });
+  if (!storyTimer) nextSay();
+}
+function nextSay(){
+  const it = storyQ.shift();
+  if (!it){ storyEl.classList.remove("on"); storyTimer = 0; return; }
+  storyEl.textContent = it.t; storyEl.classList.add("on");
+  storyTimer = setTimeout(function(){
+    storyEl.classList.remove("on");
+    storyTimer = setTimeout(nextSay, 900);
+  }, it.hold * storyRate);
+}
+function sayOnce(key, text, delay){
+  if (seenLine[key] || !text) return;
+  seenLine[key] = 1;
+  if (delay) setTimeout(function(){ say(text); }, delay); else say(text);
+}
+function sayOnceSeq(key, arr, delay){
+  if (seenLine[key] || !arr) return;
+  seenLine[key] = 1;
+  setTimeout(function(){ for (let i = 0; i < arr.length; i++) say(arr[i]); }, delay || 0);
+}
+
+/* ===== 場面 ==============================================================
+   会う／終わる。行が順に出て、途中で一枚だけ手札が来る。
+   その一枚を打ち切ることが、この物語でキーボードにできる唯一の返事。     */
+const scene = { on:false, steps:[], i:0, timer:0, done:null };
+function playScene(steps, done){
+  scene.on = true; scene.steps = steps; scene.i = 0; scene.done = done;
+  storyQ.length = 0; clearTimeout(storyTimer); storyTimer = 0;
+  storyEl.classList.remove("on");
+  clearTimeout(zoneTimer); elZone.classList.remove("on");   // 区間の見出しは場面に重ねない
+  S.mat = null; S.active = null; S.rr = ""; S.queued = null;
+  elWords.style.opacity = "0";
+  setTimeout(sceneNext, 900);
+}
+function sceneNext(){
+  const st = scene.steps[scene.i++];
+  if (!st){
+    scene.on = false; storyEl.classList.remove("on");
+    elWords.style.opacity = "";
+    if (scene.done) scene.done();
+    return;
+  }
+  if (st.fn) st.fn();
+  if (st.t !== undefined){
+    let t = st.t;
+    storyEl.textContent = t; storyEl.classList.add("on");
+    scene.timer = setTimeout(function(){
+      storyEl.classList.remove("on");
+      scene.timer = setTimeout(sceneNext, 800);
+    }, (st.hold || 3800) * storyRate);
+  } else if (st.card){
+    const w = { kana:st.card, keys:firstKeys(st.card), romaji:restRomaji(st.card, 0, ""), forced:true, tier:9 };
+    S.cands = [w]; S.mat = null; S.active = null; S.rr = ""; S.preds = null;
+    buildWords(); elWords.style.opacity = "";
+  }
+}
+function startMeeting(){
+  S.together = true; S.sinceLand = 60;
+  const P = S.ground;
+  girl.on = true; girl.sit = true; girl.plat = P; girl.alpha = 1; girl.focus = null;
+  girl.pocket = -1; girl.phone = false;              // 右手（奥の手）はポケットの中
+  girl.x = girl.tx = Math.max(P.x + 16, Math.min(P.x + P.w - 16, S.x + 56));
+  girl.face = -1;
+  playScene(STORY.meet, function(){
+    newCandidates();
+    sayOnce("brace", STORY.brace, 1800);
+  });
+}
+function startEnding(){
+  S.ended = true;
+  girl.focus = "boy";
+  playScene(S.together ? STORY.end : STORY.endSolo, function(){
+    const el = document.getElementById("endov");
+    document.getElementById("e_words").textContent = S.words;
+    document.getElementById("e_river").textContent = S.rivers;
+    document.getElementById("e_climb").textContent = S.climbs;
+    const m = Math.floor(S.elapsed / 60), sec = Math.floor(S.elapsed % 60);
+    document.getElementById("e_time").textContent = m + ":" + (sec < 10 ? "0" : "") + sec;
+    el.classList.add("on");
+  });
+}
+function arrivedAt(p){
+  if (scene.on || S.ended) return;
+  if (!S.together && p.zone === ZONES[5]) startMeeting();
+  else if (p === summitPlat) startEnding();
 }
 
 /* ===== ⑩ 単語候補 ======================================================== */
@@ -1131,9 +1500,12 @@ function newCandidates(slot){
     if (i !== slot && S.cands[i])
       for (let k = 0; k < S.cands[i].keys.length; k++) used[S.cands[i].keys[k]] = 1;
 
+  const tier = tierAt();
   for (let i = 0; i < 4; i++){
     if (slot !== undefined && i !== slot) continue;
-    const list = BUCKET_WORDS[i];
+    // いまの層の言葉を6割、それ以下の層から4割。層が変わった瞬間に全部変わらない
+    const own = BUCKET_TIER[i][tier];
+    const list = (own.length && wrnd() < .62) ? own : BUCKET_UPTO[i][tier];
     let w = null;
     for (let n = 0; n < 90; n++){
       const c = list[(wrnd() * list.length) | 0];
@@ -1152,8 +1524,12 @@ function newCandidates(slot){
   buildWords();
 }
 function ensurePreds(){
-  if (S.preds || S.air || river.on || S.onCable) return;
-  S.preds = S.cands.map(w => predict(w.kana.length, S.x, S.y));   // 候補は文字列ではなくオブジェクト
+  if (S.air || river.on || S.onCable || wind.t > 0) return;
+  // 風や滑落地帯で地上のまま動くことがある。予測した位置とずれていたら作り直す
+  if (S.preds && (S.preds.px !== S.x || S.preds.py !== S.y)) S.preds = null;
+  if (S.preds) return;
+  S.preds = S.cands.map(w => w ? predict(w.kana.length, S.x, S.y) : null);
+  S.preds.px = S.x; S.preds.py = S.y;
 }
 
 /* ===== ⑪ 入力 — プレイヤーができるのはこれだけ ============================
@@ -1167,6 +1543,7 @@ addEventListener("keydown", function(e){
   if (e.repeat) return;
   // 日本語IMEが変換に食っているキーは、ゲーム側では無かったことにする
   if (e.isComposing) return;
+  if (e.key === "F2"){ e.preventDefault(); const dp = document.getElementById("dbgp"); dp.hidden = !dp.hidden; return; }
   if (e.key.length !== 1) return;
   const c = e.key.toLowerCase();
   if (!(c >= "a" && c <= "z") && c !== "-") return;
@@ -1175,14 +1552,18 @@ addEventListener("keydown", function(e){
   if (!S.started){
     S.started = true; S.t0 = performance.now();
     document.getElementById("ov").classList.add("off");
-    try { startAudio(); } catch (err) {}   // 音が死んでも入力は死なせない
   }
+  if (!AC){ try { startAudio(); } catch (err) {} }   // 音が死んでも入力は死なせない
   if (river.on) return;                     // 流されている間は打っても進まない
+  if (S.ended && !scene.on){                // 終わったあと。麓から
+    document.getElementById("endov").classList.remove("on");
+    S.ended = false; reset(); return;
+  }
   S.keys++;
   sfx.key(c);
 
   // --- リロール（'r' は予約キーなので、言葉と取り違えようがない）---
-  if (!S.mat && (S.rr !== "" || c === "r")){
+  if (!scene.on && !S.mat && (S.rr !== "" || c === "r")){
     const want = S.rr + c;
     let ok = false;
     for (let i = 0; i < REROLL.opts.length; i++) if (REROLL.opts[i].indexOf(want) === 0) ok = true;
@@ -1214,6 +1595,12 @@ addEventListener("keydown", function(e){
   if (S.combo > S.bestCombo) S.bestCombo = S.combo;
 
   if (S.mat.complete()){                          // 打ち切った → かなの数だけ跳ぶ
+    if (S.active.forced){                         // 場面の一枚。跳ばない。返事になる
+      S.words++; S.mat = null; S.active = null; S.cands = []; S.preds = null;
+      buildWords(); elWords.style.opacity = "0";
+      setTimeout(sceneNext, 700);
+      return;
+    }
     const len = S.active.kana.length, slot = S.cands.indexOf(S.active);
     S.words++;                                    // これが本作の主役の数字
     S.mat = null; S.active = null;
@@ -1227,7 +1614,7 @@ addEventListener("keydown", function(e){
 });
 
 /* ===== ⑫ 音 — 企画書 §9。煽らない。落ちても「コトッ」で終わる ============= */
-let AC = null, MASTER = null, NOISE = null;
+let AC = null, MASTER = null, NOISE = null, audioLP = null, padGain = null;
 const sfx = {
   key: function(){}, miss: function(){}, jump: function(){},
   land: function(){}, bump: function(){}, gust: function(){}, reroll: function(){},
@@ -1237,6 +1624,9 @@ function startAudio(){
   if (AC) return;
   try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
   MASTER = AC.createGain(); MASTER.gain.value = .85; MASTER.connect(AC.destination);
+  seBus  = AC.createGain(); seBus.connect(MASTER);      // 効果音はこちら
+  bgmBus = AC.createGain(); bgmBus.connect(MASTER);     // パッドとポツンはこちら
+  applyVolume();
 
   const n = AC.sampleRate * 1.2 | 0;
   NOISE = AC.createBuffer(1, n, AC.sampleRate);
@@ -1249,12 +1639,16 @@ function startAudio(){
     gn.gain.setValueAtTime(0.0001, t);
     gn.gain.exponentialRampToValueAtTime(Math.max(.0002, g), t + a);
     gn.gain.exponentialRampToValueAtTime(0.0001, t + a + dec);
-    gn.connect(MASTER);
+    gn.connect(seBus);
     return gn;
   }
   function stop(node, t){ node.stop(AC.currentTime + t); }
 
+  let lastKeyAt = 0;
   sfx.key = function(c){
+    const now = AC.currentTime;
+    if (now - lastKeyAt < .018) return;                 // 同時押しの重なりは1つに
+    lastKeyAt = now;
     const s = noise(), bp = AC.createBiquadFilter();
     bp.type = "bandpass"; bp.Q.value = 1.4;
     bp.frequency.value = 1200 + (c.charCodeAt(0) % 12) * 130;
@@ -1318,7 +1712,7 @@ function startAudio(){
       gn.gain.setValueAtTime(0.0001, t);
       gn.gain.exponentialRampToValueAtTime(.075, t + .004);
       gn.gain.exponentialRampToValueAtTime(0.0001, t + .075);
-      sN.connect(bp); bp.connect(gn); gn.connect(MASTER);
+      sN.connect(bp); bp.connect(gn); gn.connect(seBus);
       sN.start(t); sN.stop(t + .12);
     });
   };
@@ -1349,7 +1743,7 @@ function startAudio(){
       g.gain.setValueAtTime(0.0001, tt);
       g.gain.exponentialRampToValueAtTime(.05, tt + .004);
       g.gain.exponentialRampToValueAtTime(0.0001, tt + .12);
-      o.connect(bp); bp.connect(g); g.connect(MASTER);
+      o.connect(bp); bp.connect(g); g.connect(seBus);
       o.start(tt); o.stop(tt + .16);
     }
   };
@@ -1362,11 +1756,14 @@ function startAudio(){
   // 環境音：ゆっくり動くパッド ＋ たまに落ちる小さな音。完全には暗くしない
   // 音の失敗でゲーム入力を巻き添えにしない
   ["key","miss","jump","land","bump","gust","reroll","splash","climbing"].forEach(function(n){
-    const f = sfx[n]; sfx[n] = function(a){ try { f(a); } catch (e) {} };
+    const f = sfx[n];
+    sfx[n] = function(a){ if (playFile(n)) return; try { f(a); } catch (e) {} };  // ファイル優先
   });
 
-  const pad = AC.createGain(); pad.gain.value = .04; pad.connect(MASTER);
+  const pad = AC.createGain(); pad.gain.value = .04; pad.connect(bgmBus);
+  padGain = pad;
   const lp = AC.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 380; lp.Q.value = 2;
+  audioLP = lp;                                   // 高度で少しずつ開く
   lp.connect(pad);
   [55, 82.5, 110.3].forEach(function(f, i){
     const o = AC.createOscillator();
@@ -1383,16 +1780,29 @@ function startAudio(){
   (function pluck(){
     setTimeout(function(){
       if (!AC) return;
+      if (bgmEl.ok){ pluck(); return; }         // BGMファイルがあるときは鳴らさない
       const o = AC.createOscillator(); o.type = "triangle";
       o.frequency.value = SCALE[(Math.random() * SCALE.length) | 0] * (Math.random() < .3 ? 2 : 1);
       const g = AC.createGain(), t = AC.currentTime;
       g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(.035, t + .02);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
-      o.connect(g); g.connect(MASTER); o.start(); o.stop(t + 2.4);
+      o.connect(g); g.connect(bgmBus); o.start(); o.stop(t + 2.4);
+      if (S.together){                              // 二人になってからは、二声
+        const o2 = AC.createOscillator(); o2.type = "triangle";
+        o2.frequency.value = o.frequency.value * (Math.random() < .5 ? 1.5 : 1.25);
+        const g2 = AC.createGain();
+        g2.gain.setValueAtTime(0.0001, t + .11);
+        g2.gain.exponentialRampToValueAtTime(.022, t + .14);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+        o2.connect(g2); g2.connect(bgmBus); o2.start(t + .11); o2.stop(t + 2.6);
+      }
       pluck();
     }, 3200 + Math.random() * 6500);
   })();
+
+  // BGM ファイルが先に読めていれば、合成を黙らせてそちらを流す
+  if (bgmEl.ok && bgmEl.el){ bgmEl.el.play().catch(function(){}); pad.gain.value = 0; }
 }
 
 /* ===== ⑬ 描画 ============================================================ */
@@ -1419,7 +1829,7 @@ function rr(x, y, w, h, r){
   ctx.closePath();
 }
 
-let camX = 0, camY = 0, frame = 0, camReady = false;
+let camX = 0, camY = 0, frame = 0, camReady = false, lastBumpFrame = -99;
 
 /* ===== 色 — 9色だけ。シアンは1色も使わない ============================== */
 const C = {
@@ -1488,6 +1898,12 @@ function drawSky(){
   ctx.globalCompositeOperation = "overlay"; ctx.globalAlpha = .1;
   ctx.fillStyle = ditherPat; ctx.fillRect(0, 0, W, H);
   ctx.restore();
+  // 地平線の近くだけ、夕暮れの名残が藤色に残っている。登るほど消える
+  const mv = ctx.createLinearGradient(0, H * .55, 0, H * .95);
+  mv.addColorStop(0,  "rgba(128,84,118,0)");
+  mv.addColorStop(.6, "rgba(128,84,118," + (.075 * (1 - t * .6)).toFixed(3) + ")");
+  mv.addColorStop(1,  "rgba(150,92,96,"  + (.09  * (1 - t * .6)).toFixed(3) + ")");
+  ctx.fillStyle = mv; ctx.fillRect(0, H * .55, W, H * .45);
 
   // 星。瞬かせない。数は少なく
   for (let i = 0; i < stars.length; i++){
@@ -1496,8 +1912,12 @@ function drawSky(){
     let sxp = (s.x * W * 1.4 - camX * .018) % (W * 1.4);
     if (sxp < 0) sxp += W * 1.4;
     sxp -= W * .2;
-    ctx.fillStyle = rgb(C.cream, s.a * (.14 + t * .3));
-    ctx.fillRect(sxp | 0, sy | 0, 1, 1);
+    const sa = s.a * (.14 + t * .3);
+    ctx.fillStyle = rgb(C.cream, sa);
+    if ((i % 6) === 0){                          // 6つに1つは、手で描いた四芒の星
+      const sx0 = sxp | 0, sy0 = sy | 0;
+      ctx.fillRect(sx0 - 2, sy0, 5, 1); ctx.fillRect(sx0, sy0 - 2, 1, 5);
+    } else ctx.fillRect(sxp | 0, sy | 0, 1, 1);
   }
 
   // ずっと先、右の高いところの琥珀。向かい風はそこから吹いてくる。
@@ -1697,6 +2117,27 @@ function drawPlat(p){
   ctx.strokeStyle = rgb(lerp(C.night, C.dustHi, lit), .5); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(x + 4, y + .5); ctx.lineTo(x + w - 4, y + .5); ctx.stroke();
 
+  // ---- 手作業の跡 ----------------------------------------------------
+  // インクで縁を取り、少しずれた薄い二度描き（版ずれ）。影側に鉛筆のハッチング。
+  // ずれ幅は足場ごとに固定（座標から作る）。毎フレーム震えると手描きではなく故障に見える
+  const sd = ((p.x * 73856093) ^ (p.y * 19349663)) >>> 0;
+  const jt = function(i){ return ((((sd >>> (i * 5)) & 31) / 31) - .5) * 1.6; };
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = rgb(C.ink, .34 + lit * .3);
+  rr(x + jt(0), y + jt(1), w, h, 4); ctx.stroke();
+  ctx.strokeStyle = rgb(C.dustHi, .08 + lit * .12);
+  rr(x + 1.3 + jt(2), y - .9 + jt(3), w, h, 4); ctx.stroke();
+  if (h >= 26 && lit > .3){
+    ctx.strokeStyle = rgb(C.ink, .06 + lit * .08);
+    ctx.beginPath();
+    const nh = Math.min(6, (h / 9) | 0);
+    for (let i = 0; i < nh; i++){
+      const yy = y + top + 5 + i * ((h - top - 8) / nh);
+      ctx.moveTo(x + 4 + jt(i & 3), yy); ctx.lineTo(x + Math.min(w - 4, 18 + i * 4), yy + 3);
+    }
+    ctx.stroke();
+  }
+
   // 1キーごとの目盛り。「n キー先」を目で数えられるようにする刻み
   if (!p.floor && w > T.UNIT * 1.4 && h >= 20){
     ctx.strokeStyle = rgb(lerp(C.night, C.dustLo, lit), .55); ctx.lineWidth = 1;
@@ -1783,9 +2224,11 @@ function drawArcs(){
     }
     return;
   }
-  if (!T.ARC_MODE || S.air || river.on || !S.preds) return;   // 流されている間は出さない
+  if (!T.ARC_MODE || S.air || river.on || wind.t > 0 || !S.preds) return;   // 流されている間・風の間は出さない
+  if (S.preds.px !== S.x || S.preds.py !== S.y) return;                 // 位置が古い予測は描かない
   for (let i = 0; i < S.preds.length; i++){
-    const pr = S.preds[i], act = S.cands[i] === S.active;
+    const pr = S.preds[i], cw = S.cands[i]; if (!pr || !cw) continue;
+    const act = cw === S.active;
     const col = act ? C.amber : (pr.ok ? C.cream : [158, 96, 78]);
     const a   = act ? .8      : (pr.ok ? .17     : .16);
     if (T.ARC_MODE === 2){                       // ぜんぶ見せる
@@ -1834,25 +2277,46 @@ function drawPlayer(){
   ctx.translate(x, y - PH / 2);
   if (S.air) ctx.rotate(Math.max(-.5, Math.min(.5, Math.atan2(S.vy, Math.max(2, S.vx)) * .3)) + S.spin);
   else if (Math.abs(S.spin) > .002) ctx.rotate(S.spin);
-  ctx.scale(1 + S.squash * .3, 1 - S.squash * .34);
 
   // 自分が持っている灯り。まわりのキーキャップを照らしているのはこれ
-  const gr = ctx.createRadialGradient(0, 2, 2, 0, 2, 58);
+  const gr = ctx.createRadialGradient(0, 2, 2, 0, 2, 60);
   gr.addColorStop(0,  rgb(C.amberHi, .2));
   gr.addColorStop(.35, rgb(C.amber, .075));
   gr.addColorStop(1,  rgb(C.amber, 0));
-  ctx.fillStyle = gr; ctx.fillRect(-62, -62, 124, 124);
+  ctx.fillStyle = gr; ctx.fillRect(-64, -64, 128, 128);
 
-  const g = ctx.createLinearGradient(0, -PH / 2, 0, PH / 2);
+  // ---- ケーブルの尻尾。机から引き抜いたまま、今もついている ----
+  // 飛ぶと後ろへなびき、止まると足場に垂れる
+  const lagX = Math.max(-10, Math.min(10, -S.vx * 1.4));
+  const lagY = S.air ? Math.max(-8, Math.min(8, -S.vy * .9)) : 10;
+  const sway = Math.sin(frame * .09) * (S.air ? 4 : 1.6);
+  const tx = -PW / 2 - 20 + lagX + sway * .4, ty = lagY + sway;
+  const cx1 = -PW / 2 - 8 + lagX * .3, cy1 = (S.air ? -2 : 6) + sway * .5;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = rgb(C.ink, .85); ctx.lineWidth = 3.2;
+  ctx.beginPath(); ctx.moveTo(-PW / 2 + 2, 2); ctx.quadraticCurveTo(cx1, cy1, tx, ty); ctx.stroke();
+  ctx.strokeStyle = rgb(C.dustMid, .75); ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-PW / 2 + 2, 2); ctx.quadraticCurveTo(cx1, cy1, tx, ty); ctx.stroke();
+  ctx.fillStyle = rgb(C.dustMid); rr(tx - 4, ty - 2.6, 5, 5.2, 1); ctx.fill();     // 端子
+  ctx.strokeStyle = rgb(C.ink, .6); ctx.lineWidth = 1; rr(tx - 4, ty - 2.6, 5, 5.2, 1); ctx.stroke();
+
+  ctx.scale(1 + S.squash * .3, 1 - S.squash * .34);
+  const bw = PW + 4, bh = PH + 2;
+  const g = ctx.createLinearGradient(0, -bh / 2, 0, bh / 2);
   g.addColorStop(0, rgb(C.dustHi)); g.addColorStop(.5, rgb(C.dust)); g.addColorStop(1, rgb(C.dustLo));
-  rr(-PW / 2, -PH / 2, PW, PH, 4); ctx.fillStyle = g; ctx.fill();
+  rr(-bw / 2, -bh / 2, bw, bh, 4.5); ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = rgb(C.ink, .6); ctx.lineWidth = 1; ctx.stroke();                  // インクの縁
+  ctx.strokeStyle = rgb(C.dustHi, .25); rr(-bw / 2 + 1.2, -bh / 2 - .8, bw, bh, 4.5); ctx.stroke();  // 版ずれ
 
-  ctx.fillStyle = rgb(C.legend, .78);
+  ctx.fillStyle = rgb(C.legend, .78);                                                 // キー
   for (let r = 0; r < 3; r++)
-    for (let c = 0; c < 7; c++)
-      ctx.fillRect(-PW / 2 + 3.4 + c * 3.5, -PH / 2 + 3.6 + r * 3.8, 2.2, 2.2);
-  ctx.fillStyle = rgb(C.amber, .95);                     // Enter だけ光っている
-  ctx.fillRect(PW / 2 - 6.5, -PH / 2 + 3.6, 3.4, 2.2);
+    for (let c = 0; c < 8; c++)
+      ctx.fillRect(-bw / 2 + 3.2 + c * 3.5, -bh / 2 + 3.4 + r * 4, 2.3, 2.4);
+  const pulse = .62 + .38 * (.5 + .5 * Math.sin(frame * .055));                       // Enter が呼吸する
+  ctx.fillStyle = rgb(C.amber, pulse);
+  ctx.fillRect(bw / 2 - 7, -bh / 2 + 3.4, 3.8, 2.4);
+  ctx.fillStyle = rgb(C.amberHi, pulse * .35);
+  ctx.fillRect(bw / 2 - 8, -bh / 2 + 2.4, 5.8, 4.4);
   ctx.restore();
 }
 
@@ -1884,7 +2348,270 @@ function drawWind(){
   }
 }
 
+/* ===== 人 ================================================================
+   彼女と、彼。どちらも制服の高校生として見えるように描く。
+   紙のような肌、墨の髪、生成りのブラウス、藍のプリーツ、琥珀のマフラー。
+   「人っぽさ」は形ではなく挙動で出す：歩いて来る／瞬く／こちらを見る／
+   ときどき遠くを見る／風に踏ん張る／座っていたのが立ち上がる。         */
+const girl = { on:false, plat:null, x:0, tx:0, alpha:0, mode:"idle", phase:0, face:1, pocket:0, phone:false,
+               blink:0, blinkT:120, look:{ dx:0, dy:0 }, sit:false, glance:0, glanceT:360, focus:null };
+const boy  = { turned:false, dim:false };
+
+function lookToward(gx, headY, tx, ty, out){
+  let dx = (tx - gx) / 90, dy = (ty - headY) / 90;
+  dx = Math.max(-1, Math.min(1, dx)); dy = Math.max(-1, Math.min(1, dy));
+  out.dx += (dx - out.dx) * .08; out.dy += (dy - out.dy) * .08;
+}
+
+function girlStep(){
+  if (!S.together){ girl.on = false; girl.alpha = 0; girl.plat = null; return; }
+  girl.on = true;
+  if (girl.blink > 0) girl.blink--;
+  else if (--girl.blinkT <= 0){ girl.blink = 6; girl.blinkT = 140 + Math.random() * 220; }
+  if (girl.glance > 0) girl.glance--;
+  else if (--girl.glanceT <= 0){ girl.glance = 46; girl.glanceT = 300 + Math.random() * 480; }
+
+  const grounded = !S.air && !S.onCable && !river.on && !!S.ground;
+  if (grounded && S.ground !== girl.plat && !girl.sit){
+    // 新しい足場。近いほうの端から歩いて入ってくる（瞬間移動しない）
+    const P = S.ground;
+    const fromLeft = girl.plat ? (girl.x < P.x + P.w / 2) : true;
+    girl.plat = P; girl.x = fromLeft ? P.x + 16 : P.x + P.w - 16; girl.alpha = 0;
+  }
+  if (!girl.plat) return;
+  const P = girl.plat;
+  if (grounded && S.ground === P){
+    // キーボードの隣。いま居る側に立つ（すり抜けて反対側へ回らない）
+    const side = girl.x >= S.x ? 1 : -1;
+    girl.tx = Math.max(P.x + 16, Math.min(P.x + P.w - 16, S.x + side * 52));
+  }
+  const d = girl.tx - girl.x;
+  if (!girl.sit && Math.abs(d) > 1.5){
+    girl.mode = "walk"; girl.face = d > 0 ? 1 : -1;
+    girl.x += Math.sign(d) * Math.min(Math.abs(d), 1.7); girl.phase += .27;
+  } else {
+    girl.mode = girl.sit ? "sit" : "idle"; girl.phase *= .8;
+    const fx = (girl.focus === "boy" && summitPlat) ? summitPlat.x + summitPlat.w - 22 : S.x;
+    girl.face = fx >= girl.x ? 1 : -1;
+  }
+  if (wind.t > 0 && grounded && !girl.sit) girl.mode = "brace";
+  const headY = P.y - 78;
+  if (girl.glance > 0) lookToward(girl.x, headY, girl.x + girl.face * 400, headY - 140, girl.look);
+  else if (girl.focus === "boy" && summitPlat) lookToward(girl.x, headY, summitPlat.x + summitPlat.w - 22, summitPlat.y - 70, girl.look);
+  else lookToward(girl.x, headY, S.x, S.y - 10, girl.look);
+  const vis = girl.sit || (grounded && S.ground === P) || !grounded;
+  girl.alpha += ((vis ? 1 : 0) - girl.alpha) * .07;
+}
+
+/* 一人ぶんを描く。x,y は足もと。+x が正面（face で反転） */
+function drawFigure(x, y, o){
+  const u = o.h / 92, f = o.face || 1;
+  ctx.save(); ctx.translate(x, y);
+  if (o.lean) ctx.rotate(-o.lean);
+  ctx.scale(f, 1);
+  const ph = o.phase || 0, walk = o.mode === "walk", sit = o.mode === "sit", back = o.mode === "back";
+  const sw = walk ? Math.sin(ph) : 0;
+  const bob = walk ? Math.abs(Math.sin(ph)) * 1.6 * u : (o.breathe || 0);
+  ctx.globalAlpha = o.alpha == null ? 1 : o.alpha;
+  const ink = rgb(C.ink, .55);
+  const skin = o.skin || [236,222,204], hair = o.hair || [58,50,44];
+  const top = o.top || [232,224,206], bottom = o.bottom || [44,50,70];
+  const sway = o.sway || 0;
+
+  ctx.fillStyle = rgb(C.ink, .3);
+  ctx.beginPath(); ctx.ellipse(0, 1, 11 * u, 2.6 * u, 0, 0, 6.283); ctx.fill();
+
+  if (!sit){
+    for (let i = 0; i < 2; i++){
+      const s = i ? -1 : 1;
+      const legX = s * 4 * u, swing = s * sw * 7 * u;
+      const footX = legX + swing, footY = -Math.max(0, -s * sw) * 3 * u;
+      if (o.trousers){
+        ctx.strokeStyle = rgb(bottom); ctx.lineWidth = 5.2 * u; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(legX, -34 * u); ctx.lineTo(footX, footY - 3 * u); ctx.stroke();
+      } else {
+        ctx.strokeStyle = rgb(skin); ctx.lineWidth = 3.4 * u; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(legX, -33 * u); ctx.lineTo(footX, footY - 2 * u); ctx.stroke();
+        if (o.socks){
+          ctx.strokeStyle = rgb(top); ctx.lineWidth = 3.8 * u;
+          ctx.beginPath(); ctx.moveTo(legX + (footX - legX) * .55, -15 * u); ctx.lineTo(footX, footY - 2 * u); ctx.stroke();
+        }
+      }
+      ctx.fillStyle = rgb(C.ink, .9); rr(footX - 3.5 * u, footY - 3 * u, 8 * u, 3.2 * u, 1.2 * u); ctx.fill();
+    }
+  } else {
+    // 座る：脚は前へ折って、足先だけ見える
+    ctx.strokeStyle = rgb(skin); ctx.lineWidth = 3.2 * u; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(4 * u, -7 * u); ctx.lineTo(13 * u, -3 * u); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(2 * u, -6 * u); ctx.lineTo(11 * u, -2 * u); ctx.stroke();
+    ctx.fillStyle = rgb(C.ink, .9); rr(11 * u, -5 * u, 6 * u, 3 * u, 1 * u); ctx.fill();
+  }
+
+  const ty = -bob;
+  const torsoTop = (sit ? -40 : -58) * u + ty, torsoBot = (sit ? -18 : -34) * u + ty;
+
+  if (o.skirt){
+    const hem = 11 * u + (walk ? Math.abs(sw) * 2 * u : 0);
+    ctx.fillStyle = rgb(bottom);
+    ctx.beginPath();
+    if (sit){ ctx.moveTo(-8 * u, -20 * u + ty); ctx.lineTo(9 * u, -20 * u + ty); ctx.lineTo(16 * u, -4 * u); ctx.lineTo(-9 * u, -4 * u); }
+    else { ctx.moveTo(-7 * u, -36 * u + ty); ctx.lineTo(7 * u, -36 * u + ty); ctx.lineTo(hem + sway, -17 * u); ctx.lineTo(-hem + sway, -17 * u); }
+    ctx.closePath(); ctx.fill(); ctx.strokeStyle = ink; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = rgb(C.ink, .28);
+    for (let i = -2; i <= 2; i++){
+      ctx.beginPath(); ctx.moveTo(i * 3.2 * u, (sit ? -19 : -35) * u + ty);
+      ctx.lineTo(i * (sit ? 5.5 : 4.6) * u + sway * .6, (sit ? -5 : -18) * u); ctx.stroke();
+    }
+  }
+
+  ctx.fillStyle = rgb(top); rr(-7.5 * u, torsoTop, 15 * u, torsoBot - torsoTop, 3 * u); ctx.fill();
+  ctx.strokeStyle = ink; ctx.lineWidth = 1; rr(-7.5 * u, torsoTop, 15 * u, torsoBot - torsoTop, 3 * u); ctx.stroke();
+  if (o.sailor){
+    ctx.fillStyle = rgb(bottom);
+    ctx.beginPath(); ctx.moveTo(-7.5 * u, torsoTop); ctx.lineTo(7.5 * u, torsoTop);
+    ctx.lineTo(2 * u, torsoTop + 7 * u); ctx.lineTo(0, torsoTop + 4 * u); ctx.lineTo(-2 * u, torsoTop + 7 * u); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = rgb(top);
+    ctx.beginPath(); ctx.moveTo(-1.6 * u, torsoTop); ctx.lineTo(1.6 * u, torsoTop); ctx.lineTo(0, torsoTop + 5 * u); ctx.closePath(); ctx.fill();
+  }
+
+  const armSw = walk ? -sw * 5 * u : 0;
+  for (let i = 0; i < 2; i++){
+    const s = i ? -1 : 1;
+    const shX = s * 7 * u, shY = torsoTop + 3 * u;
+    let hx = shX + s * 1.5 * u + (s === 1 ? armSw : -armSw), hy = torsoBot - 1 * u;
+    if (o.mode === "brace" && s === 1){ hx = 15 * u; hy = torsoBot - 12 * u; }
+    if (o.pockets || o.pocket === s){ hx = shX; hy = torsoBot + 4 * u; }   // ポケットに手
+    if (sit){ hx = s * 6 * u; hy = torsoBot + 2 * u; }
+    ctx.strokeStyle = rgb(top); ctx.lineWidth = 3.6 * u; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(shX, shY); ctx.lineTo(hx, hy - 6 * u); ctx.stroke();
+    ctx.strokeStyle = rgb(skin); ctx.lineWidth = 2.8 * u;
+    ctx.beginPath(); ctx.moveTo(hx, hy - 6 * u); ctx.lineTo(hx, hy); ctx.stroke();
+    if (o.phone && s === 1){                                             // 手の中の画面。一行だけ光っている
+      ctx.fillStyle = rgb(C.ink, .95); rr(hx - 1.5 * u, hy - 4.5 * u, 4 * u, 6.5 * u, .8 * u); ctx.fill();
+      ctx.fillStyle = rgb(C.amberHi, .55); ctx.fillRect(hx - .7 * u, hy - 2.6 * u, 2.4 * u, .8 * u);
+    }
+  }
+
+  // ---- 頭。かわいさは頭身で決まるので、少し大きめ ----
+  const R = 8.4 * u;
+  const headY = torsoTop - 9.5 * u;
+  ctx.strokeStyle = rgb(skin); ctx.lineWidth = 3 * u; ctx.lineCap = "butt";
+  ctx.beginPath(); ctx.moveTo(0, torsoTop); ctx.lineTo(0, headY + 6 * u); ctx.stroke();
+
+  if (o.hairLen){                                                  // 後ろ髪
+    const hs = sway * 1.4;
+    ctx.fillStyle = rgb(hair);
+    ctx.beginPath(); ctx.moveTo(-7 * u, headY - 4 * u);
+    ctx.quadraticCurveTo(-12.5 * u + hs * .4, headY + 5 * u, -9 * u + hs, headY + o.hairLen * u);
+    ctx.lineTo(-2 * u + hs, headY + o.hairLen * u + 1 * u);
+    ctx.quadraticCurveTo(-3.5 * u, headY + 3 * u, -2 * u, headY - 5 * u); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = 1; ctx.stroke();
+  }
+  if (o.scarf){
+    ctx.fillStyle = rgb(C.amber, .9); rr(-6 * u, torsoTop - 3 * u, 12 * u, 3.6 * u, 1.5 * u); ctx.fill();
+    const w = o.windAmt || 0, tw = 14 * u + w * 22 * u, wob = Math.sin(frame * .09) * 2.5 * u;
+    ctx.strokeStyle = rgb(C.amber, .85); ctx.lineWidth = 2.6 * u; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-5 * u, torsoTop - 1 * u);
+    ctx.quadraticCurveTo(-9 * u - w * 8 * u, torsoTop - 2 * u + wob, -5 * u - tw, torsoTop - 4 * u + wob * 1.5 - w * 6 * u);
+    ctx.stroke();
+  }
+
+  // 顔
+  ctx.fillStyle = rgb(skin); ctx.beginPath(); ctx.arc(0, headY, R, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = rgb(C.ink, .4); ctx.lineWidth = 1; ctx.stroke();
+
+  // 前髪：額の上で丸く切りそろえる。**目には掛けない**（掛けると目が髪の房に見える）
+  ctx.fillStyle = rgb(hair);
+  if (back){ ctx.beginPath(); ctx.arc(0, headY - .3 * u, R + .3 * u, 0, 6.283); ctx.fill(); }
+  else {
+    const fy = headY - 2.9 * u, dip = headY + .1 * u;
+    ctx.beginPath();
+    ctx.arc(0, headY - .2 * u, R + .5 * u, Math.PI, Math.PI * 2);             // 頭頂
+    ctx.lineTo(R + .5 * u, headY + 3.5 * u);                                   // 前の横髪。目の横へ落ちる
+    ctx.quadraticCurveTo(R - .6 * u, headY + 1.5 * u, R - 1.6 * u, fy);
+    ctx.quadraticCurveTo(R * .5, dip, R * .18, fy);                            // 額の房（3つ）
+    ctx.quadraticCurveTo(-R * .2, dip, -R * .55, fy);
+    ctx.quadraticCurveTo(-R * .85, dip + 1 * u, -R - .5 * u, headY + 4.5 * u);  // 後ろの横髪
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = rgb(C.ink, .45); ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = rgb(C.dustHi, .22); ctx.lineWidth = 1.6 * u; ctx.lineCap = "round";   // 艶
+    ctx.beginPath(); ctx.arc(0, headY - .2 * u, R - 2.2 * u, Math.PI * 1.15, Math.PI * 1.55); ctx.stroke();
+  }
+
+  if (!back){
+    const lx = (o.look ? o.look.dx : 0) * 1.2 * u, ly = (o.look ? o.look.dy : 0) * .9 * u;
+    const ey = headY + 1.4 * u;
+    ctx.fillStyle = rgb([232,150,120], o.blush == null ? .16 : o.blush);         // 頬
+    ctx.beginPath(); ctx.arc(1.6 * u, headY + 4 * u, 1.7 * u, 0, 6.283); ctx.fill();
+    ctx.beginPath(); ctx.arc(6.6 * u, headY + 4 * u, 1.7 * u, 0, 6.283); ctx.fill();
+    const eyes = [2.3 * u, 6.1 * u];                                              // 目：丸く大きく、光をひとつ
+    for (let i = 0; i < 2; i++){
+      const ex = eyes[i] + lx, ey2 = ey + ly;
+      if (o.blink){
+        ctx.strokeStyle = rgb(C.ink, .8); ctx.lineWidth = 1.2 * u; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.arc(ex, ey2 - .6 * u, 1.4 * u, Math.PI * .15, Math.PI * .85); ctx.stroke();
+      } else {
+        ctx.fillStyle = rgb(o.eye || [54,42,40], .95);
+        ctx.beginPath(); ctx.ellipse(ex, ey2, 1.35 * u, 1.9 * u, 0, 0, 6.283); ctx.fill();
+        ctx.fillStyle = rgb([250,246,238], .9);
+        ctx.beginPath(); ctx.arc(ex - .45 * u, ey2 - .75 * u, .55 * u, 0, 6.283); ctx.fill();
+      }
+    }
+    ctx.strokeStyle = rgb(C.ink, .5); ctx.lineWidth = .9 * u; ctx.lineCap = "round";   // 口：小さく
+    ctx.beginPath(); ctx.arc(4.2 * u + lx * .3, headY + 4.6 * u, 1.1 * u, Math.PI * .15, Math.PI * .85); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawGirl(){
+  if (!girl.on || !girl.plat || girl.alpha < .02) return;
+  const x = girl.x - camX, y = girl.plat.y - camY;
+  if (x < -120 || x > W + 120 || y < -160 || y > H + 60) return;
+  const wa = wind.t > 0 ? wind.t / T.GUST_FRAMES : 0;
+  const sway = Math.sin(frame * .05) * 1.2 - wa * 10 * girl.face;   // 風は左へ吹く。向きで反転
+  drawFigure(x, y, { h:108, face:girl.face, mode:girl.mode, phase:girl.phase, alpha:girl.alpha,
+    breathe:Math.sin(frame * .045) * .8, blink:girl.blink > 0, look:girl.look, lean:wa * .16,
+    hairLen:24, sailor:true, skirt:true, socks:true, scarf:true, sway:sway, windAmt:wa,
+    pocket:girl.pocket, phone:girl.phone });
+}
+
+/* 彼。頂に立って、光のほうを向いている。「はなそう」が打たれるまで、こちらを向かない */
+function drawBoy(){
+  if (!summitPlat) return;
+  const bx = summitPlat.x + summitPlat.w - 26, by = summitPlat.y;
+  const x = bx - camX, y = by - camY;
+  if (x < -80 || x > W + 80 || y < -160 || y > H + 60) return;
+  const col = ctx.createLinearGradient(0, y - 160, 0, y + 6);
+  const ca = boy.dim ? .035 : .11;                                     // 「光が、少しだけ小さくなった」
+  col.addColorStop(0, rgb(C.amberHi, 0)); col.addColorStop(.55, rgb(C.amber, ca)); col.addColorStop(1, rgb(C.amber, ca * .2));
+  ctx.fillStyle = col; ctx.fillRect(x - 30, y - 160, 60, 166);
+  drawFigure(x, y, { h:118, face: boy.turned ? -1 : 1, mode: boy.turned ? "idle" : "back", alpha:.92,
+    breathe:Math.sin(frame * .04) * .6, blink:false, look:{ dx:-.35, dy:.15 },
+    hairLen:0, trousers:true, pockets:true, top:[228,220,204], bottom:[36,40,54], hair:[40,36,32] });
+}
+
+/* 光の中の埃。画面の中をゆっくり漂う。手描きのロファイ絵によくある、あれ */
+const motes = [];
+function drawMotes(){
+  if (!motes.length)
+    for (let i = 0; i < 26; i++)
+      motes.push({ x:Math.random() * W, y:Math.random() * H, r:.8 + Math.random() * 1.4,
+                   vx:-.12 - Math.random() * .2, vy:-.05 + Math.random() * .1, ph:Math.random() * 6.28,
+                   a:.06 + Math.random() * .12 });
+  for (let i = 0; i < motes.length; i++){
+    const m = motes[i];
+    m.x += m.vx + Math.sin(frame * .01 + m.ph) * .08;
+    m.y += m.vy + Math.cos(frame * .013 + m.ph) * .06;
+    if (m.x < -10) m.x = W + 10; if (m.x > W + 10) m.x = -10;
+    if (m.y < -10) m.y = H + 10; if (m.y > H + 10) m.y = -10;
+    const tw = .7 + .3 * Math.sin(frame * .03 + m.ph * 3);
+    ctx.fillStyle = rgb(C.amberHi, m.a * tw);
+    ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.283); ctx.fill();
+  }
+}
+
 function drawFx(){
+  drawMotes();
   for (let i = S.trail.length - 1; i >= 0; i--){
     const t = S.trail[i], a = i / S.trail.length;
     ctx.fillStyle = rgb(C.amberHi, a * .1);
@@ -1900,7 +2627,8 @@ function drawFx(){
 }
 
 function draw(){
-  const tx = S.x - W * .34, ty = S.y - H * .60;
+  const tx = (S.ended && summitPlat) ? summitPlat.x + summitPlat.w / 2 - W * .5 : S.x - W * .34;
+  const ty = S.y - H * .60;
   if (!camReady){ camX = tx; camY = ty; camReady = true; }
   const k = river.on ? .2 : (S.air && S.vy > 12 ? .16 : .085);
   camX += (tx - camX) * k; camY += (ty - camY) * k;
@@ -1920,6 +2648,8 @@ function draw(){
     for (let i = 0; i < plats.length; i++) drawPlat(plats[i]);
     drawArcs();
     drawFx();
+    drawBoy();
+    drawGirl();
     drawPlayer();
     drawWind();
   } finally {
@@ -1969,8 +2699,9 @@ function buildWords(){
             "</div>";
     S.fresh[i] = 0;
   }
-  html += '<div class="w rr"><div class="t">' + REROLL.kana + '</div>' +
-          '<div class="rm"></div></div>';
+  if (!scene.on)
+    html += '<div class="w rr"><div class="t">' + REROLL.kana + '</div>' +
+            '<div class="rm"></div></div>';
   elWords.innerHTML = html;
   cardEls = elWords.querySelectorAll(".w");
   paintWords();
@@ -1988,7 +2719,7 @@ function paintWords(){
     el.children[0].innerHTML = '<span class="d">' + w.kana.slice(0, done) + "</span>" + w.kana.slice(done);
     el.children[1].innerHTML = '<span class="d">' + rj.slice(0, typed) + "</span>" + rj.slice(typed);
   }
-  const rrEl = cardEls[cardEls.length - 1];
+  const rrEl = scene.on ? null : cardEls[cardEls.length - 1];
   if (rrEl){
     const on = S.rr !== "";
     rrEl.className = "w rr" + (on ? " a" : "") + (busy && !on ? " dim" : "");
@@ -2009,6 +2740,10 @@ function showZone(z){
   elZone.classList.add("on");
   clearTimeout(zoneTimer);
   zoneTimer = setTimeout(function(){ elZone.classList.remove("on"); }, 2600);
+  if (!scene.on){
+    sayOnce("zone:" + z.name, STORY.zone[z.name], 1500);
+    if (S.together && STORY.together[z.name]) sayOnceSeq("tog:" + z.name, STORY.together[z.name], 7200);
+  }
 }
 function updateHud(){
   const alt = Math.max(0, -S.y) / T.PX_PER_M;
@@ -2017,10 +2752,23 @@ function updateHud(){
   $("besv").textContent = S.best.toFixed(1);
   $("combo").textContent = S.combo;
   $("wordv").textContent = S.words;
+  if (audioLP && (frame % 30) === 0){                    // 毎フレーム書くとジッパーノイズが出る
+    const tt = Math.min(1, alt / 90);
+    audioLP.frequency.setTargetAtTime(380 + tt * 300, AC.currentTime, .4);
+  }
   $("keys").textContent = S.keys;
   $("miss").textContent = S.miss;
   $("rr").textContent = S.rerolls;
   $("climbs").textContent = S.climbs;
+  if ((frame % 10) === 0){
+    const dp = document.getElementById("dbgp");
+    if (!dp.hidden){
+      const z = S.zone ? S.zone.name : "—";
+      $("dbgSt").textContent = "区間 " + z + " ／ 高度 " + alt.toFixed(1) + "m ／ 彼女 " + (S.together ? "あり" : "なし") +
+        " ／ 場面 " + (scene.on ? (scene.i + "/" + scene.steps.length) : "—") +
+        (storyEl.textContent ? "\n「" + storyEl.textContent + "」" : "");
+    }
+  }
   $("fall").textContent = S.maxFall.toFixed(1);
   if (S.started){
     S.elapsed = (performance.now() - S.t0) / 1000;
@@ -2030,19 +2778,33 @@ function updateHud(){
 }
 
 /* ===== ⑮ デバッグ（プレイ中はキーボードしか使わない。ここだけマウス） ===== */
-const ARC_LABEL = ["軌道 なし", "軌道 半分", "軌道 ぜんぶ"];
-$("bArc").onclick = function(){
-  T.ARC_MODE = (T.ARC_MODE + 1) % 3;
-  this.textContent = ARC_LABEL[T.ARC_MODE];
-  this.classList.toggle("on", T.ARC_MODE > 0);
-  this.blur();
-};
-$("bArc").textContent = ARC_LABEL[T.ARC_MODE];
-$("bArc").classList.toggle("on", T.ARC_MODE > 0);
-$("bMiss").onclick = function(){
-  T.MISS_WIND = !T.MISS_WIND; this.classList.toggle("on", T.MISS_WIND); this.blur();
-};
 $("bReset").onclick = function(){ reset(); this.blur(); };
+(function debugPanel(){
+  const dp = document.getElementById("dbgp");
+  if (new URLSearchParams(location.search).get("debug") === "1") dp.hidden = false;
+  dp.addEventListener("click", function(e){
+    const b = e.target.closest("button"); if (!b) return;
+    const go = b.getAttribute("data-go"), z = b.getAttribute("data-zone");
+    if (z !== null){ debugGo({ zone:+z, together:S.together }); }
+    else if (go === "meet") debugGo({ event:"meet" });
+    else if (go === "end1") debugGo({ event:"end", together:true });
+    else if (go === "end0") debugGo({ event:"end", together:false });
+    else if (go === "next"){ if (scene.on){ clearTimeout(scene.timer); sceneNext(); } }
+    else if (go === "girl"){
+      if (S.together){ S.together = false; girl.on = false; girl.plat = null; }
+      else { S.together = true; girl.on = true; S.sinceLand = 60; }
+    }
+    else if (go === "wind"){ if (!S.air && !river.on) slip(); }
+    else if (go === "river"){ S.onCable = null; S.air = true; S.ground = null; S.apex = S.y; S.y = T.RIVER_Y + 2; }
+    else if (go === "reset"){ reset(); }
+    b.blur();
+  });
+  document.getElementById("dbgFast").addEventListener("change", function(){ storyRate = this.checked ? .3 : 1; this.blur(); });
+})();
+$("vBgm").value = vol.bgm; $("vSe").value = vol.se;
+$("vBgm").oninput = function(){ vol.bgm = +this.value; applyVolume(); };
+$("vSe").oninput  = function(){ vol.se  = +this.value; applyVolume(); };
+$("vBgm").onchange = $("vSe").onchange = function(){ this.blur(); };   // 打鍵をつまみに取られない
 
 /* ===== ⑯ 起動 ============================================================ */
 function reset(){
@@ -2055,6 +2817,12 @@ function reset(){
   S.trail.length = 0; S.puffs.length = 0;
   rattling.length = 0; wind.t = 0; wind.streaks.length = 0;
   river.on = 0; river.t = 0; elWords.style.opacity = "";
+  S.together = false; S.ended = false; S.sinceLand = 60; S.rivers = 0;
+  girl.on = false; girl.plat = null; girl.alpha = 0; girl.sit = false; girl.focus = null; girl.mode = "idle";
+  girl.pocket = 0; girl.phone = false; boy.turned = false; boy.dim = false;
+  seenLine = {}; scene.on = false; storyQ.length = 0;
+  clearTimeout(storyTimer); storyTimer = 0; clearTimeout(scene.timer);
+  storyEl.classList.remove("on");
   S.t0 = performance.now();
   camReady = false;
   newCandidates();
@@ -2062,7 +2830,46 @@ function reset(){
 
 resize();
 buildPatterns();
+loadAudioFiles();
 reset();
+
+/* ===== デバッグ入口（URL に付ける。画面には何も出ない） =====================
+   ?event=meet    … 送れなかった崖（Enter）の入口へ降りて、彼女と会う場面から
+   ?event=end     … 頂へ降りて、終わりの場面から
+   ?zone=5        … 区間の入口へ降りる（0=麓 … 7=天空域）
+   ?together=1    … 彼女が既にいる状態で始める（終わりの場面の分岐を見るとき）   */
+// コンソールからも呼べる：debugGo({event:"meet"}) / debugGo({event:"end", together:true}) / debugGo({zone:5})
+function debugGo(o){
+  o = o || {};
+  // 前の場面や終幕が残っていたら片づける。何度でも呼び直せるように
+  scene.on = false; clearTimeout(scene.timer); storyQ.length = 0; clearTimeout(storyTimer); storyTimer = 0;
+  storyEl.classList.remove("on"); storyEl.textContent = ""; elWords.style.opacity = "";
+  document.getElementById("endov").classList.remove("on");
+  wind.t = 0; river.on = 0; S.onCable = null; S.mat = null; S.active = null; S.rr = ""; S.queued = null;
+  if (o.event === "meet"){ S.together = false; girl.on = false; girl.plat = null; girl.sit = false; girl.focus = null; girl.pocket = 0; girl.phone = false; }
+  if (o.event === "end"){ S.ended = false; boy.turned = false; boy.dim = false; girl.pocket = -1; girl.phone = false; }
+  if (o.together === false){ S.together = false; girl.on = false; girl.plat = null; }
+  seenLine = {};
+  let target = null;
+  if (o.event === "meet") target = cables[4].plat;
+  else if (o.event === "end") target = summitPlat;
+  else if (o.zone !== undefined && o.zone !== null){
+    const z = Math.max(0, Math.min(7, +o.zone || 0));
+    target = z === 0 ? null : cables[z - 1].plat;
+  }
+  if (o.together){ S.together = true; S.sinceLand = 60; girl.on = true; }
+  S.started = true; S.t0 = performance.now();
+  const ov = document.getElementById("ov"); ov.classList.add("off"); ov.style.display = "none";
+  if (target){
+    S.x = target.x + target.w / 2; S.y = target.y - 30;        // 少し上から降りて、着地で場面が始まる
+    S.air = true; S.ground = null; S.apex = S.y; S.vx = 0; S.vy = 1; camReady = false;
+  }
+}
+(function debugEntry(){
+  const q = new URLSearchParams(location.search);
+  if (!q.has("event") && !q.has("zone") && !q.has("together")) return;
+  debugGo({ event:q.get("event"), zone:q.has("zone") ? q.get("zone") : undefined, together:q.get("together") === "1" });
+})();
 // 物理は 60Hz 固定で回す。可変にすると、144Hz や 240Hz のモニタで
 // そのぶん速く落ちて速く飛ぶ（実測：このプレビューは238fps出ていて4倍速だった）
 const STEP = 1000 / 60;
