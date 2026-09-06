@@ -1062,10 +1062,19 @@ window.__kikiStart = (base) => {
   document.head.appendChild(s);
 })();
 </script>
-<!-- 総PVに1足すだけのビーコン（2026-09-06）。ここは Astro を通らないので、
-     表紙側の仕組みでは数えられない。**新しいゲームを置いたら、この2行も入れる。**
-     ⚠️ 公式サイトのときだけ撃つ。zip で配ったぶん・ローカルでは何もしない。
-     ⚠️ 「人」は数えない（?v=1 を付けない）。人の判定は表紙側が持っている。 -->
-<script>if(location.hostname.endsWith("ogyanuntiusxiii.com"))fetch("/api/views",{method:"POST"}).catch(function(){});</script>
+<!-- 閲覧数のビーコン（2026-09-06）。ここは Astro を通らないので、表紙側の仕組みでは数えられない。
+     **新しいゲームやツールを置いたら、この塊ごとコピーする。** 入れ忘れたページは数に乗らない。
+     ⚠️ 公式サイトのときだけ撃つ。zip で配ったぶん・ローカルでは通信そのものが起きない。
+     ⚠️ 「人」は1つのブラウザにつき1日1回だけ。鍵（ogyanun.viewed）と日付の切り方
+        （日本時間 = +9h）は src/layouts/Base.astro と**必ず揃える**。
+        ここだけ変えると、表紙とゲームで同じ人を2回数える。 -->
+<script>(function(){
+  if(!location.hostname.endsWith("ogyanuntiusxiii.com")) return;
+  var K="ogyanun.viewed", d=new Date(Date.now()+32400000).toISOString().slice(0,10), s=null;
+  try{ s=localStorage.getItem(K); }catch(e){}
+  var f = s!==d;                                  // 今日まだ「人」として数えていない
+  if(f){ try{ localStorage.setItem(K,d); }catch(e){} }
+  fetch("/api/views"+(f?"?v=1":""),{method:"POST"}).catch(function(){});
+})();</script>
 </body>
 </html>
