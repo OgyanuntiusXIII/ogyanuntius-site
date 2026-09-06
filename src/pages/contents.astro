@@ -2,22 +2,20 @@
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import { buildNewsLinker } from '../lib/newsLink';
+import { buildFeatures } from '../lib/features';
+import { getBits, hostLabel, isExternal } from '../lib/bits';
 import { LINKS, SITE, CONTACT, CREDITS } from '../data/site';
 
 const issues = await getCollection('issues');
 const issue = issues.find((i) => i.data.current) ?? issues[0];
 
-const works = await getCollection('works');
-const scenarios = await getCollection('scenarios');
-const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order);
+/* 特集は**ジャンルごとの束**で受け取る。並び順と通し番号の正本は src/lib/features.ts。
+   表紙・作品ページも同じ番号を使うので、ここで sort し直さないこと（番号がズレる） */
+const features = await buildFeatures();
+const bits = await getBits();
 const news = (await getCollection('news')).sort((a, b) => +b.data.date - +a.data.date);
 /* url が無い行は素の文字のままで、押せなかった。ref から作品ページへ繋ぐ */
 const newsLink = await buildNewsLinker();
-
-const features = [
-  ...works.map((w) => ({ ...w.data, href: `/works/${w.id}` })),
-  ...scenarios.map((s) => ({ ...s.data, href: `/scenario/${s.id}` })),
-].sort((a, b) => +a.date - +b.date);
 
 const md = (d: Date) => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 const shownLinks = LINKS.filter((l) => l.url !== '');
@@ -26,34 +24,64 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
   <div class="wrap measure">
     <p class="kicker">{issue?.data.vol}　{issue?.data.label}</p>
     <h1 class="h1">CONTENTS</h1>
+    <p class="lead">特集{features.all.length}本。ジャンルごとに、新しい順で並べています。</p>
 
-    <ol class="toc">
-      {features.map((f, i) => (
-        <li class="toc__item">
-          <a class="toc__link" href={f.href}>
-            <span class="toc__no">{String(i + 1).padStart(2, '0')}</span>
-            <span class="toc__body">
-              <span class="toc__ttl">{f.title}</span>
-              <span class="toc__catch">{f.catch}</span>
-            </span>
-          </a>
-        </li>
+    {/* この目次は縦に長い。**上から読ませずに、行きたい欄へ直接飛ばす**（本人・2026-09-05
+        「結構ちらばったりしてて醜くなってきたから、アクセスしやすくしてくれていい」）。
+        ジャンルは features.ts が組むので、欄が増えればここも自動で増える。 */}
+    {/* ⚠️ **このページの中の欄だけ**を並べる。卓の記録・愚痴・ABOUT は柱（ヘッダー）にある。
+           両方に置くと、同じ行き先が1画面に2回出る。 */}
+    <nav class="jump" aria-label="このページの欄">
+      {features.groups.map((g) => (
+        <a class="jump__item" href={`#${g.anchor}`}>{g.jp}<b>{g.items.length}</b></a>
       ))}
-    </ol>
+      <a class="jump__item" href="#smallworks">小物<b>{bits.length}</b></a>
+      <a class="jump__item" href="#news">今月の制作物<b>{news.length}</b></a>
+    </nav>
 
-    <h2 class="h2">NOW MAKING</h2>
+    {/* --- 特集：ジャンルごと ------------------------------------------
+        本人（2026-09-04）「まとめれるものはコンテンツのジャンルごとにまとめたい」。
+        欄そのものは features.ts が組む。**0件のジャンルは欄ごと出ない。** */}
+    {features.groups.map((g) => (
+      <section>
+        <h2 class="h2" id={g.anchor}>{g.en} ／ {g.jp}<span class="h2__count">{g.items.length}</span></h2>
+        <ol class="toc">
+          {g.items.map((f) => (
+            <li class="toc__item">
+              <a class="toc__link" href={f.href}>
+                <span class="toc__no">{String(f.no).padStart(2, '0')}</span>
+                <span class="toc__body">
+                  <span class="toc__ttl">{f.data.title}</span>
+                  <span class="toc__catch">{f.data.catch}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+
+    {/* --- 小物 -------------------------------------------------------
+        作品ページを作るほどではないもの。棚（/bits）が正本で、ここは入口。 */}
+    <h2 class="h2" id="smallworks"><a class="h2__link" href="/bits">SMALL WORKS ／ 小物</a></h2>
     <ul class="plain">
-      {nowmaking.map((n) => (
-        <li>
-          {n.data.ref
-            ? <a class="link" href={`/works/${n.data.ref}`}><strong>{n.data.title}</strong></a>
-            : <strong>{n.data.title}</strong>} — {n.data.catch}
-          {n.data.progress && <span class="dim">（{n.data.progress}・{md(n.data.updated)}）</span>}
-        </li>
-      ))}
+      <li class="dim">素材・小さなツール・実験の切れ端。紹介ページは作らず、押すと配布元へ出ます。</li>
+      {bits.slice(0, 5).map((b) => {
+        const where = hostLabel(b.data.url);
+        return (
+          <li>
+            <span class="dim">{md(b.data.date)}</span>{' '}
+            {b.data.url
+              ? <a class="link" href={b.data.url} rel={isExternal(b.data.url) ? 'noopener' : undefined}>{b.data.title}{isExternal(b.data.url) && <> <span aria-hidden="true">↗</span></>}</a>
+              : <span>{b.data.title}</span>}
+            {where && <span class="label">{where}</span>}
+          </li>
+        );
+      })}
+      {bits.length > 5 && <li><a class="link" href="/bits">小物をぜんぶ見る（{bits.length}件） →</a></li>}
     </ul>
 
-    <h2 class="h2">NEWS ／ 今月の制作物</h2>
+    <h2 class="h2" id="news">NEWS ／ 今月の制作物</h2>
     <ul class="plain">
       {news.map((n) => {
         const link = newsLink(n);
@@ -67,17 +95,6 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
         );
       })}
     </ul>
-
-    <h2 class="h2">LINKS</h2>
-    {shownLinks.length > 0 ? (
-      <ul class="plain">
-        {shownLinks.map((l) => (
-          <li><a class="link" href={l.url} rel="me noopener">{l.label} <span aria-hidden="true">↗</span></a></li>
-        ))}
-      </ul>
-    ) : (
-      <p class="dim">準備中。</p>
-    )}
 
     <h2 class="h2"><a class="h2__link" href="/sessions">SESSION LOG ／ 卓の記録</a></h2>
 
@@ -93,6 +110,17 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
       <li><a class="link" href={CONTACT.privacy}>個人情報の扱い</a></li>
     </ul>
 
+    <h2 class="h2">LINKS</h2>
+    {shownLinks.length > 0 ? (
+      <ul class="plain">
+        {shownLinks.map((l) => (
+          <li><a class="link" href={l.url} rel="me noopener">{l.label} <span aria-hidden="true">↗</span></a></li>
+        ))}
+      </ul>
+    ) : (
+      <p class="dim">準備中。</p>
+    )}
+
     <h2 class="h2">奥付</h2>
     <pre class="colophon">{issue?.data.colophon.join('\n')}</pre>
     <p class="credits"><span class="credits__label">{CREDITS.label}</span>{CREDITS.text}</p>
@@ -101,14 +129,27 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
 
 <style>
   .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
-  .h1 { font-family: var(--font-en); font-size: clamp(2.4rem, 8vw, 5rem); letter-spacing: -.02em; margin: 0 0 2rem; }
-  .h2 { font-family: var(--font-en); font-size: 1rem; letter-spacing: .2em; margin: 3.2rem 0 1rem; padding-bottom: .4em; border-bottom: 2px solid var(--rule); }
+  .h1 { font-family: var(--font-en); font-size: clamp(2.4rem, 8vw, 5rem); letter-spacing: -.02em; margin: 0 0 .5rem; }
+  .lead { color: var(--ink-mid); margin: 0 0 1rem; font-size: .92rem; }
+  .h2 {
+    font-family: var(--font-en); font-size: 1rem; letter-spacing: .2em;
+    margin: 3.2rem 0 1rem; padding-bottom: .4em; border-bottom: 2px solid var(--rule);
+    /* 作品ページの「戻る」がジャンル欄へ着地する。見出しが上端へ張り付かないように */
+    scroll-margin-top: 1.5rem;
+    display: flex; align-items: baseline; gap: .8em;
+  }
+  /* 欄に何本入っているか。見出しの右端に小さく置く */
+  .h2__count {
+    margin-left: auto; font-size: .8em; letter-spacing: .1em;
+    color: var(--accent); font-weight: 700;
+  }
   /* 見出しそのものがリンクになる節。下線を出さず、見出しの見た目を保つ */
   .h2__link { color: inherit; text-decoration: none; }
   .h2__link:hover, .h2__link:focus-visible { color: var(--accent); }
   .h2__link::after { content: " →"; font-size: .85em; color: var(--accent); }
   .toc { list-style: none; margin: 0; padding: 0; }
-  .toc__item { border-top: 1px solid var(--rule); }
+  .toc__item { border-top: 1px solid var(--hair-rule); }
+  .toc__item:first-child { border-top: none; }
   .toc__item:last-child { border-bottom: 1px solid var(--rule); }
   .toc__link { display: flex; gap: clamp(12px, 3vw, 32px); align-items: baseline; padding: 1.1rem 0; text-decoration: none; }
   .toc__link:hover .toc__ttl { text-decoration: underline; }
@@ -118,6 +159,17 @@ const shownLinks = LINKS.filter((l) => l.url !== '');
   .toc__catch { display: block; color: var(--ink-mid); font-size: .92rem; }
   .plain { list-style: none; margin: 0; padding: 0; }
   .plain li { padding: .5rem 0; border-bottom: 1px solid var(--hair-rule); }
+  .plain .label { margin-left: .6em; }
+
+  /* 欄への近道。**罫と余白だけで作る**（色ベタを足すと表紙の白黒赤が崩れる・§0） */
+  .jump { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1rem; }
+  .jump__item {
+    display: inline-flex; align-items: baseline; gap: .5em;
+    border: 1px solid var(--rule); padding: .3em .8em;
+    font-size: .82rem; font-weight: 700; text-decoration: none; line-height: 1.4;
+  }
+  .jump__item b { font-family: var(--font-en); color: var(--accent); font-size: .92em; }
+  .jump__item:hover, .jump__item:focus-visible { background: var(--paper-2); color: var(--accent); }
   .dim { color: var(--ink-mid); font-size: .88rem; }
   .colophon { font-family: var(--font-jp); background: var(--paper-2); border: 1px solid var(--rule); padding: 1.2rem; line-height: 1.9; white-space: pre-wrap; }
   .credits { margin: .9rem 0 0; font-size: .78rem; line-height: 1.7; color: var(--ink-mid); }

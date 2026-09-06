@@ -123,7 +123,10 @@ a.link { text-decoration: underline; text-decoration-thickness: 1px; }
 
 .rail {
   display: flex; justify-content: space-between; align-items: baseline;
-  gap: 1em;
+  /* 行き先が5本＋昼夜ボタンになったので、狭い端末では折り返させる（2026-09-05）。
+     wrap が無いと 375px で柱が横に溢れる */
+  flex-wrap: wrap;
+  gap: .4em 1em;
   font-family: var(--font-en);
   font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
   padding: 10px var(--gut);
@@ -131,7 +134,19 @@ a.link { text-decoration: underline; text-decoration-thickness: 1px; }
 }
 
 /* 柱の右。ナビと昼夜ボタンを1つの塊にして、rail の space-between に2つだけ渡す */
-.rail__right { display: inline-flex; align-items: baseline; gap: 1.1em; }
+.rail__right { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: .4em 1.1em; }
+
+/* 柱とフッターの行き先。**中身は src/data/site.ts の NAV が正本。**
+   区切りは文字ではなく細い罫で出す（読み上げに「スラッシュ」を読ませないため） */
+.nav { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: .35em 0; }
+.nav__item { padding: 0 .85em; }
+.nav__item:first-child { padding-left: 0; }
+.nav__item + .nav__item { border-left: var(--hair) solid var(--hair-rule); }
+/* いま開いているページ。**色だけで示さない**（下線も出す） */
+.nav__item[aria-current="page"] {
+  color: var(--accent); font-weight: 700;
+  text-decoration: underline; text-underline-offset: .35em;
+}
 
 .label {
   display: inline-block;

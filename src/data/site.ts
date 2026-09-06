@@ -57,6 +57,42 @@ export const WRITER = {
   disclaimerTail: 'にあります。',
 } as const;
 
+/**
+ * **誌面の行き先（柱とフッターの正本）。**
+ *
+ * 2026-09-05 まで、行き先の集合が**3か所でバラバラ**だった：
+ *
+ * | どこ | 中身 |
+ * |---|---|
+ * | ヘッダー（柱） | CONTENTS / ABOUT の2つだけ |
+ * | フッター | 創刊号 / 卓報告 / プレスキット / お問い合わせ / 表紙へ戻る |
+ * | 表紙のフット | CONTENTS / 卓報告 / 小物 / プレスキット / 愚痴 / お問い合わせ |
+ *
+ * **`/bits`（小物）はヘッダーにもフッターにも無く、表紙からしか行けなかった。**
+ * 本人（2026-09-05）「結構ちらばったりしてて醜くなってきたから、
+ * おまかせでジャンルとかわけてアクセスしやすくしてくれていい」。ここに寄せた。
+ *
+ * ⚠️ **表紙（`index.astro` の `cover__foot`）はここを読まない。**
+ *    表紙はインパクト優先で、載せる数を絞る場所だから（CLAUDE.md §0）。
+ *    ページを1枚足したら、ここと表紙の**両方**を見ること。
+ */
+export type NavItem = {
+  label: string;
+  href: string;
+  /** true の項目だけがヘッダー（柱）に出る。フッターは全部出る */
+  primary?: boolean;
+};
+
+export const NAV: NavItem[] = [
+  { label: '目次', href: '/contents', primary: true },
+  { label: '小物', href: '/bits', primary: true },
+  { label: '卓の記録', href: '/sessions', primary: true },
+  { label: '愚痴', href: '/blog', primary: true },
+  { label: 'ABOUT', href: '/about', primary: true },
+  { label: 'プレスキット', href: '/press' },
+  { label: 'お問い合わせ', href: '/contact' },
+];
+
 export type SiteLink = { label: string; url: string; note?: string };
 
 /** LINKS 欄。url が空の項目は表示されない */

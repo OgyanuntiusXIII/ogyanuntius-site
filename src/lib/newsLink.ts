@@ -1,5 +1,6 @@
-import { getCollection, type CollectionEntry } from 'astro:content';
+import { type CollectionEntry } from 'astro:content';
 import { SITE } from '../data/site';
+import { buildFeatures } from './features';
 
 /**
  * NEWS の1件から「押したときの飛び先」を決める。
@@ -9,7 +10,7 @@ import { SITE } from '../data/site';
  *
  * 優先順位:
  *   1. `ref` があれば、その**作品ページ**（/works/<slug> か /scenario/<slug>）
- *   2. `url` だけがあればそれ（作品ページを持たないお知らせ用）
+ *   2. `url` だけがあればそれ（作品ページを持たないお知らせ・小物用）
  *   3. どちらも無ければ目次へ
  *
  * > [!IMPORTANT] **作品ページがあるものは、必ず作品ページを経由させる**（本人・2026-08-31）
@@ -30,35 +31,23 @@ import { SITE } from '../data/site';
  *
  * ⚠️ `ref` が works にも scenarios にも無いときは**ビルドを落とす。**
  *    黙って「ただの文字」に落とすと、押せないことに誰も気づかないまま公開される。
- *    表紙の headlines を解決する resolve() と同じ方針。
+ *    解決は `src/lib/features.ts` に一本化してある（表紙の headlines・NOW MAKING も同じ関数）。
  */
 export type NewsLink = { href: string; external: boolean };
 
 export async function buildNewsLinker(): Promise<
   (entry: CollectionEntry<'news'>) => NewsLink
 > {
-  const works = await getCollection('works');
-  const scenarios = await getCollection('scenarios');
-
-  const index = new Map<string, string>();
-  for (const w of works) index.set(w.id, `/works/${w.id}`);
-  for (const s of scenarios) index.set(s.id, `/scenario/${s.id}`);
+  const features = await buildFeatures();
 
   return (entry) => {
     // 1. 作品ページがあるなら、必ずそこを通す
     const ref = entry.data.ref;
     if (ref) {
-      const found = index.get(ref);
-      if (!found) {
-        throw new Error(
-          `news/${entry.id}.md の ref: "${ref}" に対応する作品が無い。` +
-            `src/content/works/${ref}.md か src/content/scenarios/${ref}.md が要る`
-        );
-      }
-      return { href: found, external: false };
+      return { href: features.resolve(ref, `news/${entry.id}.md`).href, external: false };
     }
 
-    // 2. 作品ページを持たないお知らせ
+    // 2. 作品ページを持たないお知らせ（小物・外部記事など）
     if (entry.data.url) {
       const inSite = entry.data.url.startsWith(SITE.origin + '/');
       return inSite

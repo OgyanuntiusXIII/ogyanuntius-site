@@ -14,8 +14,26 @@ interface Props {
     youtubeId?: string;
   };
   feature?: string;
+  /**
+   * 「戻る」の飛び先。既定は目次のあたま。
+   * **ジャンル欄のアンカー（/contents#cat-game）を渡すと、その欄へ戻る。**
+   * 同じジャンルのほかの作品がすぐ目に入るので、1本読んで終わりにならない。
+   */
+  backHref?: string;
+  /**
+   * **同じジャンルのほかの作品**（自分を除く・新しい順）。
+   * 記事の最後に置く。無いと1本読んだところで行き止まりになり、
+   * 目次へ戻らないと隣の作品に辿り着けない（本人・2026-09-05「アクセスしやすくして」）。
+   */
+  siblings?: { no: number; href: string; title: string; catch: string }[];
+  /** その欄の名前（「ゲーム」など）。見出しに出す */
+  categoryLabel?: string;
+  /** ジャンル欄の一覧へ。`/contents#cat-game` */
+  categoryHref?: string;
 }
-const { data, feature } = Astro.props;
+const {
+  data, feature, backHref = '/contents', siblings = [], categoryLabel, categoryHref,
+} = Astro.props;
 
 const STATUS = { published: '公開中', making: '制作中', ended: '公開終了' } as const;
 const PRICE = { free: '無料', paid: '有料', donation: '無料＋支援版', unknown: '—' } as const;
@@ -84,7 +102,29 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
 
   <div class="prose"><slot /></div>
 
-  <p class="back"><a class="link" href="/contents">← 目次へ戻る</a></p>
+  {siblings.length > 0 && (
+    <nav class="more" aria-label={`ほかの${categoryLabel ?? '作品'}`}>
+      <h2 class="more__ttl">
+        ほかの{categoryLabel ?? '作品'}
+        {categoryHref && <a class="more__all" href={categoryHref}>ぜんぶ見る →</a>}
+      </h2>
+      <ul class="more__list">
+        {siblings.map((sv) => (
+          <li>
+            <a class="more__row" href={sv.href}>
+              <span class="more__no">{String(sv.no).padStart(2, '0')}</span>
+              <span class="more__body">
+                <b>{sv.title}</b>
+                <span class="more__catch">{sv.catch}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )}
+
+  <p class="back"><a class="link" href={backHref}>← 目次へ戻る</a></p>
 </article>
 
 <script>
@@ -115,6 +155,29 @@ const ymd = `${data.date.getFullYear()}.${String(data.date.getMonth() + 1).padSt
 </script>
 
 <style>
+  /* 記事の最後に置く「ほかの◯◯」。**演出より可読性**（§0）なので罫と余白だけで組む */
+  .more { margin-top: 3.5rem; }
+  .more__ttl {
+    display: flex; align-items: baseline; gap: .8em;
+    font-family: var(--font-en); font-size: .82rem; letter-spacing: .18em;
+    margin: 0 0 .2rem; padding-bottom: .4em; border-bottom: 2px solid var(--rule);
+  }
+  .more__all { margin-left: auto; font-size: .9em; color: var(--accent); text-decoration: none; }
+  .more__all:hover { text-decoration: underline; }
+  .more__list { list-style: none; margin: 0; padding: 0; }
+  .more__list li + li { border-top: 1px solid var(--hair-rule); }
+  .more__row {
+    display: flex; align-items: baseline; gap: .9em;
+    padding: .75rem 0; text-decoration: none; line-height: 1.5;
+  }
+  .more__row:hover b { text-decoration: underline; }
+  .more__no {
+    flex: none; font-family: var(--font-en); font-weight: 700; font-style: italic;
+    color: var(--accent); min-width: 2.2ch;
+  }
+  .more__body { min-width: 0; }
+  .more__catch { display: block; color: var(--ink-mid); font-size: .88rem; }
+
   .feature {
     font-family: var(--font-en);
     font-size: 11px; letter-spacing: .24em; color: var(--accent);

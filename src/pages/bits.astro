@@ -1,0 +1,114 @@
+---
+import Base from '../layouts/Base.astro';
+import { getBits, hostLabel, isExternal } from '../lib/bits';
+
+/**
+ * 小物（SMALL WORKS）の棚。
+ *
+ * **作品ページを作るほどではないもの**を、1件4行のyamlで並べるだけの場所。
+ * 本人（2026-09-04）:「小さいこまごまとしたもの作りました〜みたいなのを
+ * 簡単に公開できる場所もあったらいいんだけどね」「作ったけど宣伝してないものが多い」
+ *
+ * ⚠️ **ここを作り込まない。** カード・画像・個別ページを足した瞬間、
+ *    「簡単に公開できる場所」ではなくなって、また溜まる。
+ *    1件が育ったら `src/content/works/` へ引っ越す（そのとき初めて画像と本文を書く）。
+ *
+ * 各行に `id` を振ってあるので、NEWS から `url: <origin>/bits#<slug>` で名指しできる。
+ * そうすると**棚を経由してから**配布元へ出るので、ほかの小物も目に入る。
+ */
+const bits = await getBits();
+
+const PRICE = { free: '無料', paid: '有料', donation: '無料＋支援版', unknown: '' } as const;
+const md = (d: Date) =>
+  `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+
+const DESC =
+  'オギャヌンティウス十三世が作った小物の棚。ココフォリア素材、小さなツール、実験の切れ端など、作品ページを立てるほどではないものをまとめて置いています。';
+---
+<Base title="小物" description={DESC}>
+  <div class="wrap measure">
+    <p class="kicker">SMALL WORKS</p>
+    <h1 class="h1">小物</h1>
+    <p class="lead">作品ページを作るほどでもない、小さいもの置き場。</p>
+
+    <aside class="notice">
+      <p class="notice__ttl">この棚について</p>
+      <p>素材、小さなツール、実験の切れ端。「作ったけど告知していない」ものが溜まっていくので、まとめて置く場所を作りました。</p>
+      <p>特集（<a class="link" href="/contents">目次</a>に載っているもの）と違って、紹介ページはありません。押すと配布元へ直接出ます。</p>
+    </aside>
+
+    {bits.length === 0 ? (
+      <p class="dim">まだ何も置いていません。</p>
+    ) : (
+      <ul class="shelf">
+        {bits.map((b) => {
+          const where = hostLabel(b.data.url);
+          const external = isExternal(b.data.url);
+          const price = b.data.priceType ? PRICE[b.data.priceType] : '';
+          return (
+            <li class="shelf__item" id={b.id}>
+              <p class="shelf__head">
+                {b.data.url ? (
+                  <a class="shelf__ttl" href={b.data.url} rel={external ? 'noopener' : undefined}>
+                    {b.data.title}{external && <span aria-hidden="true"> ↗</span>}
+                  </a>
+                ) : (
+                  <span class="shelf__ttl shelf__ttl--flat">{b.data.title}</span>
+                )}
+                {where && <span class="label">{where}</span>}
+                {price && <span class="label">{price}</span>}
+                {!b.data.url && <span class="label">配布はまだ</span>}
+              </p>
+              <p class="shelf__catch">{b.data.catch}</p>
+              <p class="shelf__foot">
+                <time>{md(b.data.date)}</time>
+                {b.data.tags.length > 0 && <span class="shelf__tags">{b.data.tags.join(' / ')}</span>}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+
+    <p class="back"><a class="link" href="/contents">← 目次へ戻る</a></p>
+  </div>
+</Base>
+
+<style>
+  .kicker { font-family: var(--font-en); font-size: 11px; letter-spacing: .24em; color: var(--accent); font-weight: 700; margin: 2.2rem 0 .3rem; }
+  .h1 { font-size: clamp(2rem, 6vw, 3.4rem); letter-spacing: -.02em; margin: 0 0 .4rem; }
+  .lead { color: var(--ink-mid); margin: 0 0 2rem; }
+
+  .notice {
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    padding: 1.1rem 1.2rem;
+    margin: 0 0 2.4rem;
+  }
+  .notice p { margin: 0 0 .6rem; font-size: .92rem; line-height: 1.8; }
+  .notice p:last-child { margin-bottom: 0; }
+  .notice__ttl { font-weight: 700; letter-spacing: .04em; }
+
+  .shelf { list-style: none; margin: 0; padding: 0; }
+  .shelf__item { border-top: 1px solid var(--rule); padding: 1.1rem 0; scroll-margin-top: 2rem; }
+  .shelf__item:last-child { border-bottom: 1px solid var(--rule); }
+  /* NEWS から `#slug` で名指しされたときだけ、どれか分かるように印を出す */
+  .shelf__item:target { border-left: 3px solid var(--accent); padding-left: .9rem; }
+
+  .shelf__head {
+    margin: 0 0 .3rem;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: .5em;
+  }
+  .shelf__ttl { font-size: clamp(1.05rem, 2.2vw, 1.3rem); font-weight: 700; line-height: 1.35; }
+  .shelf__ttl--flat { color: var(--ink-mid); }
+  .shelf__catch { margin: 0 0 .5rem; line-height: 1.75; }
+  .shelf__foot {
+    margin: 0;
+    display: flex; flex-wrap: wrap; gap: .3em 1.2em;
+    font-size: .8rem; color: var(--ink-mid);
+  }
+  .shelf__foot time { font-family: var(--font-en); letter-spacing: .04em; }
+
+  .back { margin-top: 3rem; }
+  .dim { color: var(--ink-mid); }
+</style>

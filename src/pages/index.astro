@@ -1,40 +1,34 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import { buildNewsLinker } from '../lib/newsLink';
+import { buildFeatures, CATEGORY_LABEL } from '../lib/features';
 import ThemeToggle from '../components/ThemeToggle.astro';
 
 const issues = await getCollection('issues');
 const issue = issues.find((i) => i.data.current) ?? issues[0];
 if (!issue) throw new Error('src/content/issues/ に号が1つも無い');
 
-const works = await getCollection('works');
-const scenarios = await getCollection('scenarios');
-/* コロコロ側の情報量はここから来る。装飾ではなく実データを載せる（仕様書4章・8章） */
-const nowmaking = (await getCollection('nowmaking')).sort((a, b) => a.data.order - b.data.order).slice(0, 3);
-const news = (await getCollection('news')).sort((a, b) => +b.data.date - +a.data.date).slice(0, 3);
-/* NEWS を押したら、その作品のページへ直接行く（以前は全部 /contents へ逃がしていた） */
-const newsLink = await buildNewsLinker();
+/* 特集の並びと通し番号の正本は src/lib/features.ts。目次・作品ページと同じ数字になる */
+const features = await buildFeatures();
+/* コロコロ側の情報量はここから来る。装飾ではなく実データを載せる（仕様書4章・8章）
+
+   ⚠️ **NOW MAKING（制作中）は 2026-09-04 に廃止した**（本人「NOW MAKING そのものを
+      もうサイトから消しちゃって、新作の並び順で出しとこうかな」）。
+      `nowmaking` コレクションごと消してある。**復活させるなら本人に確認する。**
+      ここに出るのは**完成して公開したものだけ**、新しい順。 */
+const latest = features.latest.slice(0, 3);
 
 type Resolved = { catch: string; href: string; badge?: string; no?: number };
-
-const index = new Map<string, { catch: string; href: string }>();
-for (const w of works) index.set(w.id, { catch: w.data.catch, href: `/works/${w.id}` });
-for (const s of scenarios) index.set(s.id, { catch: s.data.catch, href: `/scenario/${s.id}` });
 
 /** ref を解決する。見つからなければビルドを落とす（壊れたまま本番へ出さない） */
 function resolve(h: (typeof issue.data.headlines)[number]): Resolved {
   if (h.collection === 'page') {
     return { catch: h.catch ?? h.ref, href: h.ref, badge: h.badge, no: h.no };
   }
-  const found = index.get(h.ref);
-  if (!found) {
-    throw new Error(
-      `vol01.md の headlines に未知の ref: "${h.ref}"。` +
-        `src/content/${h.collection}/${h.ref}.md が要る`
-    );
-  }
-  return { catch: h.catch ?? found.catch, href: found.href, badge: h.badge, no: h.no };
+  const found = features.resolve(h.ref, `${issue!.id}.md の headlines`);
+  /* `no:` を書かなければ**目次の通し番号がそのまま入る。**
+     作品を1本足すたびに 1〜8 を手で振り直す作業は要らない */
+  return { catch: h.catch ?? found.data.catch, href: found.href, badge: h.badge, no: h.no ?? found.no };
 }
 
 const slot = (name: string) =>
@@ -47,9 +41,7 @@ const lower = slot('lower');
 const strip = slot('strip');
 
 const issued = issue.data.published;
-const md = (d: Date) =>
-  `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-const featureCount = works.length + scenarios.length;
+const featureCount = features.all.length;
 const ym = `${issued.getFullYear()}.${String(issued.getMonth() + 1).padStart(2, '0')}`;
 /** 一冊の上に刷る号表記。ゼロ埋めしない（「2026年09月号」にしない） */
 const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
@@ -97,17 +89,19 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           </a>
         ))}
 
+        {/* 新しく出したもの3本。**ジャンルをまたいで公開日の新しい順。**
+            番号は目次の通し番号なので、ここでは 04, 05, 01 のように飛ぶ（それでいい）。 */}
         <section class="block">
-          <h2 class="block__ttl">NOW MAKING<span class="block__note">この人、また何か作っている</span></h2>
+          <h2 class="block__ttl">NEW WORKS<span class="block__note">最近できたもの</span></h2>
           <ul class="block__list">
-            {nowmaking.map((n, i) => (
+            {latest.map((f) => (
               <li>
-                <a class="block__row" href={n.data.ref ? `/works/${n.data.ref}` : '/contents'}>
-                  <span class="block__tag">制作中</span>
-                  <i class="no">{String(i + 1).padStart(2, '0')}</i>
+                <a class="block__row" href={f.href}>
+                  <span class="block__tag">{CATEGORY_LABEL[f.category].short}</span>
+                  <i class="no">{String(f.no).padStart(2, '0')}</i>
                   <span class="block__body">
-                    <b>{n.data.title}</b>
-                    <span class="block__sub">{n.data.catch}</span>
+                    <b>{f.data.title}</b>
+                    <span class="block__sub">{f.data.catch}</span>
                   </span>
                 </a>
               </li>
@@ -174,20 +168,10 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
           </a>
         ))}
 
-        <section class="block">
-          <h2 class="block__ttl">今月の制作物<span class="block__note">NEWS</span></h2>
-          <ul class="block__list">
-            {news.map((n) => (
-              <li>
-                <a class="block__row block__row--news" href={newsLink(n).href}>
-                  <time class="block__date">{md(n.data.date)}</time>
-                  <span class="block__body">{n.data.title}</span>
-                  <span class="block__arrow" aria-hidden="true">→</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
+        {/* ⚠️ **「今月の制作物（NEWS）」の欄は 2026-09-04 に表紙から外した。**
+               左の NEW WORKS と**同じ3件**を出していて、777コンボが表紙に4回
+               （一冊の刷り見出し・特集見出し・NEW WORKS・NEWS）出ていた。
+               NEWS の全件は目次（/contents）に残っている。**戻すならどちらかを消すこと。** */}
 
         <ul class="cover__strips">
           {issue.data.strips.map((s) => <li>{s}</li>)}
@@ -212,9 +196,14 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
         CONTENTS <span aria-hidden="true">→</span>
       </a>
       {/* 誌面の外にある行き先。**本棚をやめて素のリンクに戻した**
-          （本人・2026-08-29「普通に、創刊号→ 卓報告→ みたいな感じで実装しよう」） */}
-      <a href="/contents" class="cover__jump">創刊号 <span aria-hidden="true">→</span></a>
+          （本人・2026-08-29「普通に、創刊号→ 卓報告→ みたいな感じで実装しよう」）
+
+          ⚠️ **「創刊号 →」は 2026-09-04 に外した。** 隣の CONTENTS と
+             飛び先が同じ `/contents` で、同じ場所へ行くリンクが2本並んでいた。
+             表紙の密度を落とすのが目的なので、重複から先に削る。 */}
       <a href="/sessions" class="cover__jump">卓報告 <span aria-hidden="true">→</span></a>
+      {/* 作品ページを作るほどでもない小物の棚（2026-09-04 新設） */}
+      <a href="/bits" class="cover__jump">小物 <span aria-hidden="true">→</span></a>
       {/* 紹介してくれる人向け。**素材と掲載条件が置いてある公開ページ**（関係者限定ではない） */}
       <a href="/press" class="cover__jump cover__jump--last">プレスキット <span aria-hidden="true">→</span></a>
       {strip.map((h) => (
@@ -737,8 +726,7 @@ const issueLabel = `${issued.getFullYear()}年${issued.getMonth() + 1}月号`;
     .block { margin-top: 10px; }
     .block__ttl { margin-bottom: .35em; padding-bottom: .25em; }
     .block__row { padding: .28em 0; }
-    .cover__right .block__list li:nth-child(n + 3) { display: none; }
-    /* 背の低い画面では NOW MAKING も2件までにする（3件だと21px溢れた） */
+    /* 背の低い画面では NEW WORKS も2件までにする（3件だと21px溢れた） */
     .cover__left .block__list li:nth-child(n + 3) { display: none; }
     .cover__theme { font-size: clamp(1.8rem, 5.4vw, 3.6rem); }
     .cover__strips { display: none; }

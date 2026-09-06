@@ -2,20 +2,48 @@
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import WorkArticle from '../../components/WorkArticle.astro';
+import { buildFeatures, CATEGORY_LABEL, categoryAnchor } from '../../lib/features';
 
 export async function getStaticPaths() {
+  /* ⚠️ **番号をここで数えない。** 以前は works の読み込み順（＝ファイル名順）で
+     `FEATURE 01` を振っていたので、公開日順に並ぶ目次と数字が食い違っていた
+     （デスクタッコが目次では 01、作品ページでは FEATURE 02）。
+     正本は src/lib/features.ts。表紙・目次・ここが同じ数字を使う。 */
+  const features = await buildFeatures();
   const works = await getCollection('works');
-  return works.map((entry, i) => ({
-    params: { slug: entry.id },
-    props: { entry, feature: `FEATURE ${String(i + 1).padStart(2, '0')}` },
-  }));
+
+  return works.map((entry) => {
+    const f = features.resolve(entry.id, 'works');
+    /* 同じジャンルのほかの作品（自分を除く・新しい順）。**行き止まりを作らない** */
+    const siblings = (features.groups.find((g) => g.category === f.category)?.items ?? [])
+      .filter((x) => x.id !== f.id)
+      .map((x) => ({ no: x.no, href: x.href, title: x.data.title, catch: x.data.catch }));
+    return {
+      params: { slug: entry.id },
+      props: {
+        entry,
+        feature: `FEATURE ${String(f.no).padStart(2, '0')} ／ ${CATEGORY_LABEL[f.category].jp}`,
+        backHref: `/contents#${categoryAnchor(f.category)}`,
+        siblings,
+        categoryLabel: CATEGORY_LABEL[f.category].jp,
+        categoryHref: `/contents#${categoryAnchor(f.category)}`,
+      },
+    };
+  });
 }
 
-const { entry, feature } = Astro.props;
+const { entry, feature, backHref, siblings, categoryLabel, categoryHref } = Astro.props;
 const { Content } = await render(entry);
 ---
 <Base title={entry.data.title} description={entry.data.description} ogImage={entry.data.ogImage ?? entry.data.thumbnail}>
-  <WorkArticle data={entry.data} feature={feature}>
+  <WorkArticle
+    data={entry.data}
+    feature={feature}
+    backHref={backHref}
+    siblings={siblings}
+    categoryLabel={categoryLabel}
+    categoryHref={categoryHref}
+  >
     <Content />
   </WorkArticle>
 </Base>

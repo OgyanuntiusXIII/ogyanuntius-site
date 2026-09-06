@@ -1,6 +1,7 @@
 ---
 import { ClientRouter } from 'astro:transitions';
-import { SITE } from '../data/site';
+import { getCollection } from 'astro:content';
+import { SITE, NAV } from '../data/site';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import '../styles/global.css';
 
@@ -27,6 +28,14 @@ const {
   noindex = false,
   structuredData: suppliedStructuredData,
 } = Astro.props;
+
+/* フッターの号表記。**手で書かない。** VOL.02 を作ったとき、ここだけ 01 のまま残る */
+const issues = await getCollection('issues');
+const currentIssue = issues.find((i) => i.data.current) ?? issues[0];
+
+/* 柱で「いまどこにいるか」を出すために使う。`build.format:'file'` の `.html` は落とす */
+const navPath = Astro.url.pathname.replace(/index\.html$/, '').replace(/\.html$/, '') || '/';
+const isHere = (href: string) => navPath === href || navPath.startsWith(href + '/');
 
 const pageTitle = cover ? SITE.title : `${title}｜${SITE.title}`;
 // build.format:'file' だと pathname が /about.html になる。
@@ -191,10 +200,16 @@ const structuredDataJson = structuredData
       <header class="rail">
         <a href="/" style="text-decoration:none">{SITE.titleEn}</a>
         <span class="rail__right">
-          <nav aria-label="誌面">
-            <a href="/contents" class="link">CONTENTS</a>
-            <span aria-hidden="true"> / </span>
-            <a href="/about" class="link">ABOUT</a>
+          {/* 行き先は src/data/site.ts の NAV が正本。**ここへ直接書き足さない。**
+              いま開いているページには印が付く（aria-current + 下線） */}
+          <nav class="nav" aria-label="誌面">
+            {NAV.filter((n) => n.primary).map((n) => (
+              <a
+                href={n.href}
+                class="link nav__item"
+                aria-current={isHere(n.href) ? 'page' : undefined}
+              >{n.label}</a>
+            ))}
           </nav>
           <ThemeToggle />
         </span>
@@ -207,18 +222,17 @@ const structuredDataJson = structuredData
 
     {!cover && (
       <footer class="rail" style="border-bottom:none;border-top:1px solid var(--rule)">
-        <span>{SITE.title} — VOL.01</span>
-        <span>
-          <a href="/contents" class="link">創刊号 →</a>
-          <span aria-hidden="true"> / </span>
-          <a href="/sessions" class="link">卓報告 →</a>
-          <span aria-hidden="true"> / </span>
-          <a href="/press" class="link">プレスキット →</a>
-          <span aria-hidden="true"> / </span>
-          <a href="/contact" class="link">お問い合わせ →</a>
-          <span aria-hidden="true"> / </span>
-          <a href="/" class="link">表紙へ戻る</a>
-        </span>
+        <span>{SITE.title} — {currentIssue?.data.vol}</span>
+        <nav class="nav" aria-label="このサイトの行き先">
+          {NAV.map((n) => (
+            <a
+              href={n.href}
+              class="link nav__item"
+              aria-current={isHere(n.href) ? 'page' : undefined}
+            >{n.label}</a>
+          ))}
+          <a href="/" class="link nav__item">表紙へ戻る</a>
+        </nav>
       </footer>
     )}
 

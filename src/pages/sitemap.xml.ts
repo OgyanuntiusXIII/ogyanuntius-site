@@ -20,6 +20,7 @@ export async function GET() {
     '/about',
     '/contents',
     '/blog',
+    '/bits',
     '/sessions',
     '/press',
     '/contact',

@@ -19,6 +19,7 @@ coverLines:
 headlines:
   # ⚠️ **表紙に出す作品は3本まで**（本人・2026-09-04「トップに出すのは3つくらいに」）。
   #    選び方は**ジャンルの代表を1本ずつ**。残りは目次のジャンル欄（/contents）で拾う。
+  #    **新作は書かない**（左の NEW WORKS 欄が公開日の新しい順で自動的に出す）。
   #    足したくなったら、まずどれかを外す。増やすと表紙がまた埋まる。
   #
   # ⚠️ **`no:` は書かない。** 省くと目次の通し番号が自動で入る（src/lib/features.ts）。
@@ -30,11 +31,14 @@ headlines:
     collection: works
     slot: lead
 
-  # ゲームの代表。いま出したばかりのもの
-  - ref: 777-combo
+  # ゲームの代表
+  # ⚠️ **新作欄（NEW WORKS）と重複させない。** ここは「特集＝代表作」、
+  #    出したばかりのものは左の NEW WORKS が自動で拾う。
+  #    777コンボを入れたら、一冊の刷り見出し・特集見出し・NEW WORKS で3回出た（2026-09-04）
+  - ref: parry-aria-bpm
     collection: works
     slot: upper
-    badge: NEW
+    catch: アリアのケツで刻め！
 
   # TRPGシナリオの代表
   - ref: amefuru-saigo-no-jikan-ni

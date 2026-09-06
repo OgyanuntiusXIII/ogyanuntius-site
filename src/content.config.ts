@@ -166,17 +166,49 @@ const news = defineCollection({
     }),
 });
 
-const nowmaking = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/nowmaking' }),
+/**
+ * **小物（SMALL WORKS）。** 作品ページを作るほどではないもの専用の棚。
+ *
+ * 本人（2026-09-04）:「小さいこまごまとしたもの作りました〜みたいなのを
+ * 簡単に公開できる場所もあったらいいんだけどね」「作ったけど宣伝してないものが多い」
+ *
+ * ⚠️ **わざと軽くしてある。** works と違って
+ * **画像も本文も description も要らない**（無くてもビルドが通る）。
+ * 1件＝この4行だけで棚に並ぶ：
+ *
+ * ```yaml
+ * title: 動くクリティカルカットイン素材
+ * date: 2026-09-01
+ * catch: ココフォリアで決定的成功のときに出るやつ
+ * url: https://tiiinnstudio.booth.pm/items/8636341
+ * ```
+ *
+ * **重くしないこと。** 画像必須・本文必須にした瞬間、
+ * 「簡単に公開できる場所」ではなくなって、また溜まる。
+ * 育ってきたら `works/` へ引っ越せばいい（そのとき初めて画像と本文を書く）。
+ */
+const bits = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/bits' }),
   schema: z.object({
     title: z.string(),
-    /** 「この人、また何か作っている」を担当する一行 */
-    catch: z.string().max(40),
-    updated: z.coerce.date(),
-    progress: z.string().optional(),
-    /** どの作品の話か。works / scenarios の slug。あればその作品ページへリンクする */
-    ref: z.string().optional(),
-    order: z.number().int().default(50),
+    /**
+     * **棚に出した日**（＝このサイトに載せた日）。並び順にだけ使う。
+     * 配布を始めた日と違っていてよい。**分からない日付を推測で書かないための逃げ道。**
+     */
+    date: z.coerce.date(),
+    /** 棚に出る一行。60字まで */
+    catch: z.string().max(60, '棚の1行に収まらない。60字まで'),
+    /**
+     * 置き場所。BOOTH・GitHub・サイト内、どこでもよい。
+     * **省略できる**（まだ配っていないものを棚に並べておける）。
+     * 配布元の名前（BOOTH / GitHub / …）は URL から機械が出すので書かない。
+     */
+    url: z.string().url().optional(),
+    /** 書いたときだけ出る。**推測で埋めない**（無ければ何も表示しない） */
+    priceType: priceType.optional(),
+    tags: z.array(z.string()).default([]),
+    /** 任意。あれば棚に小さく出る */
+    thumbnail: publicPath.optional(),
   }),
 });
 
@@ -218,4 +250,4 @@ const sessions = defineCollection({
   }),
 });
 
-export const collections = { works, scenarios, issues, news, nowmaking, blog, sessions };
+export const collections = { works, scenarios, issues, news, blog, bits, sessions };
