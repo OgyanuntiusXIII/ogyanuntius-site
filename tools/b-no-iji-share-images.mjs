@@ -7,7 +7,8 @@
  *   public/games/b-no-iji/assets/ogp-route.jpg          ゲームページと作品ページの OGP（全ルート）
  *
  * 地図の描き方はゲーム内の result-map.js と同じ投影・同じ色。データも同じファイルを読む。
- * --character を渡すと OGP の左下にキャラクターを乗せる（無ければ地図と文字だけ）。
+ * キャラクター（tools/assets/b-no-iji-character.png・ゲームの mimi.glb を描画した透過PNG）を OGP の左下と、
+ * 駅ごとのカードでは県名の右隣に乗せる。--character で別の透過PNGに差し替えられる。
  * 依存は sharp だけ（Astro が持っている）。
  */
 import sharp from 'sharp';
@@ -22,7 +23,8 @@ const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const OUT=path.join(ROOT,'public/games/b-no-iji/assets');
 const W=1200,H=630;
 const characterArg=process.argv.indexOf('--character');
-const character=characterArg>0?process.argv[characterArg+1]:null;
+const DEFAULT_CHARACTER=path.join(ROOT,'tools/assets/b-no-iji-character.png');
+const character=characterArg>0?process.argv[characterArg+1]:(fs.existsSync(DEFAULT_CHARACTER)?DEFAULT_CHARACTER:null);
 
 // Same projection as result-map.js: a 560x460 map space.
 const project=({lon,lat})=>[58+(lon-128)*Math.cos(38*Math.PI/180)*25.7,30+(46-lat)*25.7];
@@ -53,6 +55,8 @@ ${inner}
 ${text(56,608,14,'#6f7f84','ogyanuntiusxiii.com/games/b-no-iji')}
 </svg>`;
 }
+// Where the character stands on a station card: right of the prefecture name, or beside the map on the final card.
+export function characterSpot(i){const last=i===ROUTE.length-1,where=last?'':journeyLocation(ROUTE[i].km).prefecture.name;return last?{left:505,top:330,height:200}:{left:Math.max(340,60+[...where].length*60+16),top:296,height:240};}
 function stationCard(i){
  const km=ROUTE[i].km,place=journeyLocation(km),last=i===ROUTE.length-1,where=last?'西大山駅':place.prefecture.name;
  const inner=[
@@ -76,9 +80,12 @@ function baseCard(){
 }
 async function main(){
  fs.mkdirSync(path.join(OUT,'share'),{recursive:true});
+ const figures=new Map();
  for(let i=0;i<ROUTE.length;i++){
   const file=path.join(OUT,'share',String(i).padStart(2,'0')+'.jpg');
-  await sharp(Buffer.from(stationCard(i))).jpeg({quality:82,mozjpeg:true}).toFile(file);
+  let card=sharp(Buffer.from(stationCard(i)));
+  if(character){const spot=characterSpot(i);if(!figures.has(spot.height))figures.set(spot.height,await sharp(character).resize({height:spot.height,withoutEnlargement:true}).png().toBuffer());card=sharp(await card.png().toBuffer()).composite([{input:figures.get(spot.height),left:spot.left,top:spot.top}]);}
+  await card.jpeg({quality:82,mozjpeg:true}).toFile(file);
  }
  let base=sharp(Buffer.from(baseCard()));
  if(character){

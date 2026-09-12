@@ -21,7 +21,7 @@ export function effectSamples(kind,rate=44100,random=Math.random){
    else if(kind==='firework')a[i]=env*(Math.sin(t*2*Math.PI*55)*.5+n*.6)+n*Math.exp(-u*4)*.2;
    else if(kind==='shatter')a[i]=env*(n*.65+Math.sin(t*2*Math.PI*1245)*.25)+Math.sin(t*2*Math.PI*1864)*Math.exp(-u*9)*.18;
    else if(kind==='catch')a[i]=env*(n*.35+Math.sin(t*2*Math.PI*880)*.45);
-   else if(kind==='flap')a[i]=Math.sin(Math.PI*u)*low*.55;
+   else if(kind==='flap')a[i]=Math.sin(Math.PI*u)*low*.55+Math.sin(t*2*Math.PI*2400)*Math.exp(-t/.010)*.45;   // the bright tick is what phone speakers can reproduce
    else {const heavy=kind==='smash',pitch=heavy?63:kind==='thud'?90:150;a[i]=env*(Math.sin(2*Math.PI*(pitch*t-30*t*t))*.65+n*(heavy?.7:.3)+Math.sin(t*2*Math.PI*837)*Math.exp(-t*36)*.13);}
   }
  }

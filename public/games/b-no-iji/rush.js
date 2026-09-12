@@ -1,8 +1,10 @@
 export const TRAIN_WARNING=.85, TRAIN_MASH=2.6, TRAIN_IMPACT=.5;
 export const TRAIN_MIN_HITS=8, SECONDS_PER_HIT=.15;
 export const GUITAR_TAP_SECONDS=.03;
+// Caps against auto-clickers: the train mash earns at most 8 seconds of guitar, and strumming extends one rush by at most 4 seconds.
+export const TRAIN_MAX_SECONDS=8, GUITAR_MAX_EXTENSION=4;
 export const OBSTACLE_GRACE_SECONDS=1;
-export const guitarSeconds=hits=>Math.round(hits*SECONDS_PER_HIT*100)/100;
+export const guitarSeconds=hits=>Math.min(TRAIN_MAX_SECONDS,Math.round(hits*SECONDS_PER_HIT*100)/100);
 export const guitarRemaining=s=>Math.max(0,s.guitarDuration-s.guitarTime);
 // Two flashes per second; the body stays visible even when its glow is off.
 export const guitarLit=s=>!s.guitar||guitarRemaining(s)>2||Math.floor(guitarRemaining(s)*4)%2===0;
@@ -17,12 +19,13 @@ export function mashTrain(s,side,strength=1){
 }
 export function startGuitar(s,hits){
  s.obstacleGrace=0;s.guitar=true;s.guitarDuration=guitarSeconds(hits);s.guitarTime=0;s.guitarCharge=0;
- s.guitarStrums=0;s.lastGuitarStrum=-10;
+ s.guitarStrums=0;s.lastGuitarStrum=-10;s.guitarExtended=0;
  s.speed=Math.max(s.speed,180);s.flow=1;s.vx=0;s.vy=0;
 }
 export function strumGuitar(s,strength=1){
  if(s.ended||s.train||!s.guitar||guitarRemaining(s)<=0||strength!==1)return false;
- s.guitarDuration=Math.round((s.guitarDuration+GUITAR_TAP_SECONDS)*100)/100;
+ const gain=Math.min(GUITAR_TAP_SECONDS,Math.max(0,GUITAR_MAX_EXTENSION-(s.guitarExtended||0)));
+ if(gain>0){s.guitarDuration=Math.round((s.guitarDuration+gain)*100)/100;s.guitarExtended=Math.round(((s.guitarExtended||0)+gain)*100)/100;}
  s.guitarStrums++;s.lastGuitarStrum=s.guitarTime;return true;
 }
 export function stepTrain(s,dt){

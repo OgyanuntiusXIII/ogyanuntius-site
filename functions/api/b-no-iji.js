@@ -7,7 +7,9 @@ export const SCHEMA=[
  'CREATE TABLE IF NOT EXISTS b_iji_route64_runs (id TEXT PRIMARY KEY, started INTEGER NOT NULL, elapsed REAL, metres INTEGER, name TEXT)',
  'CREATE TABLE IF NOT EXISTS b_iji_route64_board (id TEXT PRIMARY KEY, name TEXT NOT NULL, elapsed REAL NOT NULL, metres INTEGER NOT NULL, created INTEGER NOT NULL)',
  'CREATE INDEX IF NOT EXISTS b_iji_route64_order ON b_iji_route64_board (metres DESC, elapsed ASC, created ASC, id ASC)',
- 'CREATE TABLE IF NOT EXISTS b_iji_route64_rate (k TEXT PRIMARY KEY, day INTEGER NOT NULL, n INTEGER NOT NULL)'
+ 'CREATE TABLE IF NOT EXISTS b_iji_route64_rate (k TEXT PRIMARY KEY, day INTEGER NOT NULL, n INTEGER NOT NULL)',
+ // Everyone's finished flights: a single row, one extra row written per confirmed result.
+ 'CREATE TABLE IF NOT EXISTS b_iji_route64_totals (k TEXT PRIMARY KEY, runs INTEGER NOT NULL DEFAULT 0, metres INTEGER NOT NULL DEFAULT 0)'
 ];
 const order='metres DESC, elapsed ASC, created ASC, id ASC';
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
@@ -22,6 +24,7 @@ export function validResult(b,wallSeconds){
 }
 export function playerName(value){if(typeof value!=='string')return null;const name=value.normalize('NFKC').trim().replace(/\s+/g,' ');return name&&[...name].length<=12&&!/[\p{Cc}\p{Cf}<>]/u.test(name)?name:null;}
 async function entries(db){return (await db.prepare(`SELECT name,elapsed,metres FROM b_iji_route64_board ORDER BY ${order} LIMIT 30`).all()).results;}
+async function totals(db){const row=await db.prepare("SELECT runs,metres FROM b_iji_route64_totals WHERE k='all'").first();return{runs:row?.runs??0,metres:row?.metres??0};}
 async function rank(db,elapsed,metres){const r=await db.prepare('SELECT COUNT(*) AS n FROM b_iji_route64_board WHERE metres > ? OR (metres = ? AND elapsed <= ?)').bind(metres,metres,elapsed).first();return r.n+1;}
 async function hash(text){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
 export function createHandler(now=()=>Date.now()){
@@ -32,7 +35,7 @@ export function createHandler(now=()=>Date.now()){
   const origin=request.headers.get('origin');if(origin&&origin!==new URL(request.url).origin)return json({error:'このページから登録してください'},403);
   try{
    if(!ready.has(db))ready.set(db,db.batch(SCHEMA.map(sql=>db.prepare(sql))).catch(e=>{ready.delete(db);throw e;}));await ready.get(db);
-   if(request.method==='GET')return json({entries:await entries(db)});
+   if(request.method==='GET')return json({entries:await entries(db),totals:await totals(db)});
    if(Number(request.headers.get('content-length'))>4096)return json({error:'送信内容が長すぎます'},413);
    const raw=await request.text();if(raw.length>4096)return json({error:'送信内容が長すぎます'},413);
    let b;try{b=JSON.parse(raw);}catch{return json({error:'記録を読み取れません'},400);}if(!b||typeof b!=='object')return json({error:'記録を読み取れません'},400);
@@ -49,9 +52,11 @@ export function createHandler(now=()=>Date.now()){
    if(b.action==='qualify'){
     if(!validResult(b,(at-run.started)/1000))return json({error:'記録を確認できませんでした'},422);
     if(run.elapsed!==null&&(run.elapsed!==b.elapsed||run.metres!==b.metres))return json({error:'この記録は確定しています'},409);
-    await db.prepare('UPDATE b_iji_route64_runs SET elapsed=?,metres=? WHERE id=? AND elapsed IS NULL').bind(b.elapsed,b.metres,b.id).run();
+    const settled=await db.prepare('UPDATE b_iji_route64_runs SET elapsed=?,metres=? WHERE id=? AND elapsed IS NULL').bind(b.elapsed,b.metres,b.id).run();
+    // Only the first confirmation of a run counts toward everyone's totals.
+    if(settled.meta?.changes)await db.prepare("INSERT INTO b_iji_route64_totals (k,runs,metres) VALUES ('all',1,?) ON CONFLICT(k) DO UPDATE SET runs=runs+1, metres=metres+excluded.metres").bind(b.metres).run();
     const confirmed=await db.prepare('SELECT elapsed,metres FROM b_iji_route64_runs WHERE id=?').bind(b.id).first();if(confirmed.elapsed!==b.elapsed||confirmed.metres!==b.metres)return json({error:'この記録は確定しています'},409);
-    const place=await rank(db,b.elapsed,b.metres);return json({rank:place<=30?place:null,entries:await entries(db)});
+    const place=await rank(db,b.elapsed,b.metres);return json({rank:place<=30?place:null,entries:await entries(db),totals:await totals(db)});
    }
    if(b.action==='register'){
     const name=playerName(b.name);if(!name)return json({error:'名前は1〜12文字で入力してください'},400);

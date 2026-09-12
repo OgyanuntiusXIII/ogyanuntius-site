@@ -121,3 +121,34 @@
 @media(prefers-reduced-motion:reduce){#mashCallout{animation:none}}
 /* The toast is fixed at left:50%; without an explicit width it wraps at half the viewport on phones. */
 #toast{width:max-content;max-width:92vw}
+
+/* 2026-09-12 (3rd): half-size speedometer, a slimmer gauge on phones, volume sliders in the pause menu, phone pause button. */
+.speed{width:70px;padding:3px 4px 4px;border-width:2px;border-radius:6px}
+.meter-face{height:38px}
+.speed .meter-reading{padding-top:2px}
+.speed .meter-reading b{font-size:12px}
+.speed .meter-reading span{font-size:7px;margin-left:3px}
+.speed #combo{font-size:8px;margin-top:3px}
+#dash{gap:5px}
+.volume-panel{display:flex;flex-direction:column;gap:9px;margin:4px 0 12px;padding:12px 16px;background:#ffffffb8;border-radius:8px;width:min(280px,80vw)}
+.volume-panel label{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;color:#3e4a5c}
+.volume-panel label span{width:46px;text-align:left;letter-spacing:.06em}
+.volume-panel input{flex:1;min-width:0;margin:0;touch-action:auto;accent-color:var(--purple);cursor:pointer}
+a.primary{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+#result #retry{font-size:13px;min-width:180px;padding:10px 20px}
+.result-totals{font-size:12px;color:#5d6d74;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+.result-totals b{color:var(--purple);font-size:14px}
+@media(max-width:720px),(max-aspect-ratio:1/1){
+ .speed{width:56px;padding:2px 3px 3px;border-width:1px;border-radius:5px}
+ .meter-face{height:30px}
+ .speed .meter-reading b{font-size:10px}
+ .speed .meter-reading span{font-size:6px;margin-left:2px}
+ .speed #combo{font-size:7px;margin-top:2px}
+ #dash{bottom:94px;gap:3px}
+ .suica-track{width:min(110px,30vw);height:8px;box-shadow:inset 0 0 0 1px #e9f3d8}
+ .suica-rind{padding:2px;box-shadow:0 2px 0 #164a1f,0 3px 8px #1b5a2633}
+ #suicaFill{background-image:radial-gradient(ellipse 1.3px 2px at 5px 3px,var(--melon-seed) 98%,transparent 100%),radial-gradient(ellipse 1.3px 2px at 12px 6px,var(--melon-seed) 98%,transparent 100%),linear-gradient(180deg,var(--melon-flesh),var(--melon-flesh-deep));background-size:14px 8px,14px 8px,100% 100%}
+ #suicaBonus{font-size:9px;margin-left:5px}
+ /* The pause button sits right above the right-ear button so a thumb can stop the flight at once. */
+ #pause{position:fixed;right:52px;bottom:98px;width:44px;height:44px;font-size:16px;background:#fffd;box-shadow:0 3px 0 #44375c33;z-index:6}
+}

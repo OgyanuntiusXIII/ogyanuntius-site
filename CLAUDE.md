@@ -604,7 +604,7 @@ Cloudflare Pages は `.js` を **`Cache-Control: max-age=14400`** で配る。`i
 |---|---|
 | Bの意地 | **`node tools/b-no-iji-importmap.mjs <版>`** で3ページの import map を書き直してからコミットする。直下の全モジュールが `./x.js?v=<版>` になる（`vendor/` は除外。three.js を二重に読み込ませない） |
 | ほかのゲーム | 入口のスクリプト1本だけなら `?v=` を変えれば足りる。**モジュールを分割しているなら同じ仕組みが要る** |
-| `public/_headers` | `/games/*` と `/tools/*` を `max-age=0, must-revalidate` にする保険（ETag で 304）。**適用されているかは応答の `X-Ogyanun-Cache` ヘッダで確かめる** |
+| `public/_headers` | **Cache-Control は Pages 側の値に上書きされて効かない**（実測：`X-Ogyanun-Cache` は付くのにファイル自体は適用されているのに、`max-age=14400` のまま）。保険にはならない。**頼るのは import map の版だけ** |
 
 ---
 

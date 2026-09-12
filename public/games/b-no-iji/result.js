@@ -11,13 +11,16 @@ export function runResult(s){
  const cleared=s.ended==='clear'||!next;
  const reason={fall:'落下',collision:'衝突',ceiling:'高度オーバー',side:'コースアウト'}[s.ended]||'到着';
  const prefecture=journeyLocation(km).prefecture.name;
- const text=cleared?`#皆もBを応援しよう\n${formatKm(km)}km進み、${prefecture}に到達　完全クリア！`:`#皆もBを応援しよう\n${formatKm(km)}km進み、${prefecture}に到達したが、${reason}`;
- return{metres,place,reason,text,index,cleared,prefecture};
+ return{km,metres,place,reason,index,cleared,prefecture};
 }
 // The shared link is a small page whose card image is the map at the station reached.
 export function sharePageUrl(s){const r=runResult(s);const url=new URL(`share/${r.metres}`,PUBLIC_GAME_URL);url.searchParams.set('e',r.cleared?'clear':s.ended||'fall');return url.href;}
+// The post itself (2026-09-12 wording). The link is part of the text so it lands on its own line under the arrow.
+export function shareText(s){
+ const r=runResult(s),reached=r.cleared?`${formatKm(r.km)}km飛行し、西大山駅に到達　完全クリア！`:`${formatKm(r.km)}km飛行し、${r.prefecture}に到達！`;
+ return `${reached}\nあなたはBをどこまで飛ばせる？\n#皆もBを応援しよう\n\n↓スマホ・PCで今すぐプレイ↓\n${sharePageUrl(s)}`;
+}
 export function shareUrl(s){
- const url=new URL('https://x.com/intent/tweet');url.searchParams.set('text',runResult(s).text);
- url.searchParams.set('url',sharePageUrl(s));
+ const url=new URL('https://x.com/intent/tweet');url.searchParams.set('text',shareText(s));
  return url.href;
 }
