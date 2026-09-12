@@ -1,0 +1,7 @@
+# ゲームとツールの素材は毎回サーバに確かめてから使う（ETag で 304 が返るので再ダウンロードはしない）。
+# 2026-09-12：Pages 既定の max-age=14400 のせいで、更新直後に新旧のモジュールが混ざり『Bの意地』が出撃直後に止まった。
+# 各ゲームの index.html はモジュールの URL に ?v= を付ける（Bの意地は tools/b-no-iji-importmap.mjs）。ここはその保険。
+/games/*
+  Cache-Control: public, max-age=0, must-revalidate
+/tools/*
+  Cache-Control: public, max-age=0, must-revalidate
