@@ -1,6 +1,8 @@
 import {GOAL,KM_PER_UNIT,MAX_GAME_RATE} from '../../public/games/b-no-iji/journey.js';
 import {RULESET} from '../../public/games/b-no-iji/publish-config.js';
 import {possibleTrains} from '../../public/games/b-no-iji/suica-charge.js';
+import {obstacleCount} from '../../public/games/b-no-iji/course.js';
+import {flierCount} from '../../public/games/b-no-iji/fliers.js';
 export const SCHEMA=[
  'CREATE TABLE IF NOT EXISTS b_iji_route64_runs (id TEXT PRIMARY KEY, started INTEGER NOT NULL, elapsed REAL, metres INTEGER, name TEXT)',
  'CREATE TABLE IF NOT EXISTS b_iji_route64_board (id TEXT PRIMARY KEY, name TEXT NOT NULL, elapsed REAL NOT NULL, metres INTEGER NOT NULL, created INTEGER NOT NULL)',
@@ -14,8 +16,9 @@ export function validResult(b,wallSeconds){
  if(!integer(b.metres,1,Math.floor(GOAL*1000))||!Number.isFinite(b.elapsed)||b.elapsed<=0||b.elapsed>3600||b.elapsed>wallSeconds+3)return false;
  const metresPerUnit=KM_PER_UNIT*1000;
  if(b.metres>(b.elapsed+.05)*325*MAX_GAME_RATE*metresPerUnit)return false;
- const maxRings=Math.max(0,Math.floor((b.metres/metresPerUnit-199)/105)+1),maxObstacles=Math.ceil(b.metres/(185*metresPerUnit));
- return integer(b.rings,0,maxRings)&&integer(b.nearMisses,0,maxObstacles)&&integer(b.destroyed,0,maxObstacles+possibleTrains(b.rings,b.nearMisses)*3)&&integer(b.trainHits,0,possibleTrains(b.rings,b.nearMisses)*100);
+ // metres is floored, so allow a couple of units of slack before counting what the flight can have met.
+ const units=b.metres/metresPerUnit+2,maxRings=Math.max(0,Math.floor((units-199)/105)+1),maxObstacles=obstacleCount(units),maxFliers=flierCount(units);
+ return integer(b.rings,0,maxRings)&&integer(b.nearMisses,0,maxObstacles)&&integer(b.destroyed,0,maxObstacles+maxFliers+possibleTrains(b.rings,b.nearMisses)*3)&&integer(b.trainHits,0,possibleTrains(b.rings,b.nearMisses)*100);
 }
 export function playerName(value){if(typeof value!=='string')return null;const name=value.normalize('NFKC').trim().replace(/\s+/g,' ');return name&&[...name].length<=12&&!/[\p{Cc}\p{Cf}<>]/u.test(name)?name:null;}
 async function entries(db){return (await db.prepare(`SELECT name,elapsed,metres FROM b_iji_route64_board ORDER BY ${order} LIMIT 30`).all()).results;}

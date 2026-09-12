@@ -1,7 +1,7 @@
 export const TRAIN_WARNING=.85, TRAIN_MASH=2.6, TRAIN_IMPACT=.5;
 export const TRAIN_MIN_HITS=8, SECONDS_PER_HIT=.15;
 export const GUITAR_TAP_SECONDS=.03;
-export const OBSTACLE_GRACE_SECONDS=3;
+export const OBSTACLE_GRACE_SECONDS=1;
 export const guitarSeconds=hits=>Math.round(hits*SECONDS_PER_HIT*100)/100;
 export const guitarRemaining=s=>Math.max(0,s.guitarDuration-s.guitarTime);
 // Two flashes per second; the body stays visible even when its glow is off.

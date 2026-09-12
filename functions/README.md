@@ -167,3 +167,21 @@ npx wrangler pages secret put CONTACT_WEBHOOK --project-name ogyanuntius-site
 
 なお `wrangler.toml` があるとダッシュボード側の環境変数は無視されるが、
 **`wrangler pages secret put` のシークレットは効く**（2026-09-02 実測）。
+
+---
+
+## 『Bの意地』の共有ページ — `functions/games/b-no-iji/share/[m].js`
+
+`/games/b-no-iji/share/<メートル>?e=<終わり方>` を返すだけの関数。**D1 は使わない。何も保存しない。**
+
+| | |
+|---|---|
+| 何のため | Xの「共有」から飛ぶ先。カード画像が**その回に飛んだ道の地図**になる |
+| 画像 | `public/games/b-no-iji/assets/share/00.jpg … 63.jpg`（到達した駅ごと・1200x630） |
+| 画像の作り方 | `node tools/b-no-iji-share-images.mjs`（ゲーム内の地図と同じデータ・同じ投影で描く） |
+| `e` | `fall` / `collision` / `ceiling` / `side` / `clear`。知らない値や桁外れの数字は**ゲームへ 302** |
+
+- 文面（「○○km進み、○○に到達したが、衝突」）は**サーバ側で距離から作る**。
+  URLに都道府県名や文章を持たせない（好きな文言のカードを作られないため）
+- `noindex`。人が開いたときは地図と「自分も飛ぶ」ボタンだけの軽いページ
+- 駅や地図を変えたら画像を作り直す。**画像が無い駅番号は X 側で画像なしのカードになる**

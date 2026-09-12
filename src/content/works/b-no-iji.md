@@ -7,7 +7,7 @@ status: published
 priceType: free
 thumbnail: /games/b-no-iji/assets/key-visual.webp
 heroImage: /games/b-no-iji/assets/key-visual.webp
-ogImage: /games/b-no-iji/assets/ogp.jpg
+ogImage: /games/b-no-iji/assets/ogp-route.jpg
 description: 毒スイカが耳で空を飛ぶ、2ボタンの3Dブラウザゲーム。スイカゲージがたまると電車が襲来。連打でぶっ飛ばしたら、ギターを弾きながら無敵の大爆走。稚内から西大山まで、64駅を駆け抜けよう。
 links:
   - label: 遊ぶ
@@ -25,7 +25,9 @@ tags: [ブラウザゲーム, 3D, アクション, ファンメイド]
 その勢いでギターを手に取り、虹色に光って障害物ごと大爆走。
 ギターを弾くたびに、残り時間がほんの少し延びる。
 
-終わったら日本地図で飛んだ道を振り返れる。到達した都道府県と距離をXで共有でき、上位30位には名前を残せる。
+道のりの3分の1を過ぎると小さなペンギンが、3分の2を過ぎるとリスが、向こうから飛んでくる。半分を過ぎると障害物の間隔も詰まる。
+
+終わったら日本地図で飛んだ道を振り返れる。到達した都道府県と距離をXで共有でき（カードには飛んだ道の地図が出る）、上位30位には名前を残せる。
 
 ## 操作
 
