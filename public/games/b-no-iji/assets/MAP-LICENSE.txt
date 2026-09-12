@@ -1,0 +1,10 @@
+Japan prefecture boundaries
+Source: geoBoundaries gbOpen JPN ADM1, release 9469f09
+https://www.geoboundaries.org/
+https://github.com/wmgeolab/geoBoundaries/tree/9469f09/releaseData/gbOpen/JPN/ADM1
+Underlying data: © OpenStreetMap contributors / Wambacher
+License: Open Data Commons Open Database License 1.0
+https://opendatacommons.org/licenses/odbl/1-0/
+https://www.openstreetmap.org/copyright
+Changes: simplified geometry and rounded coordinates for a browser result map.
+The adapted boundary database is distributed under the same ODbL license in ../japan-map-data.js. Route and game code are separate works.

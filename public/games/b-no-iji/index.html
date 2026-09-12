@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Bの意地</title>
+<meta name="description" content="2ボタンで、日本縦断。毒スイカが耳で飛び、電車をぶっ飛ばし、ギターで爆走する3Dブラウザゲーム。">
+<link rel="canonical" href="https://ogyanuntiusxiii.com/games/b-no-iji/">
+<meta property="og:type" content="website"><meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="Bの意地"><meta property="og:description" content="2ボタンで、日本縦断。耳で飛んで、ギターで爆走。">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/games/b-no-iji/">
+<meta property="og:image" content="https://ogyanuntiusxiii.com/games/b-no-iji/assets/ogp.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Bの意地。紫色の毒スイカがギターを弾きながら日本の空を飛ぶ。">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Bの意地"><meta name="twitter:description" content="2ボタンで、日本縦断。耳で飛んで、ギターで爆走。"><meta name="twitter:image" content="https://ogyanuntiusxiii.com/games/b-no-iji/assets/ogp.jpg"><meta name="twitter:image:alt" content="Bの意地。2ボタンで、日本縦断。"><script>if(location.pathname.startsWith("/games/b-no-iji")){const base=document.createElement("base");base.href="/games/b-no-iji/";document.head.append(base);}</script><link rel="icon" href="data:,"><link rel="stylesheet" href="style.css?v=20260912-tour64"></head>
+<body>
+<canvas id="world" aria-label="立体のキャラクターと日本縦断の3Dステージ"></canvas>
+<audio id="bgm" src="assets/pulp-hero.mp3" preload="metadata" loop></audio>
+<div id="boundaryWarning"></div><div id="vignette"></div><div id="flash"></div>
+<main>
+<section id="title" class="screen">
+ <div class="intro"><h1>Bの意地</h1><button id="start" class="primary" disabled>出撃</button></div>
+</section>
+<section id="hud" hidden>
+ <div class="distance"><small>飛行距離</small><b id="km">0</b><span>km</span></div>
+ <div class="score-panel"><small id="stationCount">1 / 64駅</small><span id="multiplier"></span><small id="flightRule">一度当たったら終了</small></div>
+ <div id="suicaGauge"><div><b>スイカゲージ</b><span id="suicaValue">0 / 10</span></div><div class="suica-track" role="progressbar" aria-label="スイカゲージ" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" id="suicaProgress"><i id="suicaFill"></i></div><small id="suicaBonus"></small></div><div class="wind-panel" id="windStatus"></div>
+ <div class="route"><span id="region">北海道</span><b id="next">豊富まで</b><div class="track"><i id="progress"></i></div></div>
+ <div class="status"><span id="hearts" aria-label="耐久力1">●</span><button id="mute" aria-label="音を消す">♪</button><button id="pause" aria-label="一時停止">Ⅱ</button></div>
+ <div class="speed" aria-label="速度計"><div class="meter-heading">速度</div><div class="meter-face"><svg id="speedDial" viewBox="0 0 220 138" aria-hidden="true"><path d="M25 105 A85 85 0 0 1 195 105" class="meter-arc"/><g id="speedNeedle" transform="rotate(-90 110 105)"><path d="M106 107 L110 28 L114 107 Z"/><circle cx="110" cy="105" r="6"/></g></svg><div class="meter-reading"><b id="speed">0</b><span>km/h</span></div></div><small id="combo">通常飛行</small><small id="ringCount">リング 0 / 10</small></div>
+ <div class="lift"><span>高度</span><div><i id="liftBar"></i></div></div>
+</section>
+<section id="trainHud" hidden><div class="train-stripe"></div><h2 id="trainHeadline"></h2><strong id="mashCount"></strong><p id="trainDetail"></p><div class="train-clock"><i id="trainClock"></i></div><small id="mashHint"></small><div class="train-stripe"></div></section>
+<div id="guitarTimer" hidden><small>GUITAR RUSH</small><b id="guitarSeconds">0.0</b><span>秒</span><em id="guitarGain">+0.03秒</em><div><i id="guitarTimeBar"></i></div></div>
+<section id="trainPractice" class="overlay" hidden><h2>電車をぶっ飛ばす</h2><p id="practiceText"></p><button id="practiceStart" class="primary">連打を試す</button><button id="practiceBack" class="text-button">タイトルに戻る</button></section>
+<div id="mashCallout" hidden>連打！</div><div id="moment" hidden></div><div id="stationStamp" hidden><small id="stampNumber"></small><b id="stampName"></b><span id="stampLandmark"></span></div><div id="regionRibbon" hidden></div>
+<div id="toast" role="status"></div><div id="feedback" aria-live="polite"></div>
+<div id="controls" hidden><button id="left" aria-label="左耳を回す"><kbd>F</kbd><span>左耳</span><i></i></button><div class="rhythm"><b id="flowLabel">FLOW</b><div><i id="flowBar"></i></div></div><button id="right" aria-label="右耳を回す"><kbd>J</kbd><span>右耳</span><i></i></button></div>
+<section id="cinema" hidden><div class="cinema-caption"><small id="cinemaTag"></small><b id="cinemaText"></b></div><div class="cinema-buttons"><button id="cinemaPause" aria-label="演出を一時停止">Ⅱ</button><button id="cinemaRetry" hidden>もう一度</button><button id="skip">スキップ</button></div><div class="cinema-progress"><i id="cinemaProgress"></i></div></section>
+
+<section id="paused" class="overlay" hidden><div id="pauseChoices"><button id="resume" class="primary">戻る</button><button id="backTitle" class="text-button">タイトルに戻る</button></div><div id="quitChoices" hidden><h2>本当に？</h2><button id="quitCancel" class="primary">戻る</button><button id="quitConfirm" class="text-button">タイトルに戻る</button></div></section>
+<section id="result" class="overlay" hidden><div class="result-layout"><div class="result-summary"><p class="kicker" id="resultLabel">FLIGHT LOG</p><h2><span id="resultKm">0</span><small> km</small></h2><p id="resultLocation"></p><p id="resultMessage"></p><div id="clearMedal" hidden><span>★</span><b>64駅 制覇</b></div><p class="result-stats" id="resultStats"></p><form id="rankEntry" hidden><label for="playerName" id="rankPrompt"></label><div><input id="playerName" name="playerName" placeholder="名前" aria-label="名前" maxlength="24" autocomplete="nickname"><button id="saveRank" type="submit">登録</button></div></form><p id="rankStatus" role="status"></p><button id="rankRetry" class="text-button" hidden>ランキングを再読込</button><button id="retry" class="primary">もう一度</button><a id="shareX" class="share-button" target="_blank" rel="noopener noreferrer">Xで共有</a><button id="showRanks" class="text-button">ランキング</button><button id="resultBack" class="text-button">タイトルに戻る</button></div>
+<figure class="result-map-panel"><figcaption><b id="mapProgress"></b><span id="mapStationCount"></span></figcaption><svg id="resultMap" viewBox="0 0 560 460" role="img" aria-labelledby="mapTitle mapDescription"></svg><div class="map-legend"><span>飛んだ道</span><span>この先</span></div><p class="map-note">駅を結ぶ飛行ルート</p><div class="map-credit">地図 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · <a href="https://www.geoboundaries.org/" target="_blank" rel="noopener">geoBoundaries</a> / 駅位置 <a href="https://express.heartrails.com/" target="_blank" rel="noopener">HeartRails Express</a></div></figure></div></section>
+<section id="ranks" class="overlay" hidden><h2>TOP 30</h2><p id="ranksStatus" role="status"></p><div class="ranking-scroll"><table><thead><tr><th>順位</th><th>名前</th><th>距離</th><th>時間</th></tr></thead><tbody id="rankRows"></tbody></table></div><button id="closeRanks" class="primary">戻る</button></section>
+<aside id="loadError" class="overlay" hidden><h2>読み込みエラー</h2><p id="errorMessage"></p><button class="primary" onclick="location.reload()">読み直す</button></aside>
+
+</main><script type="module" src="game.js?v=20260912-tour64"></script><script>(function(){
+ if(!location.hostname.endsWith("ogyanuntiusxiii.com")) return;
+ var K="ogyanun.viewed",d=new Date(Date.now()+32400000).toISOString().slice(0,10),s=null;
+ try{s=localStorage.getItem(K);}catch(e){}
+ var f=s!==d;if(f){try{localStorage.setItem(K,d);}catch(e){}}
+ fetch("/api/views"+(f?"?v=1":""),{method:"POST"}).catch(function(){});
+})();</script></body></html>
+
