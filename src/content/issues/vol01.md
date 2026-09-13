@@ -6,11 +6,18 @@ theme: |-
   全部やる
 published: 2026-09-01
 current: true
-mainVisual: /images/cover/2026-09-main.webp
-mainVisualAlt: 白衣の男性とサメのぬいぐるみを囲む4人の少女たちの集合写真
-mainVisualFocus: 50% 0%
+# 2026-09-13 一冊の写真を差し替え。前の集合写真は
+# public/images/cover/2026-09-main.webp に残してある。戻すときは下の5行を元へ：
+#   mainVisual: /images/cover/2026-09-main.webp
+#   mainVisualAlt: 白衣の男性とサメのぬいぐるみを囲む4人の少女たちの集合写真
+#   mainVisualFocus: 50% 0%
+#   coverInk: dark
+#   coverNote: 今月プレイしたCoCのキャラ達。全員生きているが、年代が違う人間もいる。（医者が1920s。名前はオギャーヌ・ドクターカモン）
+mainVisual: /images/cover/2026-09-cory.webp
+mainVisualAlt: 生成り色の地に置いたコリドラス・ステルバイの写真
+mainVisualFocus: 50% 50%
 coverInk: dark
-coverNote: 今月プレイしたCoCのキャラ達。全員生きているが、年代が違う人間もいる。（医者が1920s。名前はオギャーヌ・ドクターカモン）
+coverNote: いつものアイコンの魚。コリドラス・ステルバイ。
 magTitleJp: 月刊
 magTitleEn: OGYANUN
 coverLines:
