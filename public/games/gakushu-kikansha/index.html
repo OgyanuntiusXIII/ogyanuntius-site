@@ -11,6 +11,9 @@
 <style>
   :root { color-scheme: dark; --ground: #1b1a17; --panel: #1e1d1a; --panel-2: #292722; --line: #3b3931; --ink: #ece6d6; --ink-2: #c0b9a6; --muted: #8e8878; --red: #e8564a; --red-deep: #b8261c; --on-red: #fff7ec; --yellow: #e5b400; --board-ink: #f2c230; }
   * { box-sizing: border-box; }
+  /* hidden 属性を必ず効かせる（display を指定した要素でも消す）。フェード中の層はクリックを通す */
+  [hidden] { display: none !important; }
+  .layer:not(.on) { pointer-events: none; }
   html, body { height: 100%; }
   body { margin: 0; background: var(--ground); color: var(--ink); font-family: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; font-size: 15px; line-height: 1.7; overflow: hidden; }
   #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
@@ -102,7 +105,7 @@
   #fade.on { opacity: 1; }
 
   /* 表題 */
-  #title { inset: 0; z-index: 50; background: rgba(27, 26, 23, .74); display: grid; place-items: center; text-align: center; padding: 20px; opacity: 1; }
+  #title { inset: 0; z-index: 50; background: rgba(27, 26, 23, .74); display: grid; place-items: center; text-align: center; padding: 20px; }
   #title .stamp { font-size: 12px; letter-spacing: .24em; color: var(--ink-2); }
   #title h1 { margin: 10px 0 0; font-size: clamp(40px, 9vw, 96px); font-weight: 900; letter-spacing: .06em; line-height: 1.1; }
   #title h1 span { display: block; font-size: .28em; letter-spacing: .5em; color: var(--red); margin-top: 8px; font-weight: 700; }
