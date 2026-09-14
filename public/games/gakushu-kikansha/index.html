@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>学習機関車 TRAINING DATA</title>
+<meta name="description" content="人口100万人の国の総理大臣として、生成AIと創作をめぐる政策を30秒ずつ決めていく3Dトロッコ問題。数字は出典つきの試算。">
+<link rel="canonical" href="https://ogyanuntiusxiii.com/games/gakushu-kikansha/">
+<meta property="og:type" content="website"><meta property="og:locale" content="ja_JP"><meta property="og:site_name" content="オギャヌンティウス十三世">
+<meta property="og:title" content="学習機関車 TRAINING DATA"><meta property="og:description" content="人口100万人の国の総理大臣として、生成AIと創作をめぐる政策を30秒ずつ決めていく3Dトロッコ問題。数字は出典つきの試算。">
+<meta property="og:url" content="https://ogyanuntiusxiii.com/games/gakushu-kikansha/">
+<meta property="og:image" content="https://ogyanuntiusxiii.com/games/gakushu-kikansha/assets/share/base.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="学習機関車。8角グラフと、人口100万人の国の3Dトロッコ問題の案内。">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="学習機関車 TRAINING DATA"><meta name="twitter:description" content="人口100万人の国の総理大臣として、生成AIと創作をめぐる政策を30秒ずつ決めていく3Dトロッコ問題。数字は出典つきの試算。"><meta name="twitter:image" content="https://ogyanuntiusxiii.com/games/gakushu-kikansha/assets/share/base.jpg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=DotGothic16&family=Zen+Old+Mincho:wght@700;900&display=swap">
+<style>
+  :root { color-scheme: dark; --ground: #1b1a17; --panel: #1e1d1a; --panel-2: #292722; --line: #3b3931; --ink: #ece6d6; --ink-2: #c0b9a6; --muted: #8e8878; --red: #e8564a; --red-deep: #b8261c; --on-red: #fff7ec; --yellow: #e5b400; --board-ink: #f2c230; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; font-size: 15px; line-height: 1.7; overflow: hidden; }
+  #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  button, a.btn { font: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+  .layer { position: fixed; transition: opacity .22s; opacity: 0; }
+  .layer.on { opacity: 1; }
+  .mincho { font-family: "Zen Old Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif; }
+
+  /* 発車標 */
+  #board { position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: #0d0d0c; color: var(--board-ink); border-bottom: 3px solid #2a2823; padding: 7px 14px 7px 118px; font-family: "DotGothic16", monospace; font-size: 17px; letter-spacing: .06em; min-height: 40px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #board::before { content: "運行情報"; position: absolute; left: 0; top: 0; bottom: 0; padding: 0 12px; display: flex; align-items: center; background: #2a2823; font-size: 12px; letter-spacing: .2em; }
+  .blink { animation: blink .9s steps(1) 2; }
+  @keyframes blink { 50% { opacity: .35; } }
+
+  /* HUD と ACT */
+  #hud { position: fixed; top: 50px; left: 16px; z-index: 15; font-size: 12px; letter-spacing: .16em; color: var(--ink-2); }
+  #hud b { display: block; font-weight: 400; color: var(--ink); }
+  #mute { position: fixed; top: 50px; right: 16px; z-index: 30; background: transparent; color: var(--ink-2); border: 1px solid var(--line); border-radius: 3px; padding: 3px 10px; font-size: 12px; letter-spacing: .1em; }
+  #act { position: fixed; left: 0; right: 0; top: 38%; z-index: 14; text-align: center; pointer-events: none; opacity: 0; text-shadow: 0 2px 18px rgba(0,0,0,.8); }
+  #act.run { animation: act 2.1s ease forwards; }
+  @keyframes act { 0% { opacity: 0; transform: scale(1.08); } 15% { opacity: 1; transform: none; } 70% { opacity: 1; } 100% { opacity: 0; } }
+  #act-no { display: block; font-family: "DotGothic16", monospace; letter-spacing: .4em; color: var(--red); font-size: 15px; }
+  #act-word { display: block; font-family: "Zen Old Mincho", serif; font-weight: 900; font-size: clamp(56px, 11vw, 120px); line-height: 1.05; letter-spacing: .1em; }
+
+  /* 設問カード */
+  #card { top: 90px; left: 50%; transform: translateX(-50%); width: min(720px, calc(100% - 32px)); z-index: 15; background: rgba(30, 29, 26, .93); border: 1px solid var(--line); padding: 14px 18px 16px; overflow: hidden; }
+  .bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--red-deep); transform-origin: left; transition: transform .1s linear; }
+  .bar.low { background: var(--red); }
+  .eyebar { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 4px; }
+  #card-eyebrow { margin: 0; font-size: 12px; letter-spacing: .24em; color: var(--red); font-family: "DotGothic16", monospace; }
+  .timer { font-family: "DotGothic16", monospace; font-size: 15px; color: var(--ink-2); letter-spacing: .08em; white-space: nowrap; }
+  .timer.low { color: var(--red); }
+  #card-text { margin: 0; white-space: pre-line; font-size: 16px; line-height: 1.75; }
+
+  /* 運行記録（レバーの上） */
+  #log { position: fixed; left: 16px; bottom: 124px; z-index: 15; width: min(430px, calc(100% - 32px)); display: grid; gap: 6px; }
+  #log .blk { background: rgba(30, 29, 26, .9); border-left: 4px solid var(--yellow); padding: 6px 12px; font-size: 13.5px; }
+  #log .blk:first-child:not(:last-child) { opacity: .55; }
+  #log h3 { margin: 0; font-size: 11px; font-weight: 400; letter-spacing: .12em; color: var(--muted); }
+  #log p { margin: 2px 0; opacity: 0; transform: translateY(4px); transition: opacity .3s, transform .3s; }
+  #log p.on { opacity: 1; transform: none; }
+
+  /* レバー */
+  #lever { left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 16; display: grid; grid-template-columns: 1fr 170px 1fr; gap: 10px; align-items: center; width: min(780px, calc(100% - 24px)); }
+  #lever button { background: var(--panel); color: var(--ink); border: 2px solid var(--ink-2); border-radius: 4px; padding: 10px 10px; line-height: 1.35; min-height: 84px; }
+  #lever button:hover { border-color: var(--red); }
+  #lever button::before { display: block; font-size: 11px; letter-spacing: .2em; color: var(--muted); }
+  #lever-l::before { content: "← 左の線路"; }
+  #lever-r::before { content: "右の線路 →"; }
+  #lever button b { display: block; font-size: 17px; }
+  #lever button small { display: block; font-size: 11.5px; color: var(--ink-2); margin-top: 2px; }
+  #lever button i { display: inline-block; font-style: normal; font-size: 10.5px; letter-spacing: .08em; margin-top: 4px; padding: 0 6px; background: var(--yellow); color: #1b1a17; border-radius: 2px; }
+  #lever svg { width: 170px; height: auto; display: block; }
+  #handle { transform-box: view-box; transform-origin: 160px 150px; transition: transform .25s cubic-bezier(.3, 1.4, .5, 1); }
+  #handle.shake { animation: shake .45s; }
+  @keyframes shake { 0%, 100% { transform: rotate(0deg); } 20% { transform: rotate(-7deg); } 40% { transform: rotate(6deg); } 60% { transform: rotate(-4deg); } 80% { transform: rotate(3deg); } }
+  @media (max-width: 640px) { #lever { grid-template-columns: 1fr 1fr; } #lever svg { display: none; } #log { bottom: 118px; } #card-text { font-size: 15px; } }
+
+  /* 間の設問・小さなレバー */
+  #panel, #policy { inset: 0; z-index: 25; background: rgba(27, 26, 23, .8); display: grid; place-items: center; padding: 16px; overflow: auto; }
+  .modal { position: relative; width: min(640px, 100%); background: var(--panel); border: 1px solid var(--line); padding: 18px 20px 20px; max-height: calc(100vh - 32px); overflow: auto; }
+  .modal .bar { background: var(--yellow); }
+  .modal h2 { margin: 0 0 10px; font-size: 18px; white-space: pre-line; line-height: 1.6; }
+  .modal .eyebrow { margin: 0; font-size: 12px; letter-spacing: .2em; color: var(--muted); }
+  #panel-options { display: grid; gap: 8px; }
+  #panel-options button { text-align: left; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 3px; padding: 10px 14px; }
+  #panel-options button:hover { border-color: var(--red); }
+  #policy-list { display: grid; gap: 4px; }
+  .prow { border-top: 1px dashed var(--line); padding: 8px 0; }
+  .prow .pt b { display: block; }
+  .prow .pt span { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+  .sw { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: start; cursor: pointer; }
+  .sw input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .knob { position: relative; width: 44px; height: 24px; border: 2px solid var(--ink-2); border-radius: 3px; background: var(--panel-2); margin-top: 3px; }
+  .knob::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--ink-2); transition: transform .15s, background .15s; }
+  .sw input:checked + .knob { border-color: var(--red); background: rgba(232, 86, 74, .18); }
+  .sw input:checked + .knob::after { transform: translateX(20px); background: var(--red); }
+  .sw input:focus-visible + .knob { outline: 3px solid var(--red); outline-offset: 2px; }
+  .seg { display: flex; border: 2px solid var(--ink-2); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .seg label { flex: 1; text-align: center; padding: 4px 6px; font-size: 13px; cursor: pointer; border-left: 2px solid var(--ink-2); position: relative; }
+  .seg label:first-child { border-left: 0; }
+  .seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .seg input:checked + span { display: block; margin: -4px -6px; padding: 4px 6px; background: var(--red-deep); color: var(--on-red); font-weight: 700; }
+  .sel { padding: 6px 8px; border: 2px solid var(--ink-2); border-radius: 3px; background: var(--panel); color: var(--ink); width: 100%; }
+  #policy-go { margin-top: 14px; width: 100%; background: var(--red-deep); color: var(--on-red); border: 0; border-radius: 3px; padding: 12px; font-weight: 700; letter-spacing: .2em; font-size: 16px; }
+
+  #fade { inset: 0; z-index: 35; background: #000; opacity: 0; transition: opacity .6s; pointer-events: none; }
+  #fade.on { opacity: 1; }
+
+  /* 表題 */
+  #title { inset: 0; z-index: 50; background: rgba(27, 26, 23, .74); display: grid; place-items: center; text-align: center; padding: 20px; opacity: 1; }
+  #title .stamp { font-size: 12px; letter-spacing: .24em; color: var(--ink-2); }
+  #title h1 { margin: 10px 0 0; font-size: clamp(40px, 9vw, 96px); font-weight: 900; letter-spacing: .06em; line-height: 1.1; }
+  #title h1 span { display: block; font-size: .28em; letter-spacing: .5em; color: var(--red); margin-top: 8px; font-weight: 700; }
+  #title .sub { margin: 22px auto 0; color: var(--ink); max-width: 34em; font-size: 15.5px; line-height: 1.9; text-wrap: pretty; }
+  #start { margin-top: 26px; background: var(--red-deep); color: var(--on-red); border: 0; border-radius: 3px; padding: 14px 36px; font-size: 18px; letter-spacing: .3em; font-weight: 700; }
+  #start:hover { background: var(--red); }
+  .site-link { display: block; width: fit-content; margin: 14px auto 0; font-size: 12.5px; color: var(--ink-2); text-underline-offset: 3px; }
+  #title-note { margin: 18px auto 0; font-size: 12px; color: var(--muted); max-width: 40em; }
+
+  /* 診断 */
+  #ending { position: absolute; inset: 0; z-index: 45; background: var(--ground); overflow: auto; }
+  .doc { max-width: 1000px; margin: 0 auto; padding: 24px 20px 80px; }
+  .masthead { border-top: 3px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 10px 0 14px; }
+  .masthead .stamp { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12px; letter-spacing: .12em; color: var(--ink-2); }
+  .masthead .stamp span::before { content: "■ "; color: var(--red); }
+  .masthead h1 { margin: 6px 0 0; font-size: clamp(28px, 4.6vw, 40px); font-weight: 900; letter-spacing: .04em; }
+  .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; margin-top: 20px; align-items: start; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  .box { background: var(--panel); border: 1px solid var(--line); }
+  .radar-card { padding: 12px 12px 6px; }
+  .radar-card svg { width: 100%; height: auto; display: block; }
+  .cap { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12.5px; color: var(--ink-2); padding: 4px 6px 8px; }
+  .sw1 { display: inline-block; width: 22px; border-top: 3px solid var(--red); vertical-align: middle; margin-right: 6px; }
+  .sw2 { display: inline-block; width: 22px; border-top: 2px dashed var(--muted); vertical-align: middle; margin-right: 6px; }
+  .verdict { padding: 16px 18px 18px; border-left: 6px solid var(--red); }
+  .eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: .2em; color: var(--muted); }
+  .verdict h2 { margin: 0; font-size: clamp(20px, 2.6vw, 26px); line-height: 1.35; font-weight: 900; }
+  .verdict p { margin: 8px 0 0; }
+  #reasons { color: var(--ink-2); font-size: 14px; }
+  h2.sec { font-size: 16px; letter-spacing: .16em; padding: 8px 0; border-bottom: 2px solid var(--ink); margin: 30px 0 6px; display: flex; justify-content: space-between; align-items: baseline; }
+  h2.sec small { font-size: 12px; letter-spacing: .05em; color: var(--muted); font-weight: 400; }
+  .stat-list { list-style: none; margin: 0; padding: 0; }
+  .stat { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(150px, auto) 2fr; gap: 6px 18px; align-items: baseline; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+  @media (max-width: 720px) { .stat { grid-template-columns: 1fr auto; } .stat .note { grid-column: 1 / -1; } }
+  .stat .label { font-weight: 700; }
+  .stat .value { font-size: 26px; line-height: 1.1; white-space: nowrap; font-family: "DotGothic16", monospace; font-variant-numeric: tabular-nums; }
+  .stat .value small { font-family: "BIZ UDPGothic", sans-serif; font-size: 13px; margin-left: 4px; color: var(--ink-2); }
+  .stat .note { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+  .stat.zero, .stat.zero .value { color: var(--red); }
+  .badge { display: inline-block; font-size: 11px; letter-spacing: .1em; padding: 1px 7px; border-radius: 2px; margin-right: 8px; vertical-align: 2px; border: 1.5px solid var(--ink-2); color: var(--ink-2); }
+  .badge.b-実測 { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .badge.b-推定 { background: var(--yellow); color: #1b1a17; border-color: var(--yellow); }
+  .badge.b-仮定 { border-style: dashed; }
+  .badge.b-架空 { color: var(--red); border-color: var(--red); }
+  .closing { margin: 18px 0 0; padding: 14px 18px; background: var(--panel); border: 1px solid var(--line); font-size: 17px; }
+  .closing small { display: block; font-family: "BIZ UDPGothic", sans-serif; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .kept { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+  @media (max-width: 720px) { .kept { grid-template-columns: 1fr; } }
+  .kept dl { margin: 0; }
+  .kept dt { font-size: 12px; letter-spacing: .16em; color: var(--muted); margin-top: 12px; }
+  .kept dd { margin: 4px 0 0; font-weight: 700; font-size: 17px; }
+  .kept dd ul { margin: 0; padding-left: 1.2em; font-weight: 400; font-size: 15px; }
+  .kept dd.q { font-weight: 900; }
+  .share { display: grid; gap: 10px; }
+  #banner { width: 100%; max-width: 720px; aspect-ratio: 1200 / 630; display: block; border: 1px solid var(--line); background: var(--panel); }
+  .share-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .btn, .share-row button, #again { display: inline-block; padding: 10px 18px; background: var(--ink); color: var(--ground); border: 0; border-radius: 3px; letter-spacing: .1em; font-weight: 700; text-decoration: none; }
+  .btn.x { background: #000; color: #fff; border: 1px solid #555; }
+  .btn:hover, .share-row button:hover, #again:hover { background: var(--red); color: var(--on-red); }
+  .hint, #copy-done { font-size: 12.5px; color: var(--ink-2); margin: 0; }
+  .share textarea { width: 100%; min-height: 7.5em; resize: vertical; padding: 10px 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); line-height: 1.6; font: inherit; }
+  #answers { font-size: 13px; color: var(--ink-2); }
+  ol.src { margin: 0; padding-left: 1.6em; columns: 2 380px; column-gap: 32px; font-size: 13px; }
+  ol.src li { margin: 0 0 6px; break-inside: avoid; }
+  ol.src a { color: var(--ink-2); text-underline-offset: 3px; }
+  details { margin-top: 18px; border: 1px solid var(--line); background: var(--panel); }
+  summary { cursor: pointer; padding: 10px 14px; font-weight: 700; letter-spacing: .08em; }
+  .tbl-wrap { overflow-x: auto; padding: 0 14px 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; letter-spacing: .1em; color: var(--muted); font-weight: 400; }
+  td.n { text-align: right; font-family: "DotGothic16", monospace; white-space: nowrap; }
+  .again-row { margin-top: 26px; text-align: center; }
+  .again-row p { color: var(--muted); font-size: 13px; }
+  footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-2); max-width: 60em; }
+  @media (prefers-reduced-motion: reduce) { #handle, .layer, #log p, .bar { transition: none; } #handle.shake, .blink { animation: none; } #act.run { animation-duration: .01s; } }
+</style>
+</head>
+<body>
+<canvas id="gl" aria-label="線路と機関車の3D表示" role="img"></canvas>
+
+<div id="board" hidden aria-live="polite"><span id="board-text"></span></div>
+<div id="hud" hidden><span id="hud-act"></span><b id="hud-q"></b></div>
+<div id="act" aria-hidden="true"><span id="act-no"></span><span id="act-word"></span></div>
+<button id="mute" type="button" aria-pressed="false">音：入</button>
+
+<div id="card" class="layer" hidden role="region" aria-live="polite">
+  <div class="bar" id="card-bar"></div>
+  <div class="eyebar"><p id="card-eyebrow"></p><span class="timer" id="card-timer"></span></div>
+  <p id="card-text"></p>
+</div>
+
+<div id="log" hidden aria-live="polite"></div>
+
+<div id="lever" class="layer" hidden>
+  <button id="lever-l" type="button"></button>
+  <svg viewBox="0 0 320 200" aria-hidden="true">
+    <rect x="16" y="148" width="288" height="44" fill="#151513" stroke="#e5b400" stroke-width="5" stroke-dasharray="18 12"/>
+    <path d="M64 150 A96 96 0 0 1 256 150" fill="none" stroke="#6b6559" stroke-width="10" stroke-linecap="round"/>
+    <g id="handle">
+      <line x1="160" y1="150" x2="160" y2="42" stroke="#c8bfa6" stroke-width="13" stroke-linecap="round"/>
+      <circle cx="160" cy="40" r="24" fill="#b8261c" stroke="#1b1a17" stroke-width="4"/>
+    </g>
+    <circle cx="160" cy="150" r="15" fill="#6b6559" stroke="#1b1a17" stroke-width="3"/>
+  </svg>
+  <button id="lever-r" type="button"></button>
+</div>
+
+<div id="panel" class="layer" hidden role="dialog" aria-labelledby="panel-text">
+  <div class="modal"><div class="bar" id="panel-bar"></div>
+    <div class="eyebar"><p class="eyebrow">回答は政策パラメータとして記録されます</p><span class="timer" id="panel-timer"></span></div>
+    <h2 id="panel-text"></h2><div id="panel-options"></div></div>
+</div>
+
+<div id="policy" class="layer" hidden role="dialog" aria-labelledby="policy-title">
+  <div class="modal"><div class="bar" id="policy-bar"></div>
+    <div class="eyebar"><p class="eyebrow">三本目の線路</p><span class="timer" id="policy-timer"></span></div>
+    <h2 id="policy-title">小さなレバー</h2>
+    <p style="margin:0 0 10px;color:var(--ink-2);font-size:13.5px">大きなレバーは動きませんでした。代わりに、8本の小さなレバーがあります。これまでの回答が初期位置に入っています。制度を組み立てて、運行してください。</p>
+    <div id="policy-list"></div>
+    <div class="prow"><label class="pt" for="policy-levy"><b>基金の配り方（還元を入れた場合）</b></label><select class="sel" id="policy-levy"><option value="A">A 読まれた枚数に応じて</option><option value="B">B 全員に均等</option><option value="C">C AIへの貢献度に応じて</option><option value="D">D 申請した人に</option></select></div>
+    <button id="policy-go" type="button">運行する</button>
+  </div>
+</div>
+
+<div id="fade" hidden></div>
+
+<div id="title" class="layer on">
+  <div>
+    <div class="stamp">学習機関車 運行管理局 ／ 公共教育映像 第8号</div>
+    <h1 class="mincho">学習機関車<span>TRAINING DATA</span></h1>
+    <p class="sub">ここは人口100万人の国。あなたは総理大臣です。機関車は止まりません。レバーを引いて、どちらの線路を通すか決めてください。どちらを選んでも、誰かが何かを払う可能性が常にあることを忘れないでください。</p>
+    <button id="start" type="button">乗車する</button>
+    <a class="site-link" href="/">← オギャヌンティウス十三世のページへ</a>
+    <p id="title-note">1問の制限時間は30秒。時間切れのときは、レバーを引かなかったことになります。人数・金額はすべて架空の国のシミュレーションで、出典のある実測値に明示した仮定を重ねて計算しています。キーボードの ← → でもレバーを引けます。</p>
+  </div>
+</div>
+
+<div id="ending" class="layer" hidden>
+  <div class="doc">
+    <header class="masthead">
+      <div class="stamp"><span>学習機関車 運行管理局</span><span>様式第8号 政策効果試算票</span><span>人口 1,000,000人</span></div>
+      <h1 class="mincho">最終診断</h1>
+    </header>
+    <div class="grid">
+      <div class="box radar-card">
+        <svg id="radar" viewBox="0 0 640 560" role="img" aria-labelledby="radar-title"><title id="radar-title">8角グラフ：あなたの制度の形</title></svg>
+        <div class="cap"><span><span class="sw1"></span>あなたの制度</span><span><span class="sw2"></span>何もしない場合（現状）</span><span>合計はほぼ一定です。面積ではなく、どこに寄っているかを見てください。</span></div>
+      </div>
+      <div>
+        <div class="box verdict">
+          <p class="eyebrow">あなたの政策思想</p>
+          <h2 id="arch-name" class="mincho"></h2>
+          <p id="arch-body"></p>
+          <p id="reasons"></p>
+        </div>
+        <div class="kept" style="margin-top:16px">
+          <dl><dt>あなたが守ったもの</dt><dd id="kept-top"></dd><dt>あなたが犠牲にしたもの</dt><dd id="kept-bottom"></dd></dl>
+          <dl><dt>あなたが作った例外</dt><dd id="kept-ex"></dd><dt>最後まで解決できなかった問題</dt><dd class="q mincho" id="kept-q"></dd></dl>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">あなたの政策によって <small>人口100万人の国・年あたり</small></h2>
+    <ol class="stat-list" id="stats"></ol>
+    <p class="closing mincho">すべてを救うレバーはありませんでした。<br>おめでとうございます。あなたには政策を決める才能があります。<small>人数・金額はすべて架空の国のシミュレーションです。出典のある実測値に、明示した仮定を重ねて計算しています。</small></p>
+
+    <h2 class="sec">共有 <small>#学習機関車</small></h2>
+    <div class="share">
+      <img id="banner" alt="共有用の画像。8角グラフと、あなたの政策思想・守ったもの・犠牲にしたもの">
+      <div class="share-row">
+        <a id="x-share" class="btn x" href="https://x.com/intent/post" target="_blank" rel="noopener">Xでポスト</a>
+        <button id="img-share" type="button" hidden>画像つきで共有</button>
+        <button id="img-copy" type="button">画像をコピー</button>
+        <button id="copy" type="button">文章をコピー</button>
+      </div>
+      <p id="copy-done" aria-live="polite"></p>
+      <p class="hint">Xの投稿画面が開いたら、コピーした画像を貼り付けてください。画像は長押し（右クリック）でも保存できます。</p>
+      <textarea id="share-text" readonly aria-label="共有文"></textarea>
+      <p id="answers"></p>
+    </div>
+
+    <h2 class="sec">出典 <small>この結果の数字の根拠（すべて）</small></h2>
+    <ol class="src" id="sources"></ol>
+
+    <details><summary>8軸の値（表）</summary><div class="tbl-wrap"><table id="axis-table"><thead><tr><th>軸</th><th>意味</th><th style="text-align:right">現状</th><th style="text-align:right">あなた</th></tr></thead><tbody></tbody></table></div></details>
+
+    <div class="again-row"><p>もう一度、決めますか？</p><button id="again" type="button">もう一度乗る</button><p><a class="site-link" href="/">← オギャヌンティウス十三世のページへ</a></p></div>
+    <footer>出典のある数字は、日本の全国値を 1/123.3（総人口1億2,330万人 → 100万人）に縮めたものです。英米の調査は日本にそのまま当てはまるとは限りません。「仮定」の係数はゲームの設計者が置いた値で、根拠は弱く、変えてよいものです。</footer>
+  </div>
+</div>
+<script src="vendor/three-r152.min.js"></script>
+<script src="model-6.js"></script>
+<script src="questions-6.js"></script>
+<script src="scene-6.js"></script>
+<script src="game-6.js"></script>
+<script>(function(){
+ if(!location.hostname.endsWith("ogyanuntiusxiii.com")) return;
+ var K="ogyanun.viewed",d=new Date(Date.now()+32400000).toISOString().slice(0,10),s=null;
+ try{s=localStorage.getItem(K);}catch(e){}
+ var f=s!==d;if(f){try{localStorage.setItem(K,d);}catch(e){}}
+ fetch("/api/views"+(f?"?v=1":""),{method:"POST"}).catch(function(){});
+})();</script></body></html>
