@@ -8,10 +8,10 @@ export async function onRequestGet({request, params}) {
  const key = String(params.k || '');
  const c = /^[a-z]+-[a-z]+-[a-z]+$/.test(key) && Object.prototype.hasOwnProperty.call(CARDS, key) ? CARDS[key] : null;
  if (!c) return Response.redirect(game, 302);
- const image = `${url.origin}/games/gakushu-kikansha/assets/share/${key}.jpg`;
- const title = `学習機関車 — ${c.a}`;
+ const image = `${url.origin}/games/gakushu-kikansha/assets/share/${key}.jpg?v=2`;  // カードを描き直したら v を上げる（Xが古い画像を使い続けないように）
+ const title = `学習機関車 — ${c.a}の総理大臣`;
  const description = `守ったもの：${c.top}。犠牲にしたもの：${c.bottom}。人口100万人の国で、生成AIと創作の政策を30秒ずつ決める3Dトロッコ問題。`;
- const alt = `8角グラフと診断。政策思想${c.a}、守ったもの${c.top}、犠牲にしたもの${c.bottom}。グラフは同じ診断になった形の代表例。`;
+ const alt = `8角グラフと診断。${c.a}の総理大臣。守ったもの${c.top}、犠牲にしたもの${c.bottom}。グラフは同じ診断になった形の代表例。`;
  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)}</title>
 <meta name="description" content="${escape(description)}"><meta name="robots" content="noindex">
 <meta property="og:type" content="website"><meta property="og:locale" content="ja_JP"><meta property="og:site_name" content="オギャヌンティウス十三世">
@@ -32,8 +32,8 @@ img{display:block;width:100%;height:auto;border:1px solid var(--line)}
 .play:hover{background:var(--red)}.site{display:block;font-size:12px;color:var(--ink-2);margin-top:14px}
 .note{font-size:11px;color:var(--muted);margin:18px 0 0;line-height:1.7}
 </style></head><body><main>
-<p class="kicker">TRAINING DATA / 政策思想の診断</p>
-<h1>${escape(c.a)}</h1>
+<p class="kicker">TRAINING DATA / あなたはこんな総理大臣でした</p>
+<h1>${escape(c.a)}の総理大臣</h1>
 <p class="kept">守ったもの：<b>${escape(c.top)}</b><br>犠牲にしたもの：<b class="lost">${escape(c.bottom)}</b></p>
 <img src="${escape(image)}" width="1200" height="630" alt="${escape(alt)}">
 <a class="play" href="${escape(game)}">自分も乗る</a>

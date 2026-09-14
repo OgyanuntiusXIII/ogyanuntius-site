@@ -243,7 +243,7 @@
     g.fillStyle = '#1b1a17'; g.fillRect(0, 0, W, H); g.fillStyle = '#b8261c'; g.fillRect(0, 0, W, 10);
     radarCanvas(g, r, 300, 312, 150);
     const x0 = 600; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-    g.fillStyle = '#8e8878'; g.font = '700 22px "BIZ UDPGothic", sans-serif'; g.fillText('学習機関車　あなたの政策思想', x0, 84);
+    g.fillStyle = '#8e8878'; g.font = '700 22px "BIZ UDPGothic", sans-serif'; g.fillText('学習機関車　あなたはこんな総理大臣でした', x0, 84);
     g.fillStyle = '#ece6d6'; let y = wrapText(g, ar.name, x0, 150, 560, '900 {s}px "Zen Old Mincho", serif', 50, 1.12, 2) + 12;
     const row = (label, value, color) => { g.fillStyle = '#8e8878'; g.font = '700 19px "BIZ UDPGothic", sans-serif'; g.fillText(label, x0, y); y += 36; g.fillStyle = color; y = wrapText(g, value, x0, y, 560, '700 {s}px "BIZ UDPGothic", sans-serif', 30, 1.1, 1) + 16; };
     row('守ったもの', r.top.name, '#ece6d6'); row('犠牲にしたもの', r.bottom.name, '#e8564a');
@@ -285,9 +285,9 @@
     // 共有文（Xの上限280。日本語は1字2として数える）
     // URLはXが23字として数える
     const url = sharePageUrl(ar.id + '-' + r.top.id + '-' + r.bottom.id);
-    const lines = ['私の政策思想：' + ar.name, '守ったもの：' + r.top.name, '犠牲にしたもの：' + r.bottom.name, '解決できなかったもの：' + unresolved, '#学習機関車'];
+    const lines = ['#学習機関車', '私は' + ar.name + 'の総理大臣でした。', '守ったもの：' + r.top.name, '犠牲にしたもの：' + r.bottom.name, '解決できなかったもの：' + unresolved];
     const tail = url ? '\n\n↓スマホ・PCで今すぐプレイ↓\n' : '';
-    if (xLen(lines.join('\n') + tail) + (url ? 23 : 0) > 275) lines.splice(3, 1);
+    if (xLen(lines.join('\n') + tail) + (url ? 23 : 0) > 275) lines.splice(4, 1);
     const text = lines.join('\n') + tail + (url || '');
     $('#share-text').value = text;
     $('#x-share').href = 'https://x.com/intent/post?text=' + encodeURIComponent(text);

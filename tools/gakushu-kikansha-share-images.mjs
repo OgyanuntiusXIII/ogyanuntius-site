@@ -92,7 +92,7 @@ ${text(36, H - 19, 21, C.ground, '#学習機関車　　ogyanuntiusxiii.com/game
 function resultCard(g, vals) {
   const x0 = 600, ls = nameLines(g.a.name), size = Math.min(56, Math.floor(560 / Math.max(...ls.map(l => [...l].length))));
   let y = 158;
-  const parts = [text(x0, 86, 22, C.muted, '学習機関車　あなたの政策思想', 'font-weight="700"')];
+  const parts = [text(x0, 86, 22, C.muted, '学習機関車　あなたはこんな総理大臣でした', 'font-weight="700"')];
   ls.forEach(l => { parts.push(text(x0, y, size, C.ink, l, 'font-weight="700"', MIN)); y += Math.round(size * 1.18); });
   y += 18;
   parts.push(text(x0, y, 20, C.muted, '守ったもの', 'font-weight="700"')); y += 40;
