@@ -62,7 +62,20 @@
     boardNext() {
       const line = board.q.shift(); if (line == null) { board.busy = false; return; }
       board.busy = true; $('#board').hidden = false; const b = $('#board-text'); b.textContent = line; b.classList.remove('blink'); void b.offsetWidth; b.classList.add('blink'); Snd.beep();
-      setTimeout(() => this.boardNext(), (board.q.length > 2 ? 1300 : Math.min(3200, 1300 + line.length * 55)) * FAST);
+      // 画面より長い文は、電光掲示板のように横へ流して最後まで見せる（スマホで途中が切れていた）。
+      // 幅は流し始める瞬間に測る（表示した直後はドット書体が読み込み前で、短く測ってしまう）
+      b.style.transition = 'none'; b.style.transform = 'translateX(0)';
+      const base = board.q.length > 2 ? 1300 : Math.min(3200, 1300 + line.length * 55), hold = 800;
+      setTimeout(() => {
+        if (b.textContent !== line) return;
+        const bs = getComputedStyle($('#board')), avail = $('#board').clientWidth - parseFloat(bs.paddingLeft) - parseFloat(bs.paddingRight);
+        const over = b.scrollWidth > avail ? b.scrollWidth - avail + 12 : 0;
+        if (!over) { setTimeout(() => this.boardNext(), Math.max(0, base - hold) * FAST); return; }
+        const speed = board.q.length > 2 ? 160 : 90, scroll = over / speed * 1000;
+        const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        b.style.transition = still ? 'none' : 'transform ' + Math.round(scroll * FAST) + 'ms linear'; b.style.transform = 'translateX(' + (-over) + 'px)';
+        setTimeout(() => this.boardNext(), (scroll + 1400) * FAST);
+      }, hold * FAST);
     },
     async fade(dark) { const f = $('#fade'); f.hidden = false; void f.offsetWidth; f.classList.toggle('on', dark); await wait(dark ? 650 : 500); if (!dark) f.hidden = true; },
     lever(labels, opt) {
@@ -72,9 +85,10 @@
         const fill = (b, i) => {
           b.textContent = ''; const t = document.createElement('b'); t.textContent = labels[i]; b.appendChild(t);
           if (opt.signs) { const s = document.createElement('small'); s.textContent = '轢かれるもの：' + [].concat(opt.signs[i]).join(''); b.appendChild(s); }
-          if (!opt.stuck && opt.def === i) { const d = document.createElement('i'); d.textContent = '時間切れならこちら'; b.appendChild(d); }
+          b.toggleAttribute('data-default', !opt.stuck && opt.def === i);   // 「時間切れならこちら」は箱の上に出す（箱の大きさを揃える）
         };
         fill(L, 0); fill(R, 1); handle.style.transform = 'rotate(0deg)'; handle.classList.remove('shake'); this.show(box);
+        document.documentElement.style.setProperty('--lever-h', box.offsetHeight + 'px');   // 運行記録をレバーの上に置くため
         let attempts = 0, finished = false, stop = () => {};
         const cleanup = () => { L.removeEventListener('click', onL); R.removeEventListener('click', onR); window.removeEventListener('keydown', key); };
         const finish = (choice, timedOut) => {
@@ -111,6 +125,7 @@
   function boot() {
     if (!window.THREE) { $('#title-note').textContent = '3D表示に必要な部品を読み込めませんでした。通信環境を確認して読み直してください。'; return; }
     world = new window.TrainWorld($('#gl')); window.__world = world;
+    try { document.fonts.load('17px "DotGothic16"'); } catch (e) { /* 読めなくても代わりの書体で出る */ }
   }
 
   /* ---------- 本編 ---------- */
