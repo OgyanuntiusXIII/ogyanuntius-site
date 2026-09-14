@@ -259,7 +259,11 @@
     radarCanvas(g, r, 300, 312, 150);
     const x0 = 600; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
     g.fillStyle = '#8e8878'; g.font = '700 22px "BIZ UDPGothic", sans-serif'; g.fillText('学習機関車　あなたはこんな総理大臣でした', x0, 84);
-    g.fillStyle = '#ece6d6'; let y = wrapText(g, ar.name, x0, 150, 560, '900 {s}px "Zen Old Mincho", serif', 50, 1.12, 2) + 12;
+    // 名前は「。」でだけ折り、1行に収まらなければ文字を小さくする（語の途中で折らない）
+    const ni = ar.name.indexOf('。'), names = [...ar.name].length > 11 && ni > 0 && ni < ar.name.length - 1 ? [ar.name.slice(0, ni + 1), ar.name.slice(ni + 1)] : [ar.name];
+    g.fillStyle = '#ece6d6'; let ns = 50; g.font = '900 ' + ns + 'px "Zen Old Mincho", serif';
+    while (ns > 26 && Math.max(...names.map(l => g.measureText(l).width)) > 560) { ns -= 2; g.font = '900 ' + ns + 'px "Zen Old Mincho", serif'; }
+    let y = 150; names.forEach(l => { g.fillText(l, x0, y); y += Math.round(ns * 1.18); }); y += 12 - Math.round(ns * 1.18) + Math.round(ns * 1.12);
     const row = (label, value, color) => { g.fillStyle = '#8e8878'; g.font = '700 19px "BIZ UDPGothic", sans-serif'; g.fillText(label, x0, y); y += 36; g.fillStyle = color; y = wrapText(g, value, x0, y, 560, '700 {s}px "BIZ UDPGothic", sans-serif', 30, 1.1, 1) + 16; };
     row('守ったもの', r.top.name, '#ece6d6'); row('犠牲にしたもの', r.bottom.name, '#e8564a');
     g.fillStyle = '#8e8878'; g.font = '700 19px "BIZ UDPGothic", sans-serif'; g.fillText('最後まで解決できなかったもの', x0, y); y += 32;

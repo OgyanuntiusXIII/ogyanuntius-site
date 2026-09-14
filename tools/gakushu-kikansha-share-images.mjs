@@ -72,12 +72,10 @@ function radar(vals, cx, cy, R) {
   });
   return out.join('\n');
 }
+// 名前は「。」でだけ折る。折れない名前は1行のまま、文字を小さくして収める（「許／可」のように語の途中で折らない）
 const nameLines = name => {
-  const cs = [...name];
-  if (cs.length <= 11) return [name];
   const i = name.indexOf('。');
-  if (i > 0 && i < name.length - 1) return [name.slice(0, i + 1), name.slice(i + 1)];
-  const h = Math.ceil(cs.length / 2); return [cs.slice(0, h).join(''), cs.slice(h).join('')];
+  return [...name].length > 11 && i > 0 && i < name.length - 1 ? [name.slice(0, i + 1), name.slice(i + 1)] : [name];
 };
 function frame(inner, vals, legend) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">

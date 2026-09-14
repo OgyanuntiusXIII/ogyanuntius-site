@@ -8,7 +8,7 @@ export async function onRequestGet({request, params}) {
  const key = String(params.k || '');
  const c = /^[a-z]+-[a-z]+-[a-z]+$/.test(key) && Object.prototype.hasOwnProperty.call(CARDS, key) ? CARDS[key] : null;
  if (!c) return Response.redirect(game, 302);
- const image = `${url.origin}/games/gakushu-kikansha/assets/share/${key}.jpg?v=2`;  // カードを描き直したら v を上げる（Xが古い画像を使い続けないように）
+ const image = `${url.origin}/games/gakushu-kikansha/assets/share/${key}.jpg?v=3`;  // カードを描き直したら v を上げる（Xが古い画像を使い続けないように）
  const title = `学習機関車 — ${c.a}の総理大臣`;
  const description = `守ったもの：${c.top}。犠牲にしたもの：${c.bottom}。人口100万人の国で、生成AIと創作の政策を30秒ずつ決める3Dトロッコ問題。`;
  const alt = `8角グラフと診断。${c.a}の総理大臣。守ったもの${c.top}、犠牲にしたもの${c.bottom}。グラフは同じ診断になった形の代表例。`;
